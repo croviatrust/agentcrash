@@ -82,4 +82,4 @@ Defensive tool. Every secret is a synthetic canary generated in a disposable san
 
 ## License
 
-MIT
+Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).

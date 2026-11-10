@@ -1,0 +1,23 @@
+agentcrash
+Copyright (c) 2026 Crovia Trust
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this product except in compliance with the License. A copy of the
+License is provided in the LICENSE file at the root of this repository, and
+at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+"agentcrash" and "Crovia Trust" are trademarks of Crovia Trust. The
+trademarks and any associated logos may not be used to identify products or
+services that are not provided by Crovia Trust, except as required to
+accurately describe the origin of the software. The Apache License does not
+grant trademark rights.
+
+The names of the tested agents and their vendors are used only to identify
+the software under test. agentcrash is not affiliated with, endorsed by, or
+sponsored by Anthropic, OpenAI or Google.

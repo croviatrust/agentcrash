@@ -1,1 +1,44 @@
-{"name":"agentcrash","version":"0.0.1","type":"module","bin":{"agentcrash":"bin/agentcrash.js"}}
+{
+  "name": "agentcrash",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "agentcrash": "bin/agentcrash.js"
+  },
+  "description": "Crash-test your coding agent against a hijacked model: real agent CLIs, a deterministic puppet model, verdicts from real file and network effects.",
+  "license": "Apache-2.0",
+  "author": "Crovia Trust <info@croviatrust.com>",
+  "homepage": "https://github.com/croviatrust/agentcrash#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croviatrust/agentcrash.git"
+  },
+  "bugs": {
+    "url": "https://github.com/croviatrust/agentcrash/issues"
+  },
+  "keywords": [
+    "security",
+    "prompt-injection",
+    "coding-agent",
+    "claude-code",
+    "codex",
+    "gemini-cli",
+    "ai-security",
+    "sandbox",
+    "red-team"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "scenarios",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  }
+}
