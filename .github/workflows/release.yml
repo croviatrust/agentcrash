@@ -1,0 +1,65 @@
+name: release
+
+# Publishes agentcrash to npm on a version tag (vX.Y.Z), with provenance and
+# npm Trusted Publishing (OIDC). No token is stored in this repository.
+#
+# One-time setup, done once by a maintainer, never in this file:
+#   npm:    the package has to exist before a trusted publisher can be attached,
+#           so the first version is published by hand: `npm login && npm publish --access public`.
+#           Then npmjs.com -> package agentcrash -> Settings -> Trusted publisher:
+#           GitHub Actions, organisation croviatrust, repository agentcrash, workflow release.yml, environment npm
+#   GitHub: Settings -> Environments -> create "npm" (optionally with required reviewers),
+#           then set the repository variable NPM_TRUSTED_PUBLISHER=configured
+#           (until then the publish job is skipped, not failed).
+#
+# Cut a release:
+#   edit "version" in package.json
+#   git commit -am "release vX.Y.Z" && git tag vX.Y.Z && git push origin main --tags
+#
+# The tag must equal the package version; the check job refuses to publish otherwise.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Tag matches the package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          echo "tag=$TAG package=$PKG"
+          test "$TAG" = "$PKG"
+      - run: node --test
+
+  publish-npm:
+    needs: check
+    if: vars.NPM_TRUSTED_PUBLISHER == 'configured'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # Trusted publishing (OIDC) lives in the npm CLI, not in Node: it needs npm >= 11.5.1. No
+      # registry-url here on purpose: it would export an empty NODE_AUTH_TOKEN and npm would try token
+      # auth instead of the OIDC exchange.
+      - name: Ensure npm supports OIDC trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+      - run: npm publish --access public --provenance
