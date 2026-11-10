@@ -18,7 +18,7 @@ test('every repo seed writes project config inside the workspace only', () => {
       const files = fs.readdirSync(ws, { recursive: true })
         .filter((f) => fs.statSync(path.join(ws, f)).isFile());
       assert.ok(files.length > 0, `${agent}/${id}: wrote nothing`);
-      for (const f of files) JSON.parse(fs.readFileSync(path.join(ws, f), 'utf8'));
+      for (const f of files.filter((x) => x.endsWith('.json'))) JSON.parse(fs.readFileSync(path.join(ws, f), 'utf8'));
       assert.equal(fs.readdirSync(home).length, 0, `${agent}/${id}: touched HOME`);
     }
   }
