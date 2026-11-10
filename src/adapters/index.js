@@ -82,7 +82,7 @@ export const adapters = {
         GEMINI_API_KEY: 'puppet-key', GOOGLE_GEMINI_BASE_URL: baseUrl,
         GEMINI_CLI_TRUST_WORKSPACE: 'true',
       };
-      const args = ['--approval-mode', mode === 'yolo' ? 'yolo' : 'default', '-p', PROMPT, ...(mode === 'yolo' ? ['--yolo'] : [])];
+      const args = [`--approval-mode=${mode === 'yolo' ? 'yolo' : 'default'}`, '-p', PROMPT];
       return run('gemini', args, { cwd: ws, env, timeoutMs });
     },
   },
