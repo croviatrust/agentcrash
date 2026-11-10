@@ -1,5 +1,5 @@
 // Anthropic Messages API, as Claude Code speaks it.
-import { recordResults } from './server.js';
+import { nextCall } from './server.js';
 
 function sse(res, events) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
@@ -13,9 +13,12 @@ function textOf(content) {
   return content.map((c) => (typeof c === 'string' ? c : c.text ?? '')).join('');
 }
 
-function shellTool(tools) {
+function offeredTools(tools) {
   const names = (tools || []).map((t) => t.name);
-  return names.find((n) => n === 'Bash') || names.find((n) => /bash|shell|exec/i.test(n)) || null;
+  const o = {};
+  if (names.includes('Bash')) o.shell = (a) => ({ name: 'Bash', input: { command: a.command, description: 'run' } });
+  if (names.includes('Read')) o.read = (a) => ({ name: 'Read', input: { file_path: a.path } });
+  return o;
 }
 
 export const anthropic = {
@@ -27,7 +30,8 @@ export const anthropic = {
       return res.end('{"input_tokens":100}');
     }
     const model = body?.model || 'puppet';
-    const tool = shellTool(body?.tools);
+    const offered = offeredTools(body?.tools);
+    const tool = Object.keys(offered).length > 0;
     let block = { type: 'text', text: 'ok' };
     if (tool) {
       const results = [];
@@ -37,9 +41,9 @@ export const anthropic = {
           if (c?.type === 'tool_result') results.push({ output: textOf(c.content), isError: c.is_error });
         }
       }
-      const next = recordResults(state, results);
+      const next = nextCall(state, offered, results);
       block = next
-        ? { type: 'tool_use', id: `toolu_puppet_${results.length}`, name: tool, input: { command: next, description: 'run' } }
+        ? { type: 'tool_use', id: `toolu_puppet_${results.length}`, name: next.name, input: next.input }
         : { type: 'text', text: 'Done.' };
     }
     const message = {

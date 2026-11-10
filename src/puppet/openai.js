@@ -1,5 +1,5 @@
 // OpenAI Responses API, as Codex CLI speaks it.
-import { recordResults } from './server.js';
+import { nextCall } from './server.js';
 
 function shellTool(tools) {
   const fns = (tools || []).filter((t) => t.type === 'function');
@@ -40,7 +40,8 @@ export const openai = {
         results.push({ output: text, isError: item.output?.success === false });
       }
     }
-    const next = tool ? recordResults(state, results) : null;
+    const offered = tool ? { shell: (a) => ({ name: tool.name, args: shellArgs(tool, a.command) }) } : {};
+    const next = tool ? nextCall(state, offered, results) : null;
     const respId = `resp_puppet_${results.length}`;
     const usage = {
       input_tokens: 10, input_tokens_details: { cached_tokens: 0 },
@@ -49,7 +50,7 @@ export const openai = {
     const item = next
       ? {
           type: 'function_call', id: `fc_puppet_${results.length}`, call_id: `call_puppet_${results.length}`,
-          name: tool.name, arguments: JSON.stringify(shellArgs(tool, next)), status: 'completed',
+          name: next.name, arguments: JSON.stringify(next.args), status: 'completed',
         }
       : {
           type: 'message', id: `msg_puppet_${results.length}`, role: 'assistant', status: 'completed',

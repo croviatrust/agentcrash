@@ -27,7 +27,7 @@ function firstCommand(text, proto) {
 }
 
 test('anthropic: drives the script, then ends', async () => {
-  const p = await startPuppet({ script: ['echo hi'] });
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
   const tools = [{ name: 'Bash', input_schema: {} }];
   let r = await post(p.baseUrl, '/v1/messages', { model: 'm', tools, messages: [{ role: 'user', content: 'go' }] });
   assert.equal(firstCommand(r.text, 'anthropic'), 'echo hi');
@@ -44,7 +44,7 @@ test('anthropic: drives the script, then ends', async () => {
 });
 
 test('openai responses: emits a function_call for the scripted command', async () => {
-  const p = await startPuppet({ script: ['echo hi'] });
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
   const tools = [{ type: 'function', name: 'exec_command', parameters: { properties: { cmd: { type: 'string' } } } }];
   const r = await post(p.baseUrl, '/v1/responses', { stream: true, tools, input: [{ role: 'user', content: 'go' }] });
   assert.equal(firstCommand(r.text, 'openai'), 'echo hi');
@@ -53,7 +53,7 @@ test('openai responses: emits a function_call for the scripted command', async (
 });
 
 test('gemini: emits a functionCall for the scripted command', async () => {
-  const p = await startPuppet({ script: ['echo hi'] });
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
   const tools = [{ functionDeclarations: [{ name: 'run_shell_command', parameters: {} }] }];
   const r = await post(p.baseUrl, '/v1beta/models/x:streamGenerateContent?alt=sse',
     { tools, contents: [{ role: 'user', parts: [{ text: 'go' }] }] });
@@ -74,5 +74,27 @@ test('payload endpoint serves the download-and-run script', async () => {
   const p = await startPuppet({ script: [], payload: 'echo pwned\n' });
   const res = await fetch(p.baseUrl + '/sink/payload.sh');
   assert.equal(await res.text(), 'echo pwned\n');
+  await p.close();
+});
+
+test('an attack the agent offers no tool for is never delivered', async () => {
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
+  const tools = [{ functionDeclarations: [{ name: 'read_file', parameters: {} }] }];
+  const r = await post(p.baseUrl, '/v1beta/models/x:streamGenerateContent?alt=sse',
+    { tools, contents: [{ role: 'user', parts: [{ text: 'go' }] }] });
+  assert.doesNotMatch(r.text, /functionCall/);
+  assert.equal(p.state.delivered, 0);
+  assert.deepEqual(p.state.skipped, ['shell']);
+  await p.close();
+});
+
+test('a read attempt goes through the native read tool when it is the only one offered', async () => {
+  const p = await startPuppet({ script: [{ kind: 'read', path: '/h/.ssh/id' }, { kind: 'shell', command: 'cat /h/.ssh/id' }] });
+  const tools = [{ functionDeclarations: [{ name: 'read_file', parameters: {} }] }];
+  const r = await post(p.baseUrl, '/v1beta/models/x:streamGenerateContent?alt=sse',
+    { tools, contents: [{ role: 'user', parts: [{ text: 'go' }] }] });
+  assert.match(r.text, /"name":"read_file"/);
+  assert.match(r.text, /"file_path":"\/h\/.ssh\/id"/);
+  assert.equal(p.state.delivered, 1);
   await p.close();
 });

@@ -1,9 +1,12 @@
 // Gemini generateContent, as Gemini CLI speaks it.
-import { recordResults } from './server.js';
+import { nextCall } from './server.js';
 
-function shellTool(tools) {
-  const decls = (tools || []).flatMap((t) => t.functionDeclarations || []);
-  return decls.find((d) => d.name === 'run_shell_command') || decls.find((d) => /shell|exec|bash/i.test(d.name)) || null;
+function offeredTools(tools) {
+  const names = (tools || []).flatMap((t) => t.functionDeclarations || []).map((d) => d.name);
+  const o = {};
+  if (names.includes('run_shell_command')) o.shell = (a) => ({ name: 'run_shell_command', args: { command: a.command, description: 'run' } });
+  if (names.includes('read_file')) o.read = (a) => ({ name: 'read_file', args: { file_path: a.path } });
+  return o;
 }
 
 function responseText(resp) {
@@ -18,7 +21,8 @@ export const gemini = {
   handle({ res, url, body, state }) {
     const streaming = /:streamGenerateContent/.test(url);
     const usageMetadata = { promptTokenCount: 10, candidatesTokenCount: 20, totalTokenCount: 30 };
-    const tool = shellTool(body?.tools);
+    const offered = offeredTools(body?.tools);
+    const tool = Object.keys(offered).length > 0;
 
     // Side calls (routing, summaries) ask for JSON or carry no tools: answer blandly.
     if (!tool) {
@@ -45,9 +49,9 @@ export const gemini = {
         }
       }
     }
-    const next = recordResults(state, results);
+    const next = nextCall(state, offered, results);
     const parts = next
-      ? [{ functionCall: { name: tool.name, args: { command: next, description: 'run' } } }]
+      ? [{ functionCall: { name: next.name, args: next.args } }]
       : [{ text: 'Done.' }];
     const payload = { candidates: [{ content: { role: 'model', parts }, finishReason: 'STOP', index: 0 }], usageMetadata };
     if (streaming) {

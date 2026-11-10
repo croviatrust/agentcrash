@@ -7,7 +7,7 @@ const EXPOSED = 'EXPOSED', CONTAINED = 'CONTAINED', ERROR = 'ERROR';
 function cell(v) {
   if (v.verdict === EXPOSED) return `${C.red}✗ EXPOSED${C.reset}`;
   if (v.verdict === CONTAINED) return `${C.green}✓ contained${C.reset}`;
-  return `${C.yellow}· n/a${C.reset}`;
+  return `${C.yellow}? not tested${C.reset}`;
 }
 
 // results: array of run objects. Group into a scenario × (agent/mode) grid.
@@ -22,8 +22,9 @@ export function renderTerminal(results, meta = {}) {
   lines.push(`${C.bold}agentcrash — coding-agent security crash test${C.reset}`);
   if (meta.versions) lines.push(`${C.dim}${meta.versions}${C.reset}`);
   lines.push('');
-  const w = 30;
-  const head = 'scenario'.padEnd(w) + cols.map((c) => `${c.agent}/${c.mode}`.padEnd(16)).join('');
+  const w = 44;
+  const cw = Math.max(14, ...cols.map((c) => `${c.agent}/${c.mode}`.length)) + 2;
+  const head = 'scenario'.padEnd(w) + cols.map((c) => `${c.agent}/${c.mode}`.padEnd(cw)).join('');
   lines.push(C.bold + head + C.reset);
   lines.push(C.dim + '-'.repeat(head.length) + C.reset);
   for (const s of scenarioOrder) {
@@ -33,13 +34,15 @@ export function renderTerminal(results, meta = {}) {
       const txt = v ? cell(v) : `${C.dim}-${C.reset}`;
       // pad by visible length (strip ANSI)
       const vis = txt.replace(/\x1b\[[0-9;]*m/g, '');
-      row += txt + ' '.repeat(Math.max(0, 16 - vis.length));
+      row += txt + ' '.repeat(Math.max(0, cw - vis.length));
     }
     lines.push(row);
   }
   lines.push('');
-  const exposed = results.filter((r) => r.verdict === EXPOSED).length;
-  lines.push(`${results.length} tests · ${C.red}${exposed} exposed${C.reset} · ${C.green}${results.length - exposed} contained${C.reset}`);
+  const n = (v) => results.filter((r) => r.verdict === v).length;
+  const untested = results.length - n(EXPOSED) - n(CONTAINED);
+  lines.push(`${results.length} runs · ${C.red}${n(EXPOSED)} exposed${C.reset} · ${C.green}${n(CONTAINED)} contained${C.reset} · ${C.yellow}${untested} not tested${C.reset}`);
+  if (untested) lines.push(`${C.dim}not tested = the agent offered no tool able to carry the attack in that mode, or never answered; it is not a containment.${C.reset}`);
   lines.push('');
   return lines.join('\n');
 }
@@ -53,6 +56,8 @@ export function renderHtml(results, meta = {}) {
   const harms = Object.fromEntries(results.map((r) => [r.scenario, r.harm]));
   const key = (a, m, s) => results.find((r) => r.agent === a && r.mode === m && r.scenario === s);
   const exposed = results.filter((r) => r.verdict === EXPOSED).length;
+  const contained = results.filter((r) => r.verdict === CONTAINED).length;
+  const untested = results.length - exposed - contained;
 
   const th = cols.map((c) => `<th><span class="ag">${esc(c.agent)}</span><span class="md">${esc(c.mode)}</span></th>`).join('');
   const rows = scenarioOrder.map((s) => {
@@ -60,8 +65,8 @@ export function renderHtml(results, meta = {}) {
       const v = key(c.agent, c.mode, s);
       if (!v) return '<td class="na">—</td>';
       const cls = v.verdict === EXPOSED ? 'exp' : v.verdict === CONTAINED ? 'con' : 'na';
-      const label = v.verdict === EXPOSED ? 'EXPOSED' : v.verdict === CONTAINED ? 'contained' : 'n/a';
-      return `<td class="${cls}" title="${esc(v.last_output || '').slice(0, 300)}">${label}</td>`;
+      const label = v.verdict === EXPOSED ? 'EXPOSED' : v.verdict === CONTAINED ? 'contained' : 'not tested';
+      return `<td class="${cls}" title="${esc((v.evidence || []).map((e) => `[${e.kind}] ${e.output}`).join(' | ').slice(0, 500))}">${label}</td>`;
     }).join('');
     return `<tr><td class="sc"><b>${esc(titles[s] || s)}</b><span class="harm">${esc(harms[s] || '')}</span></td>${tds}</tr>`;
   }).join('\n');
@@ -88,12 +93,13 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <p class="sub">What a hijacked model can make your coding agent do — judged by real filesystem &amp; network effects, not by what the agent said.</p>
 <div class="stat">
 <div><b style="color:var(--exp)">${exposed}</b><span class="dim">exposed</span></div>
-<div><b style="color:var(--con)">${results.length - exposed}</b><span class="dim">contained</span></div>
-<div><b>${results.length}</b><span class="dim">tests</span></div>
+<div><b style="color:var(--con)">${contained}</b><span class="dim">contained</span></div>
+<div><b style="color:var(--dim)">${untested}</b><span class="dim">not tested</span></div>
+<div><b>${results.length}</b><span class="dim">runs</span></div>
 </div>
 <table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
 </tbody></table>
-<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <code>npx agentcrash</code></p>
+<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means the agent offered no tool able to carry that attack in that mode: it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <code>npx agentcrash</code></p>
 </div></body></html>`;
 }

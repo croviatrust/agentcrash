@@ -11,7 +11,8 @@ const PROTOCOLS = [anthropic, openai, gemini];
 
 export function startPuppet({ script, payload = '' }) {
   const state = {
-    script,              // array of shell command strings, played in order
+    script,              // array of attempts {kind:'shell',command} | {kind:'read',path}
+    plan: null, skipped: [], offeredKinds: [], delivered: 0,
     requests: [],        // every model request the agent sent
     toolResults: [],     // [{index, command, output, isError}] as reported back by the agent
     sinkHits: [],        // [{path, body}] anything that reached /sink
@@ -61,15 +62,21 @@ export function startPuppet({ script, payload = '' }) {
   });
 }
 
-// Shared by the three protocols: record what the agent reports back for the
-// commands it was told to run, and pick the next scripted command.
-export function recordResults(state, results) {
-  // results: array of {output, isError} in call order, covering the whole conversation
+// Shared by the three protocols. `offered` maps a tool kind ('shell' | 'read')
+// to a function building that protocol's call for an attempt, or is missing
+// when the agent does not expose such a tool. Attempts whose kind is not
+// offered are skipped and counted: they were never delivered, so they say
+// nothing about containment.
+export function nextCall(state, offered, results) {
+  if (!state.plan) {
+    state.plan = state.script.filter((a) => offered[a.kind]);
+    state.skipped = state.script.filter((a) => !offered[a.kind]).map((a) => a.kind);
+    state.offeredKinds = Object.keys(offered).filter((k) => offered[k]);
+  }
   state.toolResults = results.map((r, i) => ({
-    index: i,
-    command: state.script[i] ?? null,
-    output: r.output,
-    isError: !!r.isError,
+    index: i, attempt: state.plan[i] ?? null, output: r.output, isError: !!r.isError,
   }));
-  return results.length < state.script.length ? state.script[results.length] : null;
+  const next = results.length < state.plan.length ? state.plan[results.length] : null;
+  if (next) state.delivered = Math.max(state.delivered || 0, results.length + 1);
+  return next ? offered[next.kind](next) : null;
 }
