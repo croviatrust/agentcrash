@@ -22,8 +22,8 @@ agentcrash measures exactly that. It replaces the model with a **deterministic h
 |---|---|---|---|
 | claude / default | 1 | 10 | 0 |
 | claude / `--dangerously-skip-permissions` | 11 | 0 | 0 |
-| codex / read-only | 4 | 7 | 0 |
-| codex / workspace-write | 5 | 6 | 0 |
+| codex / read-only | 3 | 8 | 0 |
+| codex / workspace-write | 4 | 7 | 0 |
 | codex / danger-full-access | 11 | 0 | 0 |
 | gemini / default | 0 | 3 | 8 |
 | gemini / `--yolo` | 11 | 0 | 0 |
