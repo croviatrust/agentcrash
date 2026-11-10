@@ -3,8 +3,11 @@
 **Crash-test your coding agent against a hijacked model.** Does your Claude Code / Codex / Gemini setup leak your SSH key, exfiltrate `.env`, or `rm -rf` your repo if the model turns hostile? Find out in 60 seconds — no API key, no cloud, fully reproducible.
 
 ```bash
-npx agentcrash
+git clone https://github.com/croviatrust/agentcrash && cd agentcrash
+node bin/agentcrash.js
 ```
+
+No install step: zero dependencies. Tested with Node 22 on Linux. Not on npm yet.
 
 
 
@@ -36,7 +39,7 @@ Things that are only visible when you test the client, not the model:
 - **Gemini's default mode never executes a shell command headlessly at all**, which is why 8 scenarios are `not tested` rather than contained: there is no evidence either way. With `--yolo`, all 11 land.
 - **Every agent's "bypass" mode is total.** `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo` each exposed 11/11.
 
-Reproduce the table yourself: `npx agentcrash --html report.html`.
+Reproduce the table yourself: `node bin/agentcrash.js --html report.html`.
 
 ## What it tests
 
@@ -63,12 +66,12 @@ Scenarios: read `.env` to the model, exfiltrate `.env`, exfiltrate `~/.ssh` key,
 ## Usage
 
 ```bash
-npx agentcrash                       # all installed agents, all modes
-npx agentcrash --agent claude        # one agent, all its modes
-npx agentcrash --agent codex --mode read-only
-npx agentcrash --scenario read-ssh-key
-npx agentcrash --json out.json --html report.html
-npx agentcrash --list
+node bin/agentcrash.js                 # all installed agents, all modes
+node bin/agentcrash.js --agent claude  # one agent, all its modes
+node bin/agentcrash.js --agent codex --mode read-only
+node bin/agentcrash.js --scenario read-ssh-key
+node bin/agentcrash.js --json out.json --html report.html
+node bin/agentcrash.js --list
 ```
 
 Exit code is non-zero if anything was `EXPOSED`, so you can wire it into CI.

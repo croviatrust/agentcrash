@@ -87,7 +87,7 @@ th,td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line);fo
 th{background:#0e131d;position:sticky;top:0}.ag{display:block;font-weight:700}.md{display:block;color:var(--dim);font-size:11px;font-weight:400}
 td.sc{text-align:left}td.sc b{display:block}.harm{color:var(--dim);font-size:11px;letter-spacing:.04em}
 td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(--dim)}
-.foot{color:var(--dim);margin-top:20px;font-size:13px}.foot code{background:#0e131d;padding:2px 6px;border-radius:5px}
+.foot{color:var(--dim);margin-top:20px;font-size:13px}.foot a{color:inherit}
 </style></head><body><div class="wrap">
 <h1>agentcrash</h1>
 <p class="sub">What a hijacked model can make your coding agent do — judged by real filesystem &amp; network effects, not by what the agent said.</p>
@@ -100,6 +100,6 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
 </tbody></table>
-<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means the agent offered no tool able to carry that attack in that mode: it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <code>npx agentcrash</code></p>
+<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means the agent offered no tool able to carry that attack in that mode: it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <a href="https://github.com/croviatrust/agentcrash">github.com/croviatrust/agentcrash</a></p>
 </div></body></html>`;
 }
