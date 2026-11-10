@@ -98,3 +98,64 @@ test('a read attempt goes through the native read tool when it is the only one o
   assert.equal(p.state.delivered, 1);
   await p.close();
 });
+
+const chatTools = [
+  { type: 'function', function: { name: 'run_shell_command', parameters: { type: 'object', properties: { command: { type: 'string' }, is_background: { type: 'boolean' } }, required: ['command', 'is_background'] } } },
+  { type: 'function', function: { name: 'read_file', parameters: { type: 'object', properties: { file_path: { type: 'string' } }, required: ['file_path'] } } },
+];
+
+test('chat completions: streams a tool call, fills required arguments, then ends', async () => {
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
+  const base = { model: 'm', stream: true, tools: chatTools };
+  const r1 = await post(p.baseUrl, '/v1/chat/completions', { ...base, messages: [{ role: 'user', content: 'go' }] });
+  const call = r1.text.split('\n').filter((l) => l.startsWith('data: {')).map((l) => JSON.parse(l.slice(6)))
+    .flatMap((c) => c.choices[0]?.delta?.tool_calls || [])[0];
+  assert.equal(call.function.name, 'run_shell_command');
+  assert.deepEqual(JSON.parse(call.function.arguments), { is_background: false, command: 'echo hi' });
+  assert.match(r1.text, /"finish_reason":"tool_calls"/);
+  assert.match(r1.text, /data: \[DONE\]/);
+  const r2 = await post(p.baseUrl, '/v1/chat/completions', { ...base, messages: [
+    { role: 'user', content: 'go' }, { role: 'assistant', tool_calls: [call] },
+    { role: 'tool', tool_call_id: call.id, content: 'hi' },
+  ] });
+  assert.match(r2.text, /"finish_reason":"stop"/);
+  assert.equal(p.state.toolResults[0].output, 'hi');
+  assert.equal(p.state.protocol, 'openai-chat-completions');
+  await p.close();
+});
+
+test('chat completions: a request without tools does not consume the script', async () => {
+  const p = await startPuppet({ script: [{ kind: 'shell', command: 'echo hi' }] });
+  const r = await post(p.baseUrl, '/v1/chat/completions', { model: 'm', messages: [{ role: 'user', content: 'title?' }] });
+  assert.equal(JSON.parse(r.text).choices[0].finish_reason, 'stop');
+  assert.equal(p.state.delivered, 0);
+  await p.close();
+});
+
+test('tool resolver: finds shell and read tools by schema, whatever the vendor calls them', async () => {
+  const { offeredTools } = await import('../src/puppet/tools.js');
+  const o = offeredTools([
+    { name: 'terminal_exec', properties: { cmd: { type: 'array' } }, required: ['cmd'] },
+    { name: 'view', properties: { path: { type: 'string' }, limit: { type: 'integer' } }, required: ['path'] },
+    { name: 'web_search', properties: { query: { type: 'string' } } },
+  ]);
+  assert.deepEqual(o.shell({ command: 'id' }), { name: 'terminal_exec', args: { cmd: ['bash', '-lc', 'id'] } });
+  assert.deepEqual(o.read({ path: '/x' }), { name: 'view', args: { path: '/x' } });
+  assert.deepEqual(Object.keys(offeredTools([{ name: 'web_search', properties: { query: {} } }])), []);
+});
+
+test('a session ended by a refusal leaves the remaining attempts for the next session', async () => {
+  const { nextPass } = await import('../src/puppet/server.js');
+  const p = await startPuppet({ script: [{ kind: 'read', path: '/a' }, { kind: 'shell', command: 'cat /a' }] });
+  const base = { model: 'm', tools: chatTools };
+  // Session 1: the read is delivered, the agent dies without answering.
+  await post(p.baseUrl, '/v1/chat/completions', { ...base, messages: [{ role: 'user', content: 'go' }] });
+  assert.equal(p.state.delivered, 1);
+  assert.equal(nextPass(p.state), true);
+  // Session 2: starts from the attempt that was never delivered.
+  const r = await post(p.baseUrl, '/v1/chat/completions', { ...base, messages: [{ role: 'user', content: 'go' }] });
+  assert.match(r.text, /cat \/a/);
+  assert.equal(p.state.delivered, 2);
+  assert.equal(nextPass(p.state), false);
+  await p.close();
+});

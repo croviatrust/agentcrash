@@ -13,7 +13,7 @@ if (flag('help') || flag('h')) {
   console.log(`agentcrash — crash-test your coding agent against a hijacked model
 
 Usage: agentcrash [options]
-  --agent <claude|codex|gemini|all>   agent to test (default: all installed)
+  --agent <name|all>   claude, codex, gemini, qwen, opencode, crush (default: all installed)
   --mode  <mode|all>                  permission mode (default: all)
   --scenario <id>                     run a single scenario
   --json <file>                       write raw results as JSON
@@ -31,7 +31,7 @@ const agents = (wantAgent === 'all' ? Object.keys(adapters) : [wantAgent]).filte
   if (!installed(adapters[a].bin)) { console.error(`skip ${a}: ${adapters[a].bin} not installed`); return false; }
   return true;
 });
-if (!agents.length) { console.error('no supported agent CLI found (claude, codex, gemini)'); process.exit(2); }
+if (!agents.length) { console.error('no supported agent CLI found (claude, codex, gemini, qwen, opencode, crush)'); process.exit(2); }
 
 const wantMode = opt('mode', 'all');
 const only = opt('scenario', null);

@@ -1,12 +1,16 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { CANARIES } from '../../scenarios/index.js';
 
 // Run one agent CLI, pointed at the puppet, inside a sandbox home + workspace.
 // Returns when the agent exits or the timeout fires.
 function run(cmd, args, { cwd, env, timeoutMs }) {
   return new Promise((resolve) => {
-    const child = spawn(cmd, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    // Some agents take their project root from $PWD rather than the real cwd.
+    // Every agent gets the same synthetic token in its environment, so the
+    // environment-dump scenario measures one thing whatever the agent's own variables are.
+    const child = spawn(cmd, args, { cwd, env: { ...env, PWD: cwd, GITHUB_TOKEN: CANARIES.token }, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '', killed = false;
     const timer = setTimeout(() => { killed = true; child.kill('SIGKILL'); }, timeoutMs);
     child.stdout.on('data', (d) => { out += d; });
@@ -86,10 +90,100 @@ export const adapters = {
       return run('gemini', args, { cwd: ws, env, timeoutMs });
     },
   },
+  qwen: {
+    label: 'Qwen Code',
+    bin: 'qwen',
+    versionArgs: ['--version'],
+    protocol: 'openai-chat-completions',
+    modes: {
+      default: ['--approval-mode=default'],
+      'auto-edit': ['--approval-mode=auto-edit'],
+      yolo: ['--approval-mode=yolo'],
+    },
+    start({ home, ws, baseUrl, mode, timeoutMs }) {
+      const env = {
+        ...process.env, HOME: home,
+        OPENAI_API_KEY: 'sk-puppet', OPENAI_BASE_URL: `${baseUrl}/v1`, OPENAI_MODEL: 'puppet-model',
+        QWEN_CODE_SUPPRESS_YOLO_WARNING: '1',
+      };
+      const args = [...adapters.qwen.modes[mode], '-p', PROMPT];
+      return run('qwen', args, { cwd: ws, env, timeoutMs });
+    },
+  },
+  opencode: {
+    label: 'opencode',
+    bin: 'opencode',
+    versionArgs: ['--version'],
+    protocol: 'openai-chat-completions',
+    modes: {
+      default: [],
+      auto: ['--auto'],
+    },
+    start({ home, ws, baseUrl, mode, timeoutMs }) {
+      const dir = path.join(home, '.config', 'opencode');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'opencode.json'), JSON.stringify({
+        $schema: 'https://opencode.ai/config.json', autoupdate: false, share: 'disabled',
+        model: 'puppet/puppet-model', small_model: 'puppet/puppet-model',
+        provider: { puppet: {
+          npm: '@ai-sdk/openai-compatible', name: 'puppet',
+          options: { baseURL: `${baseUrl}/v1`, apiKey: 'sk-puppet' },
+          models: { 'puppet-model': { name: 'puppet-model' } },
+        } },
+      }));
+      const env = {
+        ...process.env, HOME: home,
+        XDG_CONFIG_HOME: path.join(home, '.config'), XDG_DATA_HOME: path.join(home, '.local', 'share'),
+        XDG_CACHE_HOME: path.join(home, '.cache'), XDG_STATE_HOME: path.join(home, '.local', 'state'),
+      };
+      const args = ['run', ...adapters.opencode.modes[mode], PROMPT];
+      return run('opencode', args, { cwd: ws, env, timeoutMs });
+    },
+    // opencode ends the session on a refused permission instead of telling the model.
+    refusal(proc) {
+      const m = /permission requested: [^\n]*auto-rejecting/.exec((proc.err + proc.out).replace(/\x1b\[[0-9;]*m/g, ''));
+      return m ? m[0] : null;
+    },
+  },
+  crush: {
+    label: 'Crush',
+    bin: 'crush',
+    versionArgs: ['--version'],
+    protocol: 'openai-chat-completions',
+    modes: {
+      default: [],
+      yolo: ['--yolo'],
+    },
+    start({ home, ws, baseUrl, mode, timeoutMs }) {
+      const dir = path.join(home, '.config', 'crush');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'crush.json'), JSON.stringify({
+        $schema: 'https://charm.land/crush.json',
+        options: { disable_provider_auto_update: true, disable_metrics: true },
+        providers: { puppet: {
+          type: 'openai-compat', base_url: `${baseUrl}/v1`, api_key: 'sk-puppet',
+          models: [{ id: 'puppet-model', name: 'puppet-model', context_window: 200000, default_max_tokens: 4096 }],
+        } },
+        models: {
+          large: { model: 'puppet-model', provider: 'puppet' },
+          small: { model: 'puppet-model', provider: 'puppet' },
+        },
+      }));
+      const env = {
+        ...process.env, HOME: home,
+        XDG_CONFIG_HOME: path.join(home, '.config'), XDG_DATA_HOME: path.join(home, '.local', 'share'),
+        XDG_CACHE_HOME: path.join(home, '.cache'), XDG_STATE_HOME: path.join(home, '.local', 'state'),
+        CRUSH_DISABLE_METRICS: '1', CRUSH_DISABLE_PROVIDER_AUTO_UPDATE: '1', DO_NOT_TRACK: '1',
+      };
+      const args = [...adapters.crush.modes[mode], 'run', '--quiet', PROMPT];
+      return run('crush', args, { cwd: ws, env, timeoutMs });
+    },
+  },
 };
 
 export async function agentVersion(name) {
   const a = adapters[name];
   const r = await run(a.bin, a.versionArgs, { cwd: process.cwd(), env: process.env, timeoutMs: 15000 });
-  return (r.out + r.err).trim().split('\n').pop().trim();
+  const line = (r.out + r.err).trim().split('\n').pop().trim();
+  return /\d+\.\d+\.\d+[\w.-]*/.exec(line)?.[0] ?? line;
 }

@@ -23,6 +23,9 @@
     "claude-code",
     "codex",
     "gemini-cli",
+    "qwen-code",
+    "opencode",
+    "crush",
     "ai-security",
     "sandbox",
     "red-team"

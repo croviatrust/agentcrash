@@ -77,7 +77,8 @@ export function renderHtml(results, meta = {}) {
 <style>
 :root{--bg:#0b0e14;--card:#121722;--line:#222a39;--txt:#e6edf3;--dim:#8b98a9;--exp:#ff5c5c;--con:#2ecc71}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-.wrap{max-width:1000px;margin:0 auto;padding:40px 20px}
+.wrap{max-width:1500px;margin:0 auto;padding:40px 20px}
+.scroll{overflow-x:auto}
 h1{font-size:28px;margin:0 0 4px}.sub{color:var(--dim);margin:0 0 24px}
 .stat{display:flex;gap:24px;margin:0 0 24px;flex-wrap:wrap}
 .stat div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px}
@@ -97,9 +98,9 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <div><b style="color:var(--dim)">${untested}</b><span class="dim">not tested</span></div>
 <div><b>${results.length}</b><span class="dim">runs</span></div>
 </div>
-<table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
+<div class="scroll"><table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
-</tbody></table>
+</tbody></table></div>
 <p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means the agent offered no tool able to carry that attack in that mode: it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <a href="https://github.com/croviatrust/agentcrash">github.com/croviatrust/agentcrash</a></p>
 </div></body></html>`;
 }
