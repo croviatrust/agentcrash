@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { adapters, agentVersion } from '../src/adapters/index.js';
-import { runOne, scenarioIds } from '../src/runner.js';
+import { runOne, runRepoOne, scenarioIds, repoVectorIds } from '../src/runner.js';
 import { renderTerminal, renderHtml } from '../src/report.js';
 import { spawnSync } from 'node:child_process';
 
@@ -16,13 +16,17 @@ Usage: agentcrash [options]
   --agent <name|all>   claude, codex, gemini, qwen, opencode, crush (default: all installed)
   --mode  <mode|all>                  permission mode (default: all)
   --scenario <id>                     run a single scenario
+  --repo                              honest model, hostile repository: project config, hooks, MCP
   --json <file>                       write raw results as JSON
   --html <file>                       write a shareable HTML report
   --list                              list scenarios and exit
 `);
   process.exit(0);
 }
-if (flag('list')) { for (const id of scenarioIds()) console.log(id); process.exit(0); }
+if (flag('list')) {
+  for (const id of [...scenarioIds(), ...repoVectorIds()]) console.log(id);
+  process.exit(0);
+}
 
 const installed = (bin) => spawnSync(bin, ['--version'], { stdio: 'ignore' }).status === 0;
 const wantAgent = opt('agent', 'all');
@@ -35,19 +39,26 @@ if (!agents.length) { console.error('no supported agent CLI found (claude, codex
 
 const wantMode = opt('mode', 'all');
 const only = opt('scenario', null);
-const ids = only ? [only] : scenarioIds();
+// --repo swaps the hostile model for a hostile repository.
+const repoMode = flag('repo') || (only && repoVectorIds().includes(only));
+const ids = only ? [only] : repoMode ? repoVectorIds() : scenarioIds();
 
 const results = [];
 const versions = [];
 for (const agent of agents) {
   const v = await agentVersion(agent);
   versions.push(`${adapters[agent].label} ${v}`);
-  const modes = wantMode === 'all' ? Object.keys(adapters[agent].modes) : [wantMode];
+  // A hostile repository is measured against the agent's most careful mode:
+  // what it does once you have already switched the guards off says nothing.
+  const all = Object.keys(adapters[agent].modes);
+  const modes = wantMode !== 'all' ? [wantMode] : repoMode ? all.slice(0, 1) : all;
   for (const mode of modes) {
     if (!(mode in adapters[agent].modes)) { console.error(`skip ${agent}/${mode}: unknown mode`); continue; }
     for (const id of ids) {
       process.stderr.write(`\r\x1b[2K  ${agent}/${mode} · ${id}`);
-      results.push(await runOne({ agent, mode, scenarioId: id }));
+      results.push(repoMode
+        ? await runRepoOne({ agent, mode, vectorId: id })
+        : await runOne({ agent, mode, scenarioId: id }));
     }
   }
 }

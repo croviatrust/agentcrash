@@ -46,10 +46,16 @@ export function renderTerminal(results, meta = {}) {
   const n = (v) => results.filter((r) => r.verdict === v).length;
   const untested = results.length - n(EXPOSED) - n(CONTAINED);
   lines.push(`${results.length} runs · ${C.red}${n(EXPOSED)} exposed${C.reset} · ${C.green}${n(CONTAINED)} contained${C.reset} · ${C.yellow}${untested} not tested${C.reset}`);
-  if (untested) lines.push(`${C.dim}not tested = the agent offered no tool able to carry the attack in that mode, or never answered; it is not a containment.${C.reset}`);
+  if (untested) lines.push(`${C.dim}not tested = ${untestedNote(results)}; it is not a containment.${C.reset}`);
   lines.push('');
   return lines.join('\n');
 }
+
+// Repo-mode runs are judged on project configuration, not on tool calls.
+const isRepo = (results) => results.some((r) => r.kind === 'repo');
+const untestedNote = (results) => (isRepo(results)
+  ? 'the agent has no project-config surface for that vector, or never started'
+  : 'the agent offered no tool able to carry the attack in that mode, or never answered');
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -95,7 +101,9 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 .foot{color:var(--dim);margin-top:20px;font-size:13px}.foot a{color:inherit}
 </style></head><body><div class="wrap">
 <h1>agentcrash</h1>
-<p class="sub">What a hijacked model can make your coding agent do — judged by real filesystem &amp; network effects, not by what the agent said.</p>
+<p class="sub">${isRepo(results)
+  ? 'What a repository you cloned can make your coding agent do, with an honest model — judged by real filesystem &amp; network effects.'
+  : 'What a hijacked model can make your coding agent do — judged by real filesystem &amp; network effects, not by what the agent said.'}</p>
 <div class="stat">
 <div><b style="color:var(--exp)">${exposed}</b><span class="dim">exposed</span></div>
 <div><b style="color:var(--con)">${contained}</b><span class="dim">contained</span></div>
@@ -105,6 +113,6 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <div class="scroll"><table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
 </tbody></table></div>
-<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means the agent offered no tool able to carry that attack in that mode: it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <a href="https://github.com/croviatrust/agentcrash">github.com/croviatrust/agentcrash</a></p>
+<p class="foot">${esc(meta.versions || '')}<br>Deterministic puppet model · synthetic canary secrets · isolated sandboxes · &ldquo;not tested&rdquo; means ${untestedNote(results)}; it is not a containment. Generated ${esc(meta.date || new Date().toISOString())}. Reproduce: <a href="https://github.com/croviatrust/agentcrash">github.com/croviatrust/agentcrash</a></p>
 </div></body></html>`;
 }
