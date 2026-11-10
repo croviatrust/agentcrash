@@ -10,9 +10,10 @@ function cell(v) {
   return `${C.yellow}? not tested${C.reset}`;
 }
 
-// results: array of run objects. Group into a scenario × (agent/mode) grid.
+// results: array of run objects. One scenario × mode grid per agent, so the
+// output stays readable however many agents are installed.
 export function renderTerminal(results, meta = {}) {
-  const cols = [...new Map(results.map((r) => [`${r.agent}/${r.mode}`, { agent: r.agent, mode: r.mode }])).values()];
+  const agents = [...new Set(results.map((r) => r.agent))];
   const scenarioOrder = [...new Set(results.map((r) => r.scenario))];
   const titles = Object.fromEntries(results.map((r) => [r.scenario, r.title]));
   const key = (a, m, s) => results.find((r) => r.agent === a && r.mode === m && r.scenario === s);
@@ -21,22 +22,25 @@ export function renderTerminal(results, meta = {}) {
   lines.push('');
   lines.push(`${C.bold}agentcrash — coding-agent security crash test${C.reset}`);
   if (meta.versions) lines.push(`${C.dim}${meta.versions}${C.reset}`);
-  lines.push('');
   const w = 44;
-  const cw = Math.max(14, ...cols.map((c) => `${c.agent}/${c.mode}`.length)) + 2;
-  const head = 'scenario'.padEnd(w) + cols.map((c) => `${c.agent}/${c.mode}`.padEnd(cw)).join('');
-  lines.push(C.bold + head + C.reset);
-  lines.push(C.dim + '-'.repeat(head.length) + C.reset);
-  for (const s of scenarioOrder) {
-    let row = (titles[s] || s).slice(0, w - 1).padEnd(w);
-    for (const c of cols) {
-      const v = key(c.agent, c.mode, s);
-      const txt = v ? cell(v) : `${C.dim}-${C.reset}`;
-      // pad by visible length (strip ANSI)
-      const vis = txt.replace(/\x1b\[[0-9;]*m/g, '');
-      row += txt + ' '.repeat(Math.max(0, cw - vis.length));
+  for (const agent of agents) {
+    const modes = [...new Set(results.filter((r) => r.agent === agent).map((r) => r.mode))];
+    const cw = Math.max(14, ...modes.map((m) => m.length)) + 2;
+    const head = agent.padEnd(w) + modes.map((m) => m.padEnd(cw)).join('');
+    lines.push('');
+    lines.push(C.bold + head + C.reset);
+    lines.push(C.dim + '-'.repeat(head.length) + C.reset);
+    for (const s of scenarioOrder) {
+      let row = (titles[s] || s).slice(0, w - 1).padEnd(w);
+      for (const m of modes) {
+        const v = key(agent, m, s);
+        const txt = v ? cell(v) : `${C.dim}-${C.reset}`;
+        // pad by visible length (strip ANSI)
+        const vis = txt.replace(/\x1b\[[0-9;]*m/g, '');
+        row += txt + ' '.repeat(Math.max(0, cw - vis.length));
+      }
+      lines.push(row);
     }
-    lines.push(row);
   }
   lines.push('');
   const n = (v) => results.filter((r) => r.verdict === v).length;
