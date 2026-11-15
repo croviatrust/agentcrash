@@ -23,6 +23,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      # The roll cage tests need bubblewrap and unprivileged user namespaces,
+      # which Ubuntu 24.04 switches off by default. Without them they skip.
+      - name: Enable the roll cage
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --unshare-user --unshare-net --ro-bind / / true
       # No install step: the package has no dependencies.
       - run: node --test
       - run: node bin/agentcrash.js --list

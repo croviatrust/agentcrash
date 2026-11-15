@@ -6,19 +6,25 @@ import { renderTerminal, renderHtml } from '../src/report.js';
 import { userConfig } from '../src/myconfig.js';
 
 const argv = process.argv.slice(2);
+if (argv[0] === 'cage') {
+  const { cageMain } = await import('../src/cage/run.js');
+  process.exit(await cageMain(argv.slice(1)));
+}
 const opt = (name, def) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : def; };
 const flag = (name) => argv.includes(`--${name}`);
 
 if (flag('help') || flag('h')) {
   console.log(`agentcrash — crash-test your coding agent against a hijacked model
 
-Usage: agentcrash [options]
+Usage: agentcrash [options]            crash-test the agents you have installed
+       agentcrash cage -- <agent...>   run your agent inside the roll cage (agentcrash cage --help)
   --agent <name|all>   claude, codex, gemini, qwen, opencode, crush (default: all installed)
   --mode  <mode|all>                  permission mode (default: all)
   --scenario <id>                     run a single scenario
   --repo                              honest model, hostile repository: project config, hooks, MCP
   --my-config                         test your own agent config (permissions, tool lists, hooks, sandbox)
   --no-hooks                          with --my-config: leave your hooks out, so none of your scripts run
+  --cage                              run every test twice, bare and inside the roll cage, and show both
   --keep                              keep each run's sandbox under ~/.agentcrash/runs
   --json <file>                       write raw results as JSON
   --html <file>                       write a shareable HTML report
@@ -53,6 +59,14 @@ const ids = only ? [only] : repoMode ? repoVectorIds() : scenarioIds();
 // nothing is written back to your files.
 const myConfig = flag('my-config');
 const keep = flag('keep');
+// --cage: the same attacks again with the agent inside the roll cage.
+const cagedToo = flag('cage');
+if (cagedToo) {
+  const { cageAvailable } = await import('../src/cage/index.js');
+  const ok = cageAvailable();
+  if (!ok.ok) { console.error(`--cage: ${ok.why}`); process.exit(2); }
+}
+const passes = cagedToo ? [false, true] : [false];
 if (myConfig) {
   console.error('--my-config: reading your real agent configuration (secrets redacted, never written back)');
   if (!flag('no-hooks')) console.error('  your hooks run as they do in every session; --no-hooks leaves them out');
@@ -75,7 +89,7 @@ for (const agent of agents) {
     for (const trust of [false, true]) {
       for (const id of ids) {
         process.stderr.write(`\r\x1b[2K  ${agent}/${trust ? 'trusted folder' : 'fresh clone'} · ${id}`);
-        results.push(await runRepoOne({ agent, vectorId: id, trust, mine, keep, mode: wantMode === 'all' ? undefined : wantMode }));
+        for (const caged of passes) results.push(await runRepoOne({ agent, vectorId: id, trust, mine, keep, caged, mode: wantMode === 'all' ? undefined : wantMode }));
       }
     }
     continue;
@@ -87,7 +101,7 @@ for (const agent of agents) {
     if (!(mode in adapters[agent].modes) && !myConfig) { console.error(`skip ${agent}/${mode}: unknown mode`); continue; }
     for (const id of ids) {
       process.stderr.write(`\r\x1b[2K  ${agent}/${mode} · ${id}`);
-      results.push(await runOne({ agent, mode, scenarioId: id, mine, keep }));
+      for (const caged of passes) results.push(await runOne({ agent, mode, scenarioId: id, mine, keep, caged }));
     }
   }
 }

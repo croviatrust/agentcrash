@@ -47,8 +47,30 @@ export function renderTerminal(results, meta = {}) {
   const untested = results.length - n(EXPOSED) - n(CONTAINED);
   lines.push(`${results.length} runs · ${C.red}${n(EXPOSED)} exposed${C.reset} · ${C.green}${n(CONTAINED)} contained${C.reset} · ${C.yellow}${untested} not tested${C.reset}`);
   if (untested) lines.push(`${C.dim}not tested = ${untestedNote(results)}; it is not a containment.${C.reset}`);
+  const cs = cageSummary(results);
+  if (cs) {
+    lines.push('');
+    lines.push(`${C.bold}same attacks, same agents:${C.reset} bare ${C.red}${cs.bare} exposed${C.reset} → in the cage ${cs.caged ? C.red : C.green}${cs.caged} exposed${C.reset}`);
+    if (cs.caged) lines.push(`${C.dim}${cs.note}${C.reset}`);
+  }
   lines.push('');
   return lines.join('\n');
+}
+
+// With --cage every test ran twice. What is left exposed inside the cage is
+// damage to the workspace, which the cage leaves writable and records first.
+export function cageSummary(results) {
+  const inCage = results.filter((r) => r.caged);
+  if (!inCage.length) return null;
+  const left = inCage.filter((r) => r.verdict === EXPOSED);
+  const undone = left.filter((r) => r.undo_restored).length;
+  const what = [...new Set(left.map((r) => r.title || r.scenario))].join('; ');
+  return {
+    bare: results.filter((r) => !r.caged && r.verdict === EXPOSED).length,
+    caged: left.length,
+    undone,
+    note: left.length ? `still exposed in the cage: ${what}.${left.some((r) => 'undo_restored' in r) ? ` agentcrash cage --undo put the files back in ${undone} of ${left.length}.` : ''}` : '',
+  };
 }
 
 // Repo-mode runs are judged on project configuration, not on tool calls.
@@ -68,6 +90,7 @@ export function renderHtml(results, meta = {}) {
   const exposed = results.filter((r) => r.verdict === EXPOSED).length;
   const contained = results.filter((r) => r.verdict === CONTAINED).length;
   const untested = results.length - exposed - contained;
+  const cs = cageSummary(results);
 
   const th = cols.map((c) => `<th><span class="ag">${esc(c.agent)}</span><span class="md">${esc(c.mode)}</span></th>`).join('');
   const rows = scenarioOrder.map((s) => {
@@ -98,6 +121,7 @@ th,td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line);fo
 th{background:#0e131d;position:sticky;top:0}.ag{display:block;font-weight:700}.md{display:block;color:var(--dim);font-size:11px;font-weight:400}
 td.sc{text-align:left}td.sc b{display:block}.harm{color:var(--dim);font-size:11px;letter-spacing:.04em}
 td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(--dim)}
+.cage{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin:0 0 24px}
 .foot{color:var(--dim);margin-top:20px;font-size:13px}.foot a{color:inherit}
 </style></head><body><div class="wrap">
 <h1>agentcrash</h1>
@@ -110,6 +134,7 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <div><b style="color:var(--dim)">${untested}</b><span class="dim">not tested</span></div>
 <div><b>${results.length}</b><span class="dim">runs</span></div>
 </div>
+${cs ? `<p class="cage"><b>Same attacks, same agents:</b> bare <b style="color:var(--exp)">${cs.bare} exposed</b> → inside <code>agentcrash cage</code> <b style="color:${cs.caged ? 'var(--exp)' : 'var(--con)'}">${cs.caged} exposed</b>.${cs.caged ? ` ${esc(cs.note[0].toUpperCase() + cs.note.slice(1))}` : ''}</p>` : ''}
 <div class="scroll"><table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
 </tbody></table></div>

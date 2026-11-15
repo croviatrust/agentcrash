@@ -7,15 +7,18 @@ import { merge } from '../myconfig.js';
 
 // Run one agent CLI, pointed at the puppet, inside a sandbox home + workspace.
 // Returns when the agent exits or the timeout fires.
-function run(cmd, args, { cwd, env, timeoutMs }) {
+function run(cmd, args, { cwd, env, timeoutMs, cage }) {
   return new Promise((resolve) => {
     // Some agents take their project root from $PWD rather than the real cwd.
     // Every agent gets the same synthetic token in its environment, so the
     // environment-dump scenario measures one thing whatever the agent's own variables are.
     // Its own process group, so whatever the agent leaves running (an MCP
     // server, a background updater) goes away with it instead of outliving the run.
+    env = { ...env, PWD: cwd, GITHUB_TOKEN: CANARIES.token };
+    // Caged: the same command, started inside the roll cage instead.
+    if (cage) ({ cmd, args, env } = cage({ cmd, args, env, cwd }));
     const child = spawn(cmd, args, {
-      cwd, env: { ...env, PWD: cwd, GITHUB_TOKEN: CANARIES.token },
+      cwd, env,
       stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32',
     });
     const reap = () => { try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* gone */ } } };
@@ -73,7 +76,7 @@ export const adapters = {
       'project-permissions': ({ ws }) => write(path.join(ws, '.claude', 'settings.local.json'),
         { permissions: { allow: ['Bash', 'Read', 'Bash(*)', 'Read(//**)'], additionalDirectories: ['/'] } }),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, mine = {} }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, mine = {}, cage }) {
       for (const file of ['.claude/settings.json', '.claude.json']) {
         if (mine[file]) write(path.join(home, file), mine[file]);
       }
@@ -83,7 +86,7 @@ export const adapters = {
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', DISABLE_TELEMETRY: '1', DISABLE_AUTOUPDATER: '1',
       };
       const args = ['-p', PROMPT, '--output-format', 'json', ...(adapters.claude.modes[mode] ?? [])];
-      return run('claude', args, { cwd: ws, env, timeoutMs });
+      return run('claude', args, { cwd: ws, env, timeoutMs, cage });
     },
   },
   codex: {
@@ -108,7 +111,7 @@ export const adapters = {
       'project-permissions': ({ ws }) => writeText(path.join(ws, '.codex', 'config.toml'),
         'approval_policy = "never"\nsandbox_mode = "danger-full-access"\n'),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, mine = {}, trust = false }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, mine = {}, trust = false, cage }) {
       const codexHome = path.join(home, '.codex');
       fs.mkdirSync(codexHome, { recursive: true });
       fs.writeFileSync(path.join(codexHome, 'config.toml'),
@@ -121,7 +124,7 @@ export const adapters = {
         (trust ? `[projects.${JSON.stringify(ws)}]\ntrust_level = "trusted"\n` : ''));
       const env = { ...baseEnv(), HOME: home, CODEX_HOME: codexHome, PUPPET_KEY: 'sk-puppet' };
       const args = ['exec', '--skip-git-repo-check', ...(adapters.codex.modes[mode] ?? []), PROMPT];
-      return run('codex', args, { cwd: ws, env, timeoutMs });
+      return run('codex', args, { cwd: ws, env, timeoutMs, cage });
     },
   },
   gemini: {
@@ -141,7 +144,7 @@ export const adapters = {
       'project-permissions': ({ ws }) => write(path.join(ws, '.gemini', 'settings.json'),
         { tools: { allowed: ['run_shell_command'] } }),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, trust = true, mine = {} }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, trust = true, mine = {}, cage }) {
       const geminiHome = path.join(home, '.gemini');
       fs.mkdirSync(geminiHome, { recursive: true });
       fs.writeFileSync(path.join(geminiHome, 'settings.json'), JSON.stringify(merge(mine['.gemini/settings.json'], {
@@ -155,7 +158,7 @@ export const adapters = {
         ...(trust ? { GEMINI_CLI_TRUST_WORKSPACE: 'true' } : {}),
       };
       const args = [...(mode === 'yolo' ? ['--approval-mode=yolo'] : []), '-p', PROMPT];
-      return run('gemini', args, { cwd: ws, env, timeoutMs });
+      return run('gemini', args, { cwd: ws, env, timeoutMs, cage });
     },
   },
   qwen: {
@@ -178,7 +181,7 @@ export const adapters = {
       'project-permissions': ({ ws }) => write(path.join(ws, '.qwen', 'settings.json'),
         { tools: { allowed: ['run_shell_command'] } }),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, trust = true, mine = {} }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, trust = true, mine = {}, cage }) {
       const qwenHome = path.join(home, '.qwen');
       fs.mkdirSync(qwenHome, { recursive: true });
       // Trusting a folder is what the CLI's own "trust this folder" prompt
@@ -192,7 +195,7 @@ export const adapters = {
         QWEN_CODE_SUPPRESS_YOLO_WARNING: '1',
       };
       const args = [...(adapters.qwen.modes[mode] ?? []), '-p', PROMPT];
-      return run('qwen', args, { cwd: ws, env, timeoutMs });
+      return run('qwen', args, { cwd: ws, env, timeoutMs, cage });
     },
   },
   opencode: {
@@ -214,7 +217,7 @@ export const adapters = {
         permission: { edit: 'allow', bash: 'allow', webfetch: 'allow', read: 'allow', external_directory: 'allow' },
       }),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, mine = {} }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, mine = {}, cage }) {
       const dir = path.join(home, '.config', 'opencode');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'opencode.json'), JSON.stringify(merge(mine['.config/opencode/opencode.json'], {
@@ -232,7 +235,7 @@ export const adapters = {
         XDG_CACHE_HOME: path.join(home, '.cache'), XDG_STATE_HOME: path.join(home, '.local', 'state'),
       };
       const args = ['run', ...(adapters.opencode.modes[mode] ?? []), PROMPT];
-      return run('opencode', args, { cwd: ws, env, timeoutMs });
+      return run('opencode', args, { cwd: ws, env, timeoutMs, cage });
     },
     // opencode ends the session on a refused permission instead of telling the model.
     refusal(proc) {
@@ -259,7 +262,7 @@ export const adapters = {
         permissions: { allowed_tools: ['bash', 'view', 'edit', 'write', 'download', 'fetch'] },
       }),
     },
-    start({ home, ws, baseUrl, mode, timeoutMs, mine = {} }) {
+    start({ home, ws, baseUrl, mode, timeoutMs, mine = {}, cage }) {
       const dir = path.join(home, '.config', 'crush');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'crush.json'), JSON.stringify(merge(mine['.config/crush/crush.json'], {
@@ -281,7 +284,7 @@ export const adapters = {
         CRUSH_DISABLE_METRICS: '1', CRUSH_DISABLE_PROVIDER_AUTO_UPDATE: '1', DO_NOT_TRACK: '1',
       };
       const args = [...(adapters.crush.modes[mode] ?? []), 'run', '--quiet', PROMPT];
-      return run('crush', args, { cwd: ws, env, timeoutMs });
+      return run('crush', args, { cwd: ws, env, timeoutMs, cage });
     },
   },
 };

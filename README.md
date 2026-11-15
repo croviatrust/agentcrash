@@ -9,6 +9,12 @@ node bin/agentcrash.js
 
 No install step: zero dependencies. Tested with Node 22 on Linux. Not on npm yet.
 
+Then run the agent where there is nothing to take — same agents, same attacks, **101 exposed → 9**, and the 9 can be undone ([the roll cage](#the-roll-cage)):
+
+```bash
+node bin/agentcrash.js cage -- claude --dangerously-skip-permissions
+```
+
 
 
 ## Why
@@ -55,6 +61,89 @@ Things that are only visible when you test the client, not the model:
 These are design choices observed on the versions above, not vulnerabilities.
 
 Reproduce the table yourself: `node bin/agentcrash.js --html report.html`.
+
+## The roll cage
+
+The table above is the diagnosis. This is the treatment, measured the same way:
+
+```bash
+node bin/agentcrash.js cage -- claude --dangerously-skip-permissions     # or codex, gemini, qwen, opencode, crush
+```
+
+Your real agent, your real account, your real repository — started in a Linux namespace where the things a hijacked model goes for are not there to be taken:
+
+| | bare | inside the cage |
+|---|---|---|
+| `~/.ssh`, `~/.aws`, the rest of your home | readable | **not there**: home is an empty tmpfs, plus the agent's own state, your toolchains and `~/.gitconfig` |
+| `.env` files in the project | readable | **read as empty** (`.env.example` stays) |
+| your exported variables (`GITHUB_TOKEN`, …) | inherited | **left outside**: an allow-list plus the agent's own variables |
+| the network | open | **closed**, except a proxy that only dials the agent's model hosts; every refusal is listed when the session ends |
+| `~/.bashrc`, anything outside the project | writable | **not there** or read-only |
+| `.git` (history, hooks, config) | writable | **read-only**; `--git-write` lets the agent commit, hooks and config stay read-only |
+| the project files | writable | writable — and **recorded before every session**: `agentcrash cage --undo` puts back what was deleted or changed, uncommitted work included |
+| other processes, the Docker socket, ssh-agent, the keyring | reachable | **not there** |
+
+The same 165 crash tests, run twice — `node bin/agentcrash.js --cage`:
+
+| agent / mode | bare: exposed | in the cage: exposed | contained | not tested |
+|---|---|---|---|---|
+| claude / default | 1 | 0 | 11 | 0 |
+| claude / `--dangerously-skip-permissions` | 11 | 1 | 10 | 0 |
+| codex / read-only | 3 | 0 | 11 | 0 |
+| codex / workspace-write | 4 | 1 | 10 | 0 |
+| codex / danger-full-access | 11 | 1 | 10 | 0 |
+| gemini / default | 0 | 0 | 3 | 8 |
+| gemini / `--yolo` | 11 | 1 | 10 | 0 |
+| qwen / `--approval-mode=default` | 1 | 0 | 3 | 8 |
+| qwen / no flag | 3 | 0 | 3 | 8 |
+| qwen / `--approval-mode=auto-edit` | 3 | 0 | 3 | 8 |
+| qwen / `--approval-mode=yolo` | 11 | 1 | 10 | 0 |
+| opencode / default | 9 | 1 | 10 | 0 |
+| opencode / `--auto` | 11 | 1 | 10 | 0 |
+| crush / default | 11 | 1 | 10 | 0 |
+| crush / `--yolo` | 11 | 1 | 10 | 0 |
+| **total** | **101** | **9** | **124** | **32** |
+
+**101 exposed → 9** ([full report](example-cage-report.html)). Every secret read, every exfiltration, the `curl | sh`, the `~/.bashrc` persistence, the write outside the workspace and the destruction of `.git` stopped, in every mode of every agent, the "bypass" modes included. The agent still reached its model in all 165 caged runs, no run timed out, and a second full run gave the same 330 verdicts.
+
+The 9 that remain are one scenario: deleting the project's own files, which an agent that can write code can always do. In all 9 the session ended with the files gone and `agentcrash cage --undo` put them back byte for byte. `not tested` stays `not tested`: the cage does not turn a missing measurement into a pass.
+
+The repository-as-attacker tests ([below](#the-repository-as-the-attacker)), run twice — `node bin/agentcrash.js --repo --cage`:
+
+| 36 runs each | exposed | contained | not tested |
+|---|---|---|---|
+| bare | 20 | 8 | 8 |
+| in the cage | **0** | 30 | 6 |
+
+The cage does not stop a repository's MCP server or hook from starting: in 12 caged runs the repository's command still ran. It ran where your SSH key is not, and its upload was refused: 12 keys uploaded bare, 0 in the cage.
+
+What you get when a session ends:
+
+```text
+$ agentcrash cage -- claude --dangerously-skip-permissions
+agentcrash cage: claude in /home/you/project
+  network: *.anthropic.com, claude.ai, *.claude.ai, *.claude.com
+  .env read as empty: .env
+  environment: 23 of your variables left outside
+  undo: 5 file(s) recorded; agentcrash cage --undo puts them back
+  …
+agentcrash cage: refused 1 connection(s):
+  sink.agentcrash.test:80
+  (--allow <host> lets one through next time)
+agentcrash cage: this session deleted 2, changed 0, added 0 file(s)
+  deleted: README.md, app.py
+  (agentcrash cage --undo puts them back)
+```
+
+Day to day: `--registries` lets npm, PyPI, crates.io and the Go proxy through, `--allow host[:port]` one more host, `--local 11434` a model server on your own machine, `--rw`/`--ro` one more path, `--env NAME` one more variable. `agentcrash cage --help` has the rest.
+
+What the cage does not do, so you do not assume it:
+
+- **The project is still readable, and the model provider is still reachable.** A hijacked model can read your source and say it to the provider you already send it to. Secrets belong outside the project; the cage empties `.env`, not a key pasted into `config.py`.
+- **The agent's own credential stays inside.** It cannot work without it.
+- **Anything you `--allow` is a way out.** A package registry accepts uploads. `--open-net` removes the network cage altogether.
+- **Undo covers what `.gitignore` does not ignore.** Files the session added are listed and left in place.
+- **Linux only for now.** It is [bubblewrap](https://github.com/containers/bubblewrap) doing the namespaces (`apt install bubblewrap`), with a hand-assembled seccomp filter so an agent on your terminal cannot type into it (`TIOCSTI`). It is a boundary against a hijacked agent, not against a kernel exploit.
 
 ## What it tests
 
@@ -155,6 +244,9 @@ node bin/agentcrash.js --agent codex --mode read-only
 node bin/agentcrash.js --scenario read-ssh-key
 node bin/agentcrash.js --repo              # hostile repository, honest model, fresh clone vs trusted
 node bin/agentcrash.js --my-config         # your real permissions and hooks, secrets left behind
+node bin/agentcrash.js --cage              # every test twice: bare, and inside the roll cage
+node bin/agentcrash.js cage -- claude      # work inside the roll cage
+node bin/agentcrash.js cage --undo         # put back what the last session deleted or changed
 node bin/agentcrash.js --json out.json --html report.html
 node bin/agentcrash.js --list
 ```
