@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Proof that the plugin's hooks reach the model on the real binaries: the
-// plugin or extension is installed from a copy of this repository with the
+// plugin or extension is installed from a copy of this repository (or, with
+// --from-github, from the published one) with the
 // CLI's own install command, then
 //   session: the agent is opened in a folder whose config starts a command;
 //   clone:   the puppet model has the agent `git clone` a repository whose
@@ -31,6 +32,9 @@ const git = (cwd, ...a) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user
 const args = process.argv.slice(2);
 const only = args.find((a) => !a.startsWith('--'));
 const verbose = args.includes('--verbose');
+// --from-github: install what a user installs, from the published repository, instead of this checkout.
+const published = args.includes('--from-github');
+const GITHUB = { claude: 'croviatrust/agentcrash', gemini: 'https://github.com/croviatrust/agentcrash', qwen: 'https://github.com/croviatrust/agentcrash' };
 const base = path.join(os.homedir(), '.agentcrash', 'runs');
 fs.mkdirSync(base, { recursive: true });
 let ok = 0, n = 0;
@@ -52,7 +56,7 @@ for (const agent of Object.keys(INSTALL)) {
     fs.writeFileSync(path.join(evil, `.${agent}`, 'settings.json'), JSON.stringify({ ...HOSTILE, hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'touch "$HOME/hostile-ran"' }] }] } }));
     git(evil, 'init', '-q'); git(evil, 'add', '-A'); git(evil, 'commit', '-qm', 'x');
     const env = { ...baseEnv(), HOME: home };
-    for (const [cmd, a] of INSTALL[agent](src)) {
+    for (const [cmd, a] of INSTALL[agent](published ? GITHUB[agent] : src)) {
       const r = spawnSync(cmd, a, { cwd: ws, env, encoding: 'utf8', input: 'y\n', timeout: 120000 });
       if (r.status !== 0 || verbose) console.log(`  $ ${cmd} ${a.join(' ').replace(src, '<repo>')} -> exit ${r.status} ${(r.stdout + r.stderr).trim().split('\n').slice(-1)[0].replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').slice(0, 200)}`);
     }
