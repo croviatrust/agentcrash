@@ -30,6 +30,7 @@ agentcrash guard: you have not approved this; claude has not started.
 | [`guard`](#the-guard-the-agent-asks-before-the-repository-acts) | a shim in front of `claude`, `codex`, `gemini`, `qwen`, `opencode`, `crush`: a folder that starts something stops once, until you approve exactly that config | your `PATH` |
 | [GitHub Action](#in-a-pull-request) | fails a pull request that adds a command, a plugin, a model endpoint or a permission | CI, safe on forks |
 | [MCP server and plugins](#inside-the-agent) | `inspect_repository` as a tool the agent itself can call | Claude Code plugin, Gemini / Qwen extension, any MCP client |
+| [census](#how-common-is-this-a-census-of-public-github) | how much public project config does this today: 78% of sampled `.mcp.json` files start a command in a fresh clone | `census/census.json` |
 | [`cage`](#the-roll-cage) | runs the agent where a hijacked model has nothing to take: **101 exposed → 9**, and the 9 can be undone | Linux namespaces |
 | [crash test](#what-it-found) | the measurement behind all of it: a hostile puppet model drives the real binary, verdicts come from real file and network effects | your terminal |
 
@@ -283,6 +284,32 @@ node bin/agentcrash.js inspect . --badge
 ```
 
 prints the markdown for a badge that says what your repository starts in an agent on open: green `nothing runs on open`, or red with the count. Back it with the Action and `fail-on: any`, and it stays true.
+
+## How common is this: a census of public GitHub
+
+Is a repository that acts on your agent an exotic attack, or just how projects are set up now? `scripts/census.mjs` asks GitHub code search for the config files the six agents read, samples them across six file-size bands, reads each sampled file through the API and runs `inspect` on the text. Nothing is cloned, nothing is executed, and only counts are kept: no repository name, no file content, no credential.
+
+Taken 2026-11-16, 1,904 files read; within a row, every file comes from a different repository:
+
+| file at the repository root | files GitHub has indexed | read | starts a command | …in a fresh clone, no prompt | fetches an unpinned package | widens permissions | moves model traffic |
+|---|---|---|---|---|---|---|---|
+| `.mcp.json` | 89,660 | 228 | 78% | 78% | 32% | – | – |
+| `.claude/settings.json` | 97,136 | 240 | 46% | 46% | 2% | 50% | 0% |
+| `.claude/settings.local.json` | 97,472 | 240 | 3% | 3% | 0% | 97% | 0% |
+| `.codex/config.toml` | 12,094 | 240 | 43% | once trusted | 17% | 2% | – |
+| `.gemini/settings.json` | 4,195 | 240 | 60% | once trusted | 17% | 3% | – |
+| `.qwen/settings.json` | 1,727 | 194 | 7% | once trusted | 0% | 1% | – |
+| `opencode.json` | 39,800 | 237 | 44% | 44% | 26% | 3% | 8% |
+| `opencode.jsonc` | 6,695 | 224 | 49% | 49% | 28% | 1% | 2% |
+| `crush.json` | 2,126 | 61 | 24% | 24% | 7% | 0% | 13% |
+
+Percentages are of the files that sit at a repository root, weighted by size band.
+
+- **About four in five `.mcp.json` files start a command** in a headless Claude Code 2.1.322 session opened in a fresh clone, and about one in three do it with `npx -y name` or `uvx name` and no version: whoever publishes that package name next runs on everyone who opens the repository.
+- **`.claude/settings.local.json` is meant to stay on one machine; GitHub has indexed some 97,000 of them**, and nearly every one read grants permissions to whoever clones the repository — 8 of 240 allow any shell command.
+- **This is ordinary project setup, not malware.** That is the point: a config that starts a command is normal, so nobody looks at it, and a pull request that adds one more does not stand out.
+
+What this is not. The files are the first results code search returns in each size band, not a random draw, and GitHub's own counts are approximate and cover default branches only — treat the percentages as the shape of the sample, not a measurement of all of GitHub. Rows overlap (a repository can have several of these files), so they must not be added up. "Starts" means the shape was measured starting on the versions above; nobody ran these repositories. Raw counts are in [`census/census.json`](census/census.json); `GITHUB_TOKEN=… node scripts/census.mjs` repeats it.
 
 ## The guard: the agent asks before the repository acts
 

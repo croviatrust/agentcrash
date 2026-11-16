@@ -1,0 +1,738 @@
+{
+  "taken": "2026-11-16T19:01:21.043Z",
+  "method": "GitHub code search (default branches, as indexed), stratified by file size; first results of each stratum, exact file at repository root only; classified by agentcrash inspect; nothing executed",
+  "per_stratum": 40,
+  "summary": {
+    ".mcp.json": {
+      "indexed_files": 89660,
+      "sampled": 228,
+      "distinct_repositories_in_sample": 228,
+      "distinct_contents_in_sample": 228,
+      "in_sample": {
+        "starts_a_command": 192,
+        "starts_it_in_a_fresh_clone": 192,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 97,
+        "starts_a_pinned_registry_package": 16,
+        "starts_a_script_from_the_repository": 48,
+        "has_a_hook": 0,
+        "has_a_hook_that_needs_no_tool_use": 0,
+        "widens_permissions": 0,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 8,
+        "holds_a_literal_credential": 2,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 54610,
+        "starts_a_command": 42701,
+        "starts_it_in_a_fresh_clone": 42701,
+        "starts_an_unpinned_registry_package": 17536,
+        "widens_permissions": 0,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 47
+      }
+    },
+    ".claude/settings.json": {
+      "indexed_files": 97136,
+      "sampled": 240,
+      "distinct_repositories_in_sample": 240,
+      "distinct_contents_in_sample": 240,
+      "in_sample": {
+        "starts_a_command": 110,
+        "starts_it_in_a_fresh_clone": 110,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 1,
+        "starts_an_unpinned_registry_package": 4,
+        "starts_a_pinned_registry_package": 1,
+        "starts_a_script_from_the_repository": 26,
+        "has_a_hook": 110,
+        "has_a_hook_that_needs_no_tool_use": 69,
+        "widens_permissions": 126,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 5,
+        "spells_a_command_the_reader_did_not_find": 2,
+        "holds_a_literal_credential": 0,
+        "could_not_be_parsed": 1
+      },
+      "estimated": {
+        "at_repository_root": 73949,
+        "starts_a_command": 34258,
+        "starts_it_in_a_fresh_clone": 34258,
+        "starts_an_unpinned_registry_package": 1279,
+        "widens_permissions": 37103,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 1403,
+        "holds_a_literal_credential": 0
+      }
+    },
+    ".claude/settings.local.json": {
+      "indexed_files": 97472,
+      "sampled": 240,
+      "distinct_repositories_in_sample": 240,
+      "distinct_contents_in_sample": 240,
+      "in_sample": {
+        "starts_a_command": 10,
+        "starts_it_in_a_fresh_clone": 10,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 0,
+        "starts_a_pinned_registry_package": 0,
+        "starts_a_script_from_the_repository": 2,
+        "has_a_hook": 10,
+        "has_a_hook_that_needs_no_tool_use": 7,
+        "widens_permissions": 234,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 8,
+        "spells_a_command_the_reader_did_not_find": 0,
+        "holds_a_literal_credential": 0,
+        "could_not_be_parsed": 1
+      },
+      "estimated": {
+        "at_repository_root": 61079,
+        "starts_a_command": 1948,
+        "starts_it_in_a_fresh_clone": 1948,
+        "starts_an_unpinned_registry_package": 0,
+        "widens_permissions": 59501,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 2198,
+        "holds_a_literal_credential": 0
+      }
+    },
+    ".codex/config.toml": {
+      "indexed_files": 12094,
+      "sampled": 240,
+      "distinct_repositories_in_sample": 240,
+      "distinct_contents_in_sample": 240,
+      "in_sample": {
+        "starts_a_command": 102,
+        "starts_it_in_a_fresh_clone": 0,
+        "only_commands_held_for_approval": 13,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 42,
+        "starts_a_pinned_registry_package": 9,
+        "starts_a_script_from_the_repository": 24,
+        "has_a_hook": 0,
+        "has_a_hook_that_needs_no_tool_use": 0,
+        "widens_permissions": 7,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 4,
+        "holds_a_literal_credential": 0,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 11427,
+        "starts_a_command": 4917,
+        "starts_it_in_a_fresh_clone": 0,
+        "starts_an_unpinned_registry_package": 1892,
+        "widens_permissions": 258,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 0
+      }
+    },
+    ".gemini/settings.json": {
+      "indexed_files": 4195,
+      "sampled": 240,
+      "distinct_repositories_in_sample": 240,
+      "distinct_contents_in_sample": 240,
+      "in_sample": {
+        "starts_a_command": 163,
+        "starts_it_in_a_fresh_clone": 0,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 48,
+        "starts_a_pinned_registry_package": 5,
+        "starts_a_script_from_the_repository": 40,
+        "has_a_hook": 86,
+        "has_a_hook_that_needs_no_tool_use": 62,
+        "widens_permissions": 7,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 2,
+        "holds_a_literal_credential": 1,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 3219,
+        "starts_a_command": 1916,
+        "starts_it_in_a_fresh_clone": 0,
+        "starts_an_unpinned_registry_package": 557,
+        "widens_permissions": 93,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 18
+      }
+    },
+    ".qwen/settings.json": {
+      "indexed_files": 1727,
+      "sampled": 194,
+      "distinct_repositories_in_sample": 194,
+      "distinct_contents_in_sample": 194,
+      "in_sample": {
+        "starts_a_command": 18,
+        "starts_it_in_a_fresh_clone": 0,
+        "only_commands_held_for_approval": 33,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 0,
+        "starts_a_pinned_registry_package": 0,
+        "starts_a_script_from_the_repository": 3,
+        "has_a_hook": 18,
+        "has_a_hook_that_needs_no_tool_use": 17,
+        "widens_permissions": 3,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 2,
+        "holds_a_literal_credential": 2,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 704,
+        "starts_a_command": 52,
+        "starts_it_in_a_fresh_clone": 0,
+        "starts_an_unpinned_registry_package": 0,
+        "widens_permissions": 9,
+        "sends_model_traffic_where_the_repository_says": 0,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 7
+      }
+    },
+    "opencode.json": {
+      "indexed_files": 39800,
+      "sampled": 237,
+      "distinct_repositories_in_sample": 237,
+      "distinct_contents_in_sample": 237,
+      "in_sample": {
+        "starts_a_command": 105,
+        "starts_it_in_a_fresh_clone": 105,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 11,
+        "starts_an_unpinned_registry_package": 66,
+        "starts_a_pinned_registry_package": 9,
+        "starts_a_script_from_the_repository": 24,
+        "has_a_hook": 0,
+        "has_a_hook_that_needs_no_tool_use": 0,
+        "widens_permissions": 7,
+        "sends_model_traffic_where_the_repository_says": 22,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 11,
+        "holds_a_literal_credential": 2,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 23756,
+        "starts_a_command": 10514,
+        "starts_it_in_a_fresh_clone": 10514,
+        "starts_an_unpinned_registry_package": 6260,
+        "widens_permissions": 712,
+        "sends_model_traffic_where_the_repository_says": 1949,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 135
+      }
+    },
+    "opencode.jsonc": {
+      "indexed_files": 6695,
+      "sampled": 224,
+      "distinct_repositories_in_sample": 224,
+      "distinct_contents_in_sample": 224,
+      "in_sample": {
+        "starts_a_command": 103,
+        "starts_it_in_a_fresh_clone": 103,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 60,
+        "starts_a_pinned_registry_package": 10,
+        "starts_a_script_from_the_repository": 19,
+        "has_a_hook": 0,
+        "has_a_hook_that_needs_no_tool_use": 0,
+        "widens_permissions": 3,
+        "sends_model_traffic_where_the_repository_says": 4,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 10,
+        "holds_a_literal_credential": 0,
+        "could_not_be_parsed": 3
+      },
+      "estimated": {
+        "at_repository_root": 2736,
+        "starts_a_command": 1331,
+        "starts_it_in_a_fresh_clone": 1331,
+        "starts_an_unpinned_registry_package": 767,
+        "widens_permissions": 40,
+        "sends_model_traffic_where_the_repository_says": 48,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 0
+      }
+    },
+    "crush.json": {
+      "indexed_files": 2126,
+      "sampled": 61,
+      "distinct_repositories_in_sample": 61,
+      "distinct_contents_in_sample": 61,
+      "in_sample": {
+        "starts_a_command": 15,
+        "starts_it_in_a_fresh_clone": 15,
+        "only_commands_held_for_approval": 0,
+        "only_commands_on_an_unmeasured_path": 0,
+        "starts_an_unpinned_registry_package": 4,
+        "starts_a_pinned_registry_package": 0,
+        "starts_a_script_from_the_repository": 3,
+        "has_a_hook": 0,
+        "has_a_hook_that_needs_no_tool_use": 0,
+        "widens_permissions": 0,
+        "sends_model_traffic_where_the_repository_says": 7,
+        "allows_any_shell_command": 0,
+        "spells_a_command_the_reader_did_not_find": 18,
+        "holds_a_literal_credential": 1,
+        "could_not_be_parsed": 0
+      },
+      "estimated": {
+        "at_repository_root": 184,
+        "starts_a_command": 44,
+        "starts_it_in_a_fresh_clone": 44,
+        "starts_an_unpinned_registry_package": 12,
+        "widens_permissions": 0,
+        "sends_model_traffic_where_the_repository_says": 24,
+        "allows_any_shell_command": 0,
+        "holds_a_literal_credential": 3
+      }
+    }
+  },
+  "strata": [
+    {
+      "file": ".mcp.json",
+      "size": "0..149",
+      "indexed": 31296,
+      "returned": 100,
+      "at_root": 72,
+      "sampled": 40
+    },
+    {
+      "file": ".mcp.json",
+      "size": "150..299",
+      "indexed": 32128,
+      "returned": 100,
+      "at_root": 50,
+      "sampled": 40
+    },
+    {
+      "file": ".mcp.json",
+      "size": "300..599",
+      "indexed": 15712,
+      "returned": 100,
+      "at_root": 61,
+      "sampled": 40
+    },
+    {
+      "file": ".mcp.json",
+      "size": "600..1199",
+      "indexed": 6592,
+      "returned": 100,
+      "at_root": 71,
+      "sampled": 40
+    },
+    {
+      "file": ".mcp.json",
+      "size": "1200..2999",
+      "indexed": 2940,
+      "returned": 100,
+      "at_root": 50,
+      "sampled": 40
+    },
+    {
+      "file": ".mcp.json",
+      "size": ">=3000",
+      "indexed": 992,
+      "returned": 100,
+      "at_root": 28,
+      "sampled": 28
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": "0..149",
+      "indexed": 11952,
+      "returned": 100,
+      "at_root": 77,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": "150..299",
+      "indexed": 16768,
+      "returned": 100,
+      "at_root": 88,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": "300..599",
+      "indexed": 20192,
+      "returned": 100,
+      "at_root": 75,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": "600..1199",
+      "indexed": 21344,
+      "returned": 100,
+      "at_root": 76,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": "1200..2999",
+      "indexed": 17312,
+      "returned": 100,
+      "at_root": 70,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.json",
+      "size": ">=3000",
+      "indexed": 9568,
+      "returned": 100,
+      "at_root": 68,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": "0..149",
+      "indexed": 15456,
+      "returned": 100,
+      "at_root": 64,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": "150..299",
+      "indexed": 20768,
+      "returned": 100,
+      "at_root": 70,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": "300..599",
+      "indexed": 20224,
+      "returned": 100,
+      "at_root": 62,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": "600..1199",
+      "indexed": 17696,
+      "returned": 100,
+      "at_root": 63,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": "1200..2999",
+      "indexed": 13152,
+      "returned": 100,
+      "at_root": 56,
+      "sampled": 40
+    },
+    {
+      "file": ".claude/settings.local.json",
+      "size": ">=3000",
+      "indexed": 10176,
+      "returned": 100,
+      "at_root": 55,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": "0..149",
+      "indexed": 3752,
+      "returned": 100,
+      "at_root": 95,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": "150..299",
+      "indexed": 2716,
+      "returned": 100,
+      "at_root": 95,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": "300..599",
+      "indexed": 2596,
+      "returned": 100,
+      "at_root": 94,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": "600..1199",
+      "indexed": 1474,
+      "returned": 100,
+      "at_root": 96,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": "1200..2999",
+      "indexed": 1046,
+      "returned": 100,
+      "at_root": 93,
+      "sampled": 40
+    },
+    {
+      "file": ".codex/config.toml",
+      "size": ">=3000",
+      "indexed": 510,
+      "returned": 100,
+      "at_root": 89,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": "0..149",
+      "indexed": 1054,
+      "returned": 100,
+      "at_root": 92,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": "150..299",
+      "indexed": 1104,
+      "returned": 100,
+      "at_root": 60,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": "300..599",
+      "indexed": 900,
+      "returned": 100,
+      "at_root": 79,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": "600..1199",
+      "indexed": 689,
+      "returned": 100,
+      "at_root": 71,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": "1200..2999",
+      "indexed": 335,
+      "returned": 100,
+      "at_root": 84,
+      "sampled": 40
+    },
+    {
+      "file": ".gemini/settings.json",
+      "size": ">=3000",
+      "indexed": 113,
+      "returned": 100,
+      "at_root": 93,
+      "sampled": 40
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": "0..149",
+      "indexed": 770,
+      "returned": 100,
+      "at_root": 10,
+      "sampled": 10
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": "150..299",
+      "indexed": 398,
+      "returned": 100,
+      "at_root": 43,
+      "sampled": 40
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": "300..599",
+      "indexed": 245,
+      "returned": 100,
+      "at_root": 73,
+      "sampled": 40
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": "600..1199",
+      "indexed": 130,
+      "returned": 100,
+      "at_root": 87,
+      "sampled": 40
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": "1200..2999",
+      "indexed": 156,
+      "returned": 100,
+      "at_root": 90,
+      "sampled": 40
+    },
+    {
+      "file": ".qwen/settings.json",
+      "size": ">=3000",
+      "indexed": 28,
+      "returned": 28,
+      "at_root": 24,
+      "sampled": 24
+    },
+    {
+      "file": "opencode.json",
+      "size": "0..149",
+      "indexed": 4472,
+      "returned": 100,
+      "at_root": 80,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.json",
+      "size": "150..299",
+      "indexed": 6656,
+      "returned": 100,
+      "at_root": 75,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.json",
+      "size": "300..599",
+      "indexed": 9408,
+      "returned": 100,
+      "at_root": 66,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.json",
+      "size": "600..1199",
+      "indexed": 7184,
+      "returned": 100,
+      "at_root": 52,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.json",
+      "size": "1200..2999",
+      "indexed": 7016,
+      "returned": 100,
+      "at_root": 48,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.json",
+      "size": ">=3000",
+      "indexed": 5064,
+      "returned": 100,
+      "at_root": 37,
+      "sampled": 37
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": "0..149",
+      "indexed": 775,
+      "returned": 100,
+      "at_root": 33,
+      "sampled": 33
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": "150..299",
+      "indexed": 1110,
+      "returned": 100,
+      "at_root": 52,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": "300..599",
+      "indexed": 1278,
+      "returned": 100,
+      "at_root": 44,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": "600..1199",
+      "indexed": 1154,
+      "returned": 100,
+      "at_root": 43,
+      "sampled": 40
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": "1200..2999",
+      "indexed": 1194,
+      "returned": 100,
+      "at_root": 35,
+      "sampled": 35
+    },
+    {
+      "file": "opencode.jsonc",
+      "size": ">=3000",
+      "indexed": 1184,
+      "returned": 100,
+      "at_root": 36,
+      "sampled": 36
+    },
+    {
+      "file": "crush.json",
+      "size": "0..149",
+      "indexed": 258,
+      "returned": 100,
+      "at_root": 11,
+      "sampled": 11
+    },
+    {
+      "file": "crush.json",
+      "size": "150..299",
+      "indexed": 216,
+      "returned": 100,
+      "at_root": 16,
+      "sampled": 16
+    },
+    {
+      "file": "crush.json",
+      "size": "300..599",
+      "indexed": 360,
+      "returned": 100,
+      "at_root": 16,
+      "sampled": 16
+    },
+    {
+      "file": "crush.json",
+      "size": "600..1199",
+      "indexed": 331,
+      "returned": 100,
+      "at_root": 12,
+      "sampled": 12
+    },
+    {
+      "file": "crush.json",
+      "size": "1200..2999",
+      "indexed": 360,
+      "returned": 100,
+      "at_root": 5,
+      "sampled": 5
+    },
+    {
+      "file": "crush.json",
+      "size": ">=3000",
+      "indexed": 601,
+      "returned": 100,
+      "at_root": 1,
+      "sampled": 1
+    }
+  ]
+}
