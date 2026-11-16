@@ -5,8 +5,15 @@
 **A repository can run commands as you the moment you open a coding agent in it — before the model has said a word.** agentcrash shows you what a repository would start, stops the agent at the door until you have seen it, and measures what the agent gives away when the model itself turns hostile. Claude Code, Codex CLI, Gemini CLI, Qwen Code, opencode and Crush: the real binaries, no API key, nothing leaves your machine.
 
 ```bash
+# nothing to install: read a repository on GitHub before you clone it, or the folder you are in
+npx -y https://github.com/croviatrust/agentcrash/tarball/main inspect owner/repo
+npx -y https://github.com/croviatrust/agentcrash/tarball/main inspect .
+```
+
+To keep it:
+
+```bash
 git clone https://github.com/croviatrust/agentcrash && cd agentcrash   # zero dependencies, Node 20+
-node bin/agentcrash.js inspect ../some-repo     # what that repository starts in your agent; nothing is run
 node bin/agentcrash.js guard install --rc       # from now on, your agent asks before a repository starts anything
 ```
 
@@ -250,6 +257,18 @@ Every label is a measurement, not a reading of the documentation. Each shape `in
 - **Redirects the session:** `env.ANTHROPIC_BASE_URL` in Claude Code's project settings, `provider.<name>.options.baseURL` in `opencode.json`, `providers.<name>.base_url` in `crush.json`. In a fresh clone each of the three sent its model requests — with the API key that was in the environment — to the address the repository chose instead (7, 8 and 10 requests in the probe, none to the configured provider). Loopback addresses are not reported. Inside the roll cage none arrived.
 - **Not measured, and labelled so:** remote MCP servers, opencode language servers and formatters, Claude Code's status line. They are listed; they are never counted as running.
 
+### Before you clone it
+
+Give `inspect` a GitHub repository instead of a folder and it reads the same files from GitHub: one request for the file list, one for each config file that exists, to `api.github.com` and `raw.githubusercontent.com` and nowhere else. Nothing is cloned.
+
+```bash
+node bin/agentcrash.js inspect owner/repo                  # or github:owner/repo, or the github.com link
+```
+
+It says what `inspect` says on a clone of the same commit (`test/remote.test.mjs` compares the two). Public repositories only. Anonymous requests to GitHub's API are limited per address; when the file list is refused the config files are still read by name, the answer says that code loaded from `.opencode/` is missing from it, and `GITHUB_TOKEN` in the environment (sent to `api.github.com` only) lifts the limit.
+
+The same code runs as a static page ([`site/`](site/), built by `node scripts/build-site.mjs` and kept on the `gh-pages` branch): your browser fetches the files from GitHub and reads them there; no server of ours is involved, and the page's content security policy lets it talk to those two hosts only. Every result has a link (`?r=owner/repo`) that reads the repository again when opened. It is not hosted yet: until GitHub Pages is switched on for this repository, `node scripts/build-site.mjs out` and any static file server show it. What a repository wrote is put on the page as text: driven in Chrome against a repository whose server names, commands and file names were markup, nothing rendered and nothing ran (`node scripts/page-proof.mjs`).
+
 ### In a pull request
 
 A config that starts a command is usually put there by the maintainers. The moment worth catching is when a pull request *adds* one, because the reviewer who checks it out has already trusted the folder.
@@ -283,7 +302,7 @@ The base is read straight from git's object store: no checkout, no filter, no ho
 node bin/agentcrash.js inspect . --badge
 ```
 
-prints the markdown for a badge that says what your repository starts in an agent on open: green `nothing runs on open`, or red with the count. Back it with the Action and `fail-on: any`, and it stays true.
+prints the markdown for a badge that says what your repository starts in an agent on open: green `nothing runs on open`, or red with the count. Back it with the Action and `fail-on: any`, and it stays true. `inspect owner/repo --badge` does the same for a repository on GitHub.
 
 ## How common is this: a census of public GitHub
 
@@ -357,6 +376,13 @@ qwen extensions install https://github.com/croviatrust/agentcrash
 # anything else that speaks MCP over stdio
 node /path/to/agentcrash/bin/agentcrash.js mcp
 ```
+
+Installed that way, it also acts on its own, through two hooks the plugin and the extension bring:
+
+- **When a session starts** in a folder whose config starts something in that agent, it says so once, to you and to the model: how many commands, files of code, endpoints and permission changes, and in which files. It stays quiet until that config changes, and in a folder you approved with `guard allow`.
+- **After the agent runs a `git clone`** (or `gh repo clone`), it reads what was cloned and, if that repository would start something in an agent, tells the model not to open an agent or a sub-agent there before you have seen it.
+
+Both only read. What they hand to the model is counts, agent names and config file paths, never a command or a name the repository wrote, so a hostile config cannot use the hook to speak to your model. Installed with each CLI's own command from a copy of this repository, on Claude Code 2.1.322, Gemini CLI 0.67.0 and Qwen Code 0.27.1, both messages reached the model in 6 of 6 runs, and the cloned repository's own command did not start in any (`node scripts/hook-proof.mjs`). Measured headless against the puppet model; Codex CLI, opencode and Crush have no plugin of ours yet and get the MCP tool only.
 
 Read-only, zero dependencies, one tool. Given to each of the six binaries through its own config, all six put `inspect_repository` in front of their model (`node scripts/mcp-proof.mjs`); the Claude Code plugin and the Gemini and Qwen extensions were installed from a local copy of this repository with each CLI's own install command and did the same. The tool's answer quotes the repository's config, which is attacker-controlled text: it says so, and control characters are stripped.
 

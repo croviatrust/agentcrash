@@ -2,12 +2,29 @@
   "name": "agentcrash",
   "version": "0.1.0",
   "description": "See what a repository would start in a coding agent before one is opened in it: MCP servers, hooks, plugins, redirected model endpoints, widened permissions. Read-only.",
-  "author": { "name": "Crovia Trust", "email": "info@croviatrust.com", "url": "https://github.com/croviatrust" },
+  "author": {
+    "name": "Crovia Trust",
+    "email": "info@croviatrust.com",
+    "url": "https://github.com/croviatrust"
+  },
   "homepage": "https://github.com/croviatrust/agentcrash",
   "repository": "https://github.com/croviatrust/agentcrash",
   "license": "Apache-2.0",
-  "keywords": ["security", "mcp", "hooks", "supply-chain", "prompt-injection"],
+  "keywords": [
+    "security",
+    "mcp",
+    "hooks",
+    "supply-chain",
+    "prompt-injection"
+  ],
   "mcpServers": {
-    "agentcrash": { "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/bin/agentcrash.js", "mcp"] }
-  }
+    "agentcrash": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/bin/agentcrash.js",
+        "mcp"
+      ]
+    }
+  },
+  "hooks": "./hooks/claude.json"
 }

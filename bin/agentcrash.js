@@ -10,6 +10,10 @@ if (argv[0] === 'cage') {
   const { cageMain } = await import('../src/cage/run.js');
   process.exit(await cageMain(argv.slice(1)));
 }
+if (argv[0] === 'hook') {
+  const { hookMain } = await import('../src/hook.js');
+  process.exit(await hookMain(argv.slice(1)));
+}
 if (argv[0] === 'mcp') {
   const { mcpMain } = await import('../src/mcp.js');
   process.exit(await mcpMain());
@@ -22,11 +26,12 @@ if (argv[0] === 'inspect') {
   const { inspectDir, inspectRef, added, renderInspect, blocking } = await import('../src/inspect.js');
   const rest = argv.slice(1);
   if (rest.includes('--help')) {
-    console.log(`agentcrash inspect [dir] — what a repository does to an agent opened in it
+    console.log(`agentcrash inspect [dir | owner/repo] — what a repository does to an agent opened in it
 
 Reads the project config the six agents look for (.mcp.json, .claude/, .codex/, .gemini/, .qwen/,
 opencode.json, crush.json) and lists the commands it starts and the permissions it widens.
-Nothing in the repository is executed. Exits 1 if the repository would run something, or redirect the session, on open; 0 otherwise.
+Nothing in the repository is executed. Given owner/repo or a github.com URL instead of a folder,
+it reads the same files from GitHub without cloning. Exits 1 if the repository would run something, or redirect the session, on open; 0 otherwise.
   --since <ref>  only what was added since that git ref (a pull request against its base);
                  exits 1 if the change adds a command or widens a permission
   --json         print the findings as JSON
@@ -37,8 +42,26 @@ Nothing in the repository is executed. Exits 1 if the repository would run somet
   const since = at >= 0 ? rest[at + 1] : null;
   if (at >= 0 && (!since || since.startsWith('-'))) { console.error('agentcrash inspect: --since needs a git ref'); process.exit(2); }
   const dir = rest.find((a, i) => !a.startsWith('--') && !(at >= 0 && i === at + 1)) ?? '.';
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) { console.error(`agentcrash inspect: ${dir} is not a directory`); process.exit(2); }
-  let r = inspectDir(dir);
+  const isDir = fs.existsSync(dir) && fs.statSync(dir).isDirectory();
+  let r;
+  if (!isDir) {
+    // Not a folder here: a repository on GitHub, read without cloning it.
+    const { parseSpec, inspectGitHub } = await import('../src/remote.js');
+    const id = parseSpec(dir);
+    if (!id) { console.error(`agentcrash inspect: ${dir} is not a directory, and not a GitHub repository (owner/repo)`); process.exit(2); }
+    if (since) { console.error('agentcrash inspect: --since needs a local clone'); process.exit(2); }
+    // A token, if you have one in the environment, goes to api.github.com only: it lifts GitHub's anonymous rate limit.
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const fetchFn = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.timeout(20000), headers: { ...init.headers, 'User-Agent': 'agentcrash', ...(token && new URL(url).hostname === 'api.github.com' ? { Authorization: `Bearer ${token}` } : {}) } });
+    try {
+      const g = await inspectGitHub(id, fetchFn);
+      r = { dir: `github.com/${g.owner}/${g.repo}${g.sha ? `@${g.sha.slice(0, 7)}` : ''}`, findings: g.findings, unreadable: g.unreadable, remote: { owner: g.owner, repo: g.repo, sha: g.sha, listed: g.listed } };
+      if (!g.listed && !rest.includes('--json') && !rest.includes('--badge')) console.error('agentcrash inspect: GitHub would not list the files (rate limit or a very large repository): files loaded as code from .opencode/ are not in this answer. Set GITHUB_TOKEN to lift the limit.');
+    } catch (e) {
+      console.error(`agentcrash inspect: ${e.code ? e.message : 'GitHub could not be read.'}`);
+      process.exit(2);
+    }
+  } else r = inspectDir(dir);
   if (since) {
     let base;
     try { base = inspectRef(dir, since); } catch { console.error(`agentcrash inspect: ${since} is not a commit in ${dir}`); process.exit(2); }

@@ -44,6 +44,13 @@
     "bin",
     "src",
     "scenarios",
+    "hooks",
+    "commands",
+    "action",
+    "action.yml",
+    ".claude-plugin",
+    "gemini-extension.json",
+    "qwen-extension.json",
     "README.md",
     "LICENSE",
     "NOTICE"

@@ -1,0 +1,15 @@
+{
+  "name": "agentcrash",
+  "version": "0.1.0",
+  "description": "See what a repository would start in a coding agent before one is opened in it: MCP servers, hooks, plugins, redirected model endpoints, widened permissions. Read-only.",
+  "mcpServers": {
+    "agentcrash": {
+      "command": "node",
+      "args": [
+        "${extensionPath}${/}bin${/}agentcrash.js",
+        "mcp"
+      ]
+    }
+  },
+  "hooks": "hooks/qwen.json"
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://api.github.com https://raw.githubusercontent.com; img-src https://img.shields.io; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>agentcrash — what a repository starts in your coding agent</title>
+<meta name="description" content="Paste a GitHub repository and see what it would start in Claude Code, Codex CLI, Gemini CLI, Qwen Code, opencode or Crush the moment you open an agent in it: MCP servers, hooks, plugins, redirected model endpoints, widened permissions. Read in your browser; nothing is cloned or executed.">
+<meta property="og:title" content="What does this repository start in your coding agent?">
+<meta property="og:description" content="MCP servers, hooks, plugins and permissions a repository brings for Claude Code, Codex, Gemini, Qwen, opencode and Crush. Read in your browser, nothing is run.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <p class="brand"><a href="https://github.com/croviatrust/agentcrash">agentcrash</a></p>
+  <h1>What does this repository start in your coding agent?</h1>
+  <p class="lede">A repository can bring its own MCP servers, hooks, plugins and permissions. Some agents act on them the moment you open a session there, before the model has said a word. Paste a public GitHub repository to see what it brings.</p>
+  <form id="f" autocomplete="off">
+    <input id="q" name="r" type="text" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="owner/repo or a github.com link" aria-label="GitHub repository" maxlength="300" required>
+    <button id="go" type="submit">Read it</button>
+  </form>
+  <p class="quiet">Your browser fetches the config files from GitHub and reads them here. Nothing is cloned, nothing is executed, nothing is sent to us.</p>
+  <section id="out" aria-live="polite" hidden></section>
+  <section class="how">
+    <h2>Before you open an agent in a clone</h2>
+    <pre><code>npx -y https://github.com/croviatrust/agentcrash/tarball/main inspect owner/repo   # read it on GitHub, without cloning
+npx -y https://github.com/croviatrust/agentcrash/tarball/main inspect .            # or the folder you are in</code></pre>
+    <p>Inside the agent, so it happens without you remembering: <code>claude plugin marketplace add croviatrust/agentcrash</code> then <code>claude plugin install agentcrash@agentcrash</code>; <code>gemini extensions install https://github.com/croviatrust/agentcrash</code>; <code>qwen extensions install https://github.com/croviatrust/agentcrash</code>. On pull requests: <code>uses: croviatrust/agentcrash@main</code>.</p>
+    <p class="quiet">What "runs on open" means here was measured on the real binaries in headless sessions: Claude Code 2.1.322, Codex CLI 0.167.0, Gemini CLI 0.67.0, Qwen Code 0.27.1, opencode 1.19.5, Crush 0.100.0. Other versions, and interactive sessions of some of these, may ask first. Only config at the repository root is read. <a href="https://github.com/croviatrust/agentcrash#what-a-repository-starts-inspect">Method</a>.</p>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

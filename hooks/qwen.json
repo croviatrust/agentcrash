@@ -1,0 +1,26 @@
+{
+  "description": "agentcrash: say once what a folder's config starts in this agent, and what a repository the agent just cloned would start in one. Read-only.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for d in \"${CLAUDE_PLUGIN_ROOT}\" \"${extensionPath}\"; do [ -f \"$d/bin/agentcrash.js\" ] && exec node \"$d/bin/agentcrash.js\" hook session; done"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for d in \"${CLAUDE_PLUGIN_ROOT}\" \"${extensionPath}\"; do [ -f \"$d/bin/agentcrash.js\" ] && exec node \"$d/bin/agentcrash.js\" hook clone; done"
+          }
+        ]
+      }
+    ]
+  }
+}
