@@ -1,0 +1,13 @@
+{
+  "name": "agentcrash",
+  "owner": { "name": "Crovia Trust", "email": "info@croviatrust.com" },
+  "metadata": { "description": "agentcrash: what a repository does to the coding agent you open in it." },
+  "plugins": [
+    {
+      "name": "agentcrash",
+      "source": "./",
+      "description": "See what a repository would start in a coding agent before one is opened in it. Read-only.",
+      "category": "security"
+    }
+  ]
+}

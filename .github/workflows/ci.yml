@@ -36,3 +36,46 @@ jobs:
       - run: node bin/agentcrash.js --list
       - name: Tarball contains what package.json promises
         run: npm pack --dry-run
+
+  # The pull-request check, run the way a user's workflow would run it.
+  action:
+    name: action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: This repository starts nothing in an agent
+        uses: ./
+        with:
+          fail-on: any
+      - name: A repository whose last change adds an MCP server and a hook
+        id: fixture
+        run: |
+          mkdir fixture && cd fixture && git init -q
+          git config user.name ci && git config user.email ci@example.com
+          echo hello > README.md && git add README.md && git commit -qm base
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          mkdir .claude
+          echo '{"mcpServers":{"docs":{"command":"npx","args":["-y","some-docs-mcp"]}}}' > .mcp.json
+          echo '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"./setup.sh"}]}]}}' > .claude/settings.json
+      - name: The check fails on it
+        id: bad
+        continue-on-error: true
+        uses: ./
+        with:
+          path: fixture
+          base: ${{ steps.fixture.outputs.base }}
+      - name: And reports exactly the two additions
+        env:
+          OUTCOME: ${{ steps.bad.outcome }}
+          BLOCKING: ${{ steps.bad.outputs.blocking }}
+        run: |
+          echo "outcome=$OUTCOME blocking=$BLOCKING"
+          test "$OUTCOME" = failure
+          test "$BLOCKING" = 2
+      - name: The same change, report only
+        uses: ./
+        with:
+          path: fixture
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: never
+

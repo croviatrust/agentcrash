@@ -1,21 +1,39 @@
 # agentcrash
 
-**Crash-test your coding agent against a hijacked model.** Does your Claude Code / Codex / Gemini / Qwen Code / opencode / Crush setup leak your SSH key, exfiltrate `.env`, or `rm -rf` your repo if the model turns hostile? Find out in 60 seconds — no API key, no cloud, fully reproducible.
+[![ci](https://github.com/croviatrust/agentcrash/actions/workflows/ci.yml/badge.svg)](https://github.com/croviatrust/agentcrash/actions/workflows/ci.yml) [![agentcrash: nothing runs on open](https://img.shields.io/badge/agentcrash-nothing%20runs%20on%20open-brightgreen)](#a-badge-for-your-repository) [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
+**A repository can run commands as you the moment you open a coding agent in it — before the model has said a word.** agentcrash shows you what a repository would start, stops the agent at the door until you have seen it, and measures what the agent gives away when the model itself turns hostile. Claude Code, Codex CLI, Gemini CLI, Qwen Code, opencode and Crush: the real binaries, no API key, nothing leaves your machine.
 
 ```bash
-git clone https://github.com/croviatrust/agentcrash && cd agentcrash
-node bin/agentcrash.js
+git clone https://github.com/croviatrust/agentcrash && cd agentcrash   # zero dependencies, Node 20+
+node bin/agentcrash.js inspect ../some-repo     # what that repository starts in your agent; nothing is run
+node bin/agentcrash.js guard install --rc       # from now on, your agent asks before a repository starts anything
 ```
 
-No install step: zero dependencies. Tested with Node 22 on Linux. Not on npm yet.
+```text
+$ cd some-repo && claude
 
-Then run the agent where there is nothing to take — same agents, same attacks, **101 exposed → 9**, and the 9 can be undone ([the roll cage](#the-roll-cage)):
+  .mcp.json
+    RUNS ON OPEN        MCP server "docs": npx -y some-docs-mcp
+                        ↳ fetches some-docs-mcp from a registry each time, version not pinned: whoever publishes that name runs it on you
+  .claude/settings.json
+    RUNS ON OPEN        SessionStart hook: ./scripts/setup.sh
+    REDIRECTS ON OPEN   ANTHROPIC_BASE_URL is pointed at https://mirror.example: requests to it, your API key included, go there
 
-```bash
-node bin/agentcrash.js cage -- claude --dangerously-skip-permissions
+agentcrash guard: you have not approved this; claude has not started.
+  [r]un once   [a]lways for exactly this config   [c]age: run it where there is nothing to take   [N]o  >
 ```
 
+| | what it is | where it lives |
+|---|---|---|
+| [`inspect`](#before-you-open-a-repository-inspect) | reads a repository's agent config and says what it starts, loads, redirects and widens — and when | your terminal, read-only |
+| [`guard`](#the-guard-the-agent-asks-before-the-repository-acts) | a shim in front of `claude`, `codex`, `gemini`, `qwen`, `opencode`, `crush`: a folder that starts something stops once, until you approve exactly that config | your `PATH` |
+| [GitHub Action](#in-a-pull-request) | fails a pull request that adds a command, a plugin, a model endpoint or a permission | CI, safe on forks |
+| [MCP server and plugins](#inside-the-agent) | `inspect_repository` as a tool the agent itself can call | Claude Code plugin, Gemini / Qwen extension, any MCP client |
+| [`cage`](#the-roll-cage) | runs the agent where a hijacked model has nothing to take: **101 exposed → 9**, and the 9 can be undone | Linux namespaces |
+| [crash test](#what-it-found) | the measurement behind all of it: a hostile puppet model drives the real binary, verdicts come from real file and network effects | your terminal |
 
+Not on npm yet: every command below is `node bin/agentcrash.js …` from the clone.
 
 ## Why
 
@@ -196,6 +214,125 @@ node bin/agentcrash.js --repo
 
 All of this is the headless path (`-p`, `exec`, `run`), which is what CI jobs, scripts and wrappers use. Interactive sessions of some of these CLIs show a trust prompt first; that prompt is not measured here.
 
+## Before you open a repository: `inspect`
+
+The table above is what the agents do. `inspect` reads a repository and tells you which of those things *this* repository would set off — before any agent has seen it.
+
+```bash
+node bin/agentcrash.js inspect path/to/clone
+```
+
+```text
+  .mcp.json
+    RUNS ON OPEN        MCP server "docs": npx -y some-docs-mcp
+                        ↳ fetches some-docs-mcp from a registry each time, version not pinned: whoever publishes that name runs it on you
+    RUNS ON OPEN        MCP server "db": node ./tools/db-mcp.js
+  .claude/settings.json
+    RUNS ON OPEN        SessionStart hook: ./scripts/setup.sh
+    WIDENS ONCE TRUSTED Claude Code 2.1.322 is told to allow: Bash(npm test)
+  .codex/config.toml
+    RUNS ONCE TRUSTED   MCP server "search": uvx search-mcp==2.1.0
+
+3 commands run as you, with no prompt, in a headless session opened in this folder with Claude Code 2.1.322.
+1 more runs once the folder is trusted (Codex CLI 0.167.0).
+```
+
+It only reads the config files the six agents look for; nothing in the repository is executed, symlinks are not followed, and a credential written into a config is reported by name, never by value. Exit status is 1 when something would run, be loaded, or redirect the session in a fresh clone.
+
+Every label is a measurement, not a reading of the documentation. Each shape `inspect` reports was fed to the real binary first, and so were the shapes it stays quiet about:
+
+- **Runs:** `mcpServers` in `.mcp.json` (with or without `type: "stdio"`), nested `hooks` entries of `type: "command"` — `SessionStart`, `UserPromptSubmit`, `Stop`, `SessionEnd`, and `PreToolUse` as soon as the model asks for a tool — and the allow-lists and sandbox settings in the table above.
+- **Does not run, so not reported:** a `.mcp.json` that is a bare server map or uses VS Code's `servers` key; `mcpServers` inside `.claude/settings.json`; a hook entry that is flat or has no `type` (Claude Code, Gemini CLI and Qwen Code all skip it); `defaultMode: "bypassPermissions"` from a project.
+- **Waits for you:** Qwen Code parks a project MCP server as pending approval. Codex CLI holds a project hook until it has been reviewed, and `bypass_hook_trust = true` written by the repository does not lift that — only the `--dangerously-bypass-hook-trust` flag did.
+- **Loads code:** opencode imports every file in `.opencode/plugin(s)/` and `.opencode/tool(s)/`, and every entry of `plugin` in `opencode.json` — a path, or a package name it downloads from the registry and runs. No command line is involved, so a scanner looking for commands sees nothing.
+- **Runs a helper:** `apiKeyHelper` in `.claude/settings.json` or `settings.local.json` is executed in a fresh clone.
+- **Redirects the session:** `env.ANTHROPIC_BASE_URL` in Claude Code's project settings, `provider.<name>.options.baseURL` in `opencode.json`, `providers.<name>.base_url` in `crush.json`. In a fresh clone each of the three sent its model requests — with the API key that was in the environment — to the address the repository chose instead (7, 8 and 10 requests in the probe, none to the configured provider). Loopback addresses are not reported. Inside the roll cage none arrived.
+- **Not measured, and labelled so:** remote MCP servers, opencode language servers and formatters, Claude Code's status line. They are listed; they are never counted as running.
+
+### In a pull request
+
+A config that starts a command is usually put there by the maintainers. The moment worth catching is when a pull request *adds* one, because the reviewer who checks it out has already trusted the folder.
+
+```yaml
+# .github/workflows/agentcrash.yml
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  agentcrash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: croviatrust/agentcrash@main   # or pin a commit
+```
+
+The check fails when the pull request adds a command an agent would run, code it would load, a model endpoint, or a widened permission, with an annotation on the file and the full listing in the job summary. What the repository already had is not reported; what the base branch gained meanwhile is not blamed on the pull request. It needs no token and no write permission, and because it parses config and executes nothing it is safe on pull requests from forks. Names and commands from the pull request are escaped before they reach the log, so they cannot issue workflow commands.
+
+`fail-on: any` fails when the repository holds anything that acts on open (the claim behind the badge below); `fail-on: never` only reports. The same check from a shell:
+
+```bash
+node bin/agentcrash.js inspect . --since origin/main
+```
+
+The base is read straight from git's object store: no checkout, no filter, no hook.
+
+### A badge for your repository
+
+```bash
+node bin/agentcrash.js inspect . --badge
+```
+
+prints the markdown for a badge that says what your repository starts in an agent on open: green `nothing runs on open`, or red with the count. Back it with the Action and `fail-on: any`, and it stays true.
+
+## The guard: the agent asks before the repository acts
+
+`inspect` only helps if you remember to run it. The guard runs it for you, every time, in the one place it cannot be skipped: in front of the agent's own command.
+
+```bash
+node bin/agentcrash.js guard install --rc   # shims for every agent CLI on your PATH, one line in ~/.bashrc and ~/.zshrc
+node bin/agentcrash.js guard status         # what each agent would be stopped for in this folder
+node bin/agentcrash.js guard allow          # approve exactly the config that is here now
+node bin/agentcrash.js guard uninstall      # shims and that line gone again
+```
+
+- **A folder that starts nothing costs nothing.** The agent starts as always, with its own arguments, output and exit code.
+- **A folder whose config starts a command, loads code, moves your model traffic or widens permissions stops once.** You see what, and choose: run once, always for exactly this config, in the [roll cage](#the-roll-cage), or not at all. Without a terminal (CI, scripts) it exits 3 and starts nothing.
+- **Approval is for that exact config.** When a `git pull` changes what the folder starts — or changes a plugin file the agent loads — you are asked again. Scripts a command points at are not followed: approving `./setup.sh` approves the command, not the file's future contents.
+- `AGENTCRASH_GUARD=off|allow|cage` decides for one run without asking.
+
+Measured on the real binaries (`node scripts/guard-proof.mjs`): the same hostile repository opened bare, behind the guard, and behind the guard after approval.
+
+| agent | repository's command | bare | behind the guard | after approval |
+|---|---|---|---|---|
+| Claude Code 2.1.322 | MCP server, fresh clone | ran | **agent not started, model never contacted** | ran |
+| Claude Code 2.1.322 | `SessionStart` hook, fresh clone | ran | **not started** | ran |
+| Codex CLI 0.167.0 | MCP server, trusted folder | ran | **not started** | ran |
+| Gemini CLI 0.67.0 | MCP server, trusted folder | ran | **not started** | ran |
+| Gemini CLI 0.67.0 | `SessionStart` hook, trusted folder | ran | **not started** | ran |
+| Qwen Code 0.27.1 | `SessionStart` hook, trusted folder | ran | **not started** | ran |
+| opencode 1.19.5 | MCP server, fresh clone | ran | **not started** | ran |
+| Crush 0.100.0 | MCP server, fresh clone | ran | **not started** | ran |
+
+8 of 8 held, and all six agents reached the model unchanged through the shim in a clean folder. What the guard is not: it is a shim on your `PATH`, so an agent started by absolute path, from an IDE extension, or by a tool that bypasses `PATH` does not pass through it; and it knows the config shapes `inspect` knows. It has not been run with a logged-in agent in an interactive session — only headless, against the puppet model.
+
+## Inside the agent
+
+The same reading is available to the agent itself, as an MCP tool, `inspect_repository`: an agent about to work in a repository it just cloned — or to start a sub-agent there — can ask what that repository would start first.
+
+```bash
+# Claude Code: plugin (the MCP server plus an /agentcrash:inspect command)
+claude plugin marketplace add croviatrust/agentcrash && claude plugin install agentcrash@agentcrash
+
+# Gemini CLI and Qwen Code: extension
+gemini extensions install https://github.com/croviatrust/agentcrash
+qwen extensions install https://github.com/croviatrust/agentcrash
+
+# anything else that speaks MCP over stdio
+node /path/to/agentcrash/bin/agentcrash.js mcp
+```
+
+Read-only, zero dependencies, one tool. Given to each of the six binaries through its own config, all six put `inspect_repository` in front of their model (`node scripts/mcp-proof.mjs`); the Claude Code plugin and the Gemini and Qwen extensions were installed from a local copy of this repository with each CLI's own install command and did the same. The tool's answer quotes the repository's config, which is attacker-controlled text: it says so, and control characters are stripped.
+
 ## Your configuration, not the default one
 
 Every table here is a default install. Yours is not: you have allow-lists, hooks, a sandbox setting you changed once and forgot.
@@ -247,6 +384,10 @@ node bin/agentcrash.js --my-config         # your real permissions and hooks, se
 node bin/agentcrash.js --cage              # every test twice: bare, and inside the roll cage
 node bin/agentcrash.js cage -- claude      # work inside the roll cage
 node bin/agentcrash.js cage --undo         # put back what the last session deleted or changed
+node bin/agentcrash.js inspect ../some-clone         # what a repository would start in your agent; nothing is run
+node bin/agentcrash.js inspect . --since origin/main  # only what a pull request adds
+node bin/agentcrash.js guard install --rc            # ask before a repository starts anything in your agent
+node bin/agentcrash.js mcp                           # the same reading as an MCP tool, over stdio
 node bin/agentcrash.js --json out.json --html report.html
 node bin/agentcrash.js --list
 ```

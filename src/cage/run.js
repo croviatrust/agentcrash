@@ -1,5 +1,6 @@
 // `agentcrash cage -- <agent command>`: your real agent, your real account,
 // inside the roll cage.
+import { inspectDir, runs } from '../inspect.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -89,6 +90,9 @@ export async function cageMain(argv) {
     console.error(`  network: ${net === 'open' ? 'open (--open-net)' : allow.length ? allow.join(', ') : 'nothing allowed'}`);
     if (c.hidden.length) console.error(`  .env read as empty: ${c.hidden.map((f) => path.relative(process.cwd(), f)).join(', ')}`);
     console.error(`  environment: ${c.dropped.length} of your variables left outside`);
+    // What the repository itself is about to start in this agent.
+    const mine = inspectDir(process.cwd()).findings.filter((f) => runs(f) && (f.when === 'open' || f.when === 'trusted') && (!profile || f.agent === profile)).map((f) => ({ ...f, command: f.command ?? f.file }));
+    if (mine.length) console.error(`  this repository starts ${mine.length} command(s) in the agent, inside the cage: ${mine.slice(0, 3).map((f) => f.command.length > 60 ? f.command.slice(0, 60) + '…' : f.command).join(' · ')}${mine.length > 3 ? ' · …' : ''} (agentcrash inspect)`);
     if (snap) console.error(snap.error ? `  undo: not available (${snap.error})` : `  undo: ${snap.files} file(s) recorded; agentcrash cage --undo puts them back`);
   }
   const code = await new Promise((resolve) => {

@@ -10,6 +10,49 @@ if (argv[0] === 'cage') {
   const { cageMain } = await import('../src/cage/run.js');
   process.exit(await cageMain(argv.slice(1)));
 }
+if (argv[0] === 'mcp') {
+  const { mcpMain } = await import('../src/mcp.js');
+  process.exit(await mcpMain());
+}
+if (argv[0] === 'guard') {
+  const { guardMain } = await import('../src/guard.js');
+  process.exit(await guardMain(argv.slice(1)));
+}
+if (argv[0] === 'inspect') {
+  const { inspectDir, inspectRef, added, renderInspect, blocking } = await import('../src/inspect.js');
+  const rest = argv.slice(1);
+  if (rest.includes('--help')) {
+    console.log(`agentcrash inspect [dir] — what a repository does to an agent opened in it
+
+Reads the project config the six agents look for (.mcp.json, .claude/, .codex/, .gemini/, .qwen/,
+opencode.json, crush.json) and lists the commands it starts and the permissions it widens.
+Nothing in the repository is executed. Exits 1 if the repository would run something, or redirect the session, on open; 0 otherwise.
+  --since <ref>  only what was added since that git ref (a pull request against its base);
+                 exits 1 if the change adds a command or widens a permission
+  --json         print the findings as JSON
+  --badge        print a README badge (markdown) saying what runs on open in this repository`);
+    process.exit(0);
+  }
+  const at = rest.indexOf('--since');
+  const since = at >= 0 ? rest[at + 1] : null;
+  if (at >= 0 && (!since || since.startsWith('-'))) { console.error('agentcrash inspect: --since needs a git ref'); process.exit(2); }
+  const dir = rest.find((a, i) => !a.startsWith('--') && !(at >= 0 && i === at + 1)) ?? '.';
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) { console.error(`agentcrash inspect: ${dir} is not a directory`); process.exit(2); }
+  let r = inspectDir(dir);
+  if (since) {
+    let base;
+    try { base = inspectRef(dir, since); } catch { console.error(`agentcrash inspect: ${since} is not a commit in ${dir}`); process.exit(2); }
+    r = added(r, base);
+  }
+  if (rest.includes('--badge')) {
+    const n = r.findings.filter((f) => blocking(f, false)).length;
+    const label = n ? `${n} run${n > 1 ? '' : 's'} on open` : 'nothing runs on open';
+    console.log(`[![agentcrash: ${label}](https://img.shields.io/badge/agentcrash-${encodeURIComponent(label)}-${n ? 'red' : 'brightgreen'})](https://github.com/croviatrust/agentcrash)`);
+    process.exit(n ? 1 : 0);
+  }
+  console.log(rest.includes('--json') ? JSON.stringify(r, null, 2) : renderInspect(r, { color: !!process.stdout.isTTY }));
+  process.exit(r.findings.some((f) => blocking(f, !!since)) ? 1 : 0);
+}
 const opt = (name, def) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : def; };
 const flag = (name) => argv.includes(`--${name}`);
 
@@ -18,6 +61,7 @@ if (flag('help') || flag('h')) {
 
 Usage: agentcrash [options]            crash-test the agents you have installed
        agentcrash cage -- <agent...>   run your agent inside the roll cage (agentcrash cage --help)
+       agentcrash inspect [dir]        what a repository starts in your agent, before you open it
   --agent <name|all>   claude, codex, gemini, qwen, opencode, crush (default: all installed)
   --mode  <mode|all>                  permission mode (default: all)
   --scenario <id>                     run a single scenario

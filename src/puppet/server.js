@@ -10,7 +10,8 @@ import { chat } from './chat.js';
 
 const PROTOCOLS = [anthropic, openai, gemini, chat];
 
-export function startPuppet({ script, payload = '' }) {
+// `watch`: a string counted each time a model request carries it (a tool name, say).
+export function startPuppet({ script, payload = '', watch = '' }) {
   const state = {
     script,              // array of attempts {kind:'shell',command} | {kind:'read',path}
     plan: null, skipped: [], offeredKinds: [], delivered: 0,
@@ -41,6 +42,7 @@ export function startPuppet({ script, payload = '' }) {
       }
       state.protocol = proto.name;
       state.requests.push({ url, bytes: raw.length });
+      if (watch && raw.includes(watch)) state.watched = (state.watched || 0) + 1;
       try {
         proto.handle({ req, res, url, body, state });
       } catch (e) {
