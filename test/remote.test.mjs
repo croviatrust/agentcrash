@@ -110,7 +110,9 @@ test('the page and the modules it loads use nothing from Node, and name only Git
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'ac-site-'));
   const b = spawnSync(process.execPath, [path.join(REPO, 'scripts/build-site.mjs'), out], { encoding: 'utf8' });
   assert.equal(b.status, 0, b.stderr);
-  assert.deepEqual(fs.readdirSync(out).sort(), ['.nojekyll', 'app.js', 'index.html', 'inspect-core.js', 'remote.js', 'style.css']);
+  // The page lives under /inspect/, with exactly the files it runs; the record is the front page.
+  assert.deepEqual(fs.readdirSync(path.join(out, 'inspect')).sort(), ['app.js', 'index.html', 'inspect-core.js', 'remote.js', 'style.css']);
+  assert.deepEqual(fs.readdirSync(out).sort(), ['.nojekyll', 'agents', 'card.png', 'favicon.svg', 'feed.xml', 'index.html', 'inspect', 'latest.json', 'record.css']);
 });
 
 test('CLI: something that is neither a folder nor owner/repo is refused before any request', () => {

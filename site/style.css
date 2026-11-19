@@ -5,6 +5,8 @@ main { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
 a { color: inherit; }
 .brand { margin: 0 0 28px; font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
 .brand a { text-decoration: none; border-bottom: 1px solid var(--line); }
+.brand a + .sep ~ a { font-weight: 400; color: var(--dim); }
+.brand .sep { color: var(--line); margin: 0 6px; }
 h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.12; margin: 0 0 16px; letter-spacing: -.02em; }
 h2 { font-size: 18px; margin: 0 0 12px; }
 .lede { color: var(--dim); max-width: 64ch; margin: 0 0 24px; }

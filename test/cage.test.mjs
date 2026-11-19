@@ -107,26 +107,30 @@ test('the cage refuses a workspace that contains the home directory', () => {
 test('an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself', () => {
   const home = tmp('cage-home-'), ws = path.join(home, 'project'), gateDir = tmp('cage-gate-');
   fs.mkdirSync(ws);
-  const scratch = tmp('cage-npm-');
-  const pkg = path.join(scratch, 'node_modules', 'some-agent');
-  fs.mkdirSync(path.join(scratch, 'node_modules', '.bin'), { recursive: true });
-  fs.mkdirSync(pkg);
-  fs.writeFileSync(path.join(pkg, 'cli.js'), '#!/usr/bin/env node\n', { mode: 0o755 });
-  fs.symlinkSync(path.join(pkg, 'cli.js'), path.join(scratch, 'node_modules', '.bin', 'some-agent'));
   const pairs = (args) => args.flatMap((a, i) => (a === '--ro-bind' ? [`${args[i + 1]} -> ${args[i + 2]}`] : []));
-  const env = { PATH: `${path.join(scratch, 'node_modules', '.bin')}:${process.env.PATH}` };
-  const c = cage({ cmd: 'some-agent', home, ws, env, gateDir });
-  assert.equal(c.missing, null);
-  const root = path.join(scratch, 'node_modules');
-  assert.ok(pairs(c.args).includes(`${root} -> ${root}`), 'the install root under /tmp is bound back, read-only');
-  assert.ok(c.args.indexOf('--tmpfs') < c.args.indexOf(root), 'after /tmp was emptied, not before');
 
   const loose = path.join(home, 'loose-agent');
   fs.writeFileSync(loose, '#!/bin/sh\n', { mode: 0o755 });
   const d = cage({ cmd: loose, home, ws, env: { PATH: process.env.PATH }, gateDir });
   assert.ok(!pairs(d.args).includes(`${home} -> ${home}`), 'never the whole home');
   assert.ok(pairs(d.args).includes(`${loose} -> ${loose}`), 'only the binary');
-  for (const dir of [home, gateDir, scratch]) fs.rmSync(dir, { recursive: true, force: true });
+
+  // Where /tmp is itself a link (macOS) there is no cage to be emptied by.
+  if (fs.realpathSync('/tmp') === '/tmp') {
+    const scratch = fs.mkdtempSync('/tmp/cage-npm-');
+    const pkg = path.join(scratch, 'node_modules', 'some-agent');
+    fs.mkdirSync(path.join(scratch, 'node_modules', '.bin'), { recursive: true });
+    fs.mkdirSync(pkg);
+    fs.writeFileSync(path.join(pkg, 'cli.js'), '#!/usr/bin/env node\n', { mode: 0o755 });
+    fs.symlinkSync(path.join(pkg, 'cli.js'), path.join(scratch, 'node_modules', '.bin', 'some-agent'));
+    const c = cage({ cmd: 'some-agent', home, ws, env: { PATH: `${path.join(scratch, 'node_modules', '.bin')}:${process.env.PATH}` }, gateDir });
+    assert.equal(c.missing, null);
+    const root = path.join(scratch, 'node_modules');
+    assert.ok(pairs(c.args).includes(`${root} -> ${root}`), 'the install root under /tmp is bound back, read-only');
+    assert.ok(c.args.indexOf('/tmp') < c.args.indexOf(root), 'after /tmp was emptied, not before');
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+  for (const dir of [home, gateDir]) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed', () => {

@@ -46,7 +46,7 @@ const check = (name, ok, extra = '') => { console.log(`${ok ? 'ok  ' : 'FAIL'} $
 
 // 1. live
 for (const repo of (process.argv[2] || 'croviatrust/agentcrash').split(',')) {
-  const s = await session(`${base}?r=${repo}`);
+  const s = await session(`${base}inspect/?r=${repo}`);
   const text = await s.ev(`document.querySelector('#out').innerText`);
   console.log(`--- live ${repo}\n${String(text).slice(0, 900)}\n---`);
   check(`live ${repo}: a verdict is shown`, /starts|empty/.test(text || ''));
@@ -64,7 +64,7 @@ const files = {
   '.gemini/settings.json': '{ not json ' + X,
 };
 const tree = { sha: 'a'.repeat(40), truncated: false, tree: [...Object.keys(files).map((p) => ({ path: p, type: 'blob', mode: '100644', size: files[p].length })), { path: `.opencode/plugin/${X.replace(/\//g, '')}.ts`, type: 'blob', mode: '100644', size: 3 }] };
-const s = await session(`${base}?r=evil/repo`, { intercept: (url) => {
+const s = await session(`${base}inspect/?r=evil/repo`, { intercept: (url) => {
   const u = new URL(url);
   if (u.hostname === 'api.github.com') return { status: 200, body: JSON.stringify(tree) };
   const p = decodeURIComponent(u.pathname.split('/').slice(4).join('/'));
