@@ -127,11 +127,18 @@ export function cage({ cmd, args = [], home, ws, env, gateDir, profile, opts = {
     const whole = path.basename(dir) === 'bin' && prefix !== home && prefix !== path.join(home, '.local') && fs.existsSync(path.join(prefix, 'lib'));
     show('--ro-bind', whole ? prefix : dir);
   }
+  // The agent and node are put back wherever the cage has just emptied the
+  // place they are installed in: your home, and /tmp or /run as well (an
+  // `npm install` into a scratch directory). A binary dropped straight into
+  // one of those brings only itself, never the directory around it.
   const bin = which(cmd, env.PATH);
   for (const exe of [bin, process.execPath]) {
     if (!exe) continue;
     const real = fs.realpathSync(exe);
-    if (inside(real, home)) show('--ro-bind', installRoot(real));
+    const emptied = [home, '/tmp', '/run', ...ELSEWHERE].find((d) => inside(real, d));
+    if (!emptied) continue;
+    const root = installRoot(real);
+    show('--ro-bind', root === emptied ? real : root);
   }
   show('--ro-bind', path.join(home, '.gitconfig'));
   for (const extra of opts.ro || []) show('--ro-bind', path.resolve(extra));

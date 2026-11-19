@@ -50,8 +50,9 @@ export function renderTerminal(results, meta = {}) {
   const cs = cageSummary(results);
   if (cs) {
     lines.push('');
-    lines.push(`${C.bold}same attacks, same agents:${C.reset} bare ${C.red}${cs.bare} exposed${C.reset} → in the cage ${cs.caged ? C.red : C.green}${cs.caged} exposed${C.reset}`);
+    lines.push(`${C.bold}same attacks, same agents:${C.reset} bare ${C.red}${cs.bare} exposed${C.reset} → in the cage ${cs.caged ? C.red : cs.unmeasured ? C.yellow : C.green}${cs.caged} exposed${C.reset}${cs.unmeasured ? ` · ${C.yellow}${cs.unmeasured} not measured${C.reset}` : ''}`);
     if (cs.caged) lines.push(`${C.dim}${cs.note}${C.reset}`);
+    if (cs.unmeasured) lines.push(`${C.yellow}${cs.unmeasuredNote}${C.reset}`);
   }
   lines.push('');
   return lines.join('\n');
@@ -59,16 +60,28 @@ export function renderTerminal(results, meta = {}) {
 
 // With --cage every test ran twice. What is left exposed inside the cage is
 // damage to the workspace, which the cage leaves writable and records first.
+// A test that had a verdict bare and has none in the cage was never put to the
+// agent there (it did not start, or did not reach the model): that is counted
+// and said, because "0 exposed" over tests that did not run is not a result.
+const tested = (r) => r?.verdict === EXPOSED || r?.verdict === CONTAINED;
+const cellOf = (r) => `${r.agent}\u0000${String(r.mode).replace(/ \+ cage$/, '')}\u0000${r.scenario}`;
 export function cageSummary(results) {
   const inCage = results.filter((r) => r.caged);
   if (!inCage.length) return null;
+  const bare = new Map(results.filter((r) => !r.caged).map((r) => [cellOf(r), r]));
+  const lost = inCage.filter((r) => !tested(r) && tested(bare.get(cellOf(r))));
   const left = inCage.filter((r) => r.verdict === EXPOSED);
   const undone = left.filter((r) => r.undo_restored).length;
   const what = [...new Set(left.map((r) => r.title || r.scenario))].join('; ');
+  const why = lost.map((r) => String(r.stderr_tail || '').trim().split('\n').pop()).find(Boolean) || '';
   return {
     bare: results.filter((r) => !r.caged && r.verdict === EXPOSED).length,
     caged: left.length,
     undone,
+    unmeasured: lost.length,
+    unmeasuredNote: lost.length
+      ? `not measured in the cage: ${lost.length} of ${inCage.length} tests had a verdict bare and none in the cage, because the agent did not run there${why ? ` (${why})` : ''}. This says nothing about the cage.`
+      : '',
     note: left.length ? `still exposed in the cage: ${what}.${left.some((r) => 'undo_restored' in r) ? ` agentcrash cage --undo put the files back in ${undone} of ${left.length}.` : ''}` : '',
   };
 }
@@ -134,7 +147,7 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 <div><b style="color:var(--dim)">${untested}</b><span class="dim">not tested</span></div>
 <div><b>${results.length}</b><span class="dim">runs</span></div>
 </div>
-${cs ? `<p class="cage"><b>Same attacks, same agents:</b> bare <b style="color:var(--exp)">${cs.bare} exposed</b> → inside <code>agentcrash cage</code> <b style="color:${cs.caged ? 'var(--exp)' : 'var(--con)'}">${cs.caged} exposed</b>.${cs.caged ? ` ${esc(cs.note[0].toUpperCase() + cs.note.slice(1))}` : ''}</p>` : ''}
+${cs ? `<p class="cage"><b>Same attacks, same agents:</b> bare <b style="color:var(--exp)">${cs.bare} exposed</b> → inside <code>agentcrash cage</code> <b style="color:${cs.caged ? 'var(--exp)' : cs.unmeasured ? 'var(--dim)' : 'var(--con)'}">${cs.caged} exposed</b>.${cs.caged ? ` ${esc(cs.note[0].toUpperCase() + cs.note.slice(1))}` : ''}${cs.unmeasured ? ` <b>${esc(cs.unmeasuredNote[0].toUpperCase() + cs.unmeasuredNote.slice(1))}</b>` : ''}</p>` : ''}
 <div class="scroll"><table><thead><tr><th class="sc" style="text-align:left">scenario</th>${th}</tr></thead><tbody>
 ${rows}
 </tbody></table></div>

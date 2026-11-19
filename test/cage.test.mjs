@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { allowed, startGate } from '../src/cage/gate.js';
 import { cage, cageAvailable, cageEnv, envFiles } from '../src/cage/index.js';
+import { cageSummary, renderTerminal } from '../src/report.js';
 
 const tmp = (p) => fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), p)));
 
@@ -99,6 +100,51 @@ test('the cage refuses a workspace that contains the home directory', () => {
   assert.throws(() => cage({ cmd: 'true', home, ws: path.dirname(home), env: { PATH: process.env.PATH }, gateDir: home }), /contains your home/);
   assert.throws(() => cage({ cmd: 'true', home, ws: home, env: { PATH: process.env.PATH }, gateDir: home }), /contains your home/);
   fs.rmSync(home, { recursive: true, force: true });
+});
+
+// The cage empties /tmp. An agent installed there (npm install into a scratch
+// directory) has to be put back, or every caged test is a test of nothing.
+test('an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself', () => {
+  const home = tmp('cage-home-'), ws = path.join(home, 'project'), gateDir = tmp('cage-gate-');
+  fs.mkdirSync(ws);
+  const scratch = tmp('cage-npm-');
+  const pkg = path.join(scratch, 'node_modules', 'some-agent');
+  fs.mkdirSync(path.join(scratch, 'node_modules', '.bin'), { recursive: true });
+  fs.mkdirSync(pkg);
+  fs.writeFileSync(path.join(pkg, 'cli.js'), '#!/usr/bin/env node\n', { mode: 0o755 });
+  fs.symlinkSync(path.join(pkg, 'cli.js'), path.join(scratch, 'node_modules', '.bin', 'some-agent'));
+  const pairs = (args) => args.flatMap((a, i) => (a === '--ro-bind' ? [`${args[i + 1]} -> ${args[i + 2]}`] : []));
+  const env = { PATH: `${path.join(scratch, 'node_modules', '.bin')}:${process.env.PATH}` };
+  const c = cage({ cmd: 'some-agent', home, ws, env, gateDir });
+  assert.equal(c.missing, null);
+  const root = path.join(scratch, 'node_modules');
+  assert.ok(pairs(c.args).includes(`${root} -> ${root}`), 'the install root under /tmp is bound back, read-only');
+  assert.ok(c.args.indexOf('--tmpfs') < c.args.indexOf(root), 'after /tmp was emptied, not before');
+
+  const loose = path.join(home, 'loose-agent');
+  fs.writeFileSync(loose, '#!/bin/sh\n', { mode: 0o755 });
+  const d = cage({ cmd: loose, home, ws, env: { PATH: process.env.PATH }, gateDir });
+  assert.ok(!pairs(d.args).includes(`${home} -> ${home}`), 'never the whole home');
+  assert.ok(pairs(d.args).includes(`${loose} -> ${loose}`), 'only the binary');
+  for (const dir of [home, gateDir, scratch]) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed', () => {
+  const run = (scenario, verdict, caged, extra = {}) => ({ agent: 'claude', mode: caged ? 'default + cage' : 'default', scenario, title: scenario, verdict, caged, ...extra });
+  const dead = [
+    run('a', 'EXPOSED', false), run('a', 'NOT_TESTED', true, { stderr_tail: 'agentcrash cage: cannot start claude: spawn claude ENOENT' }),
+    run('b', 'CONTAINED', false), run('b', 'NOT_TESTED', true),
+    run('c', 'NOT_TESTED', false), run('c', 'NOT_TESTED', true),
+  ];
+  const s = cageSummary(dead);
+  assert.deepEqual([s.bare, s.caged, s.unmeasured], [1, 0, 2], 'a test nobody could run bare is not held against the cage');
+  assert.match(s.unmeasuredNote, /2 of 3 tests .* spawn claude ENOENT/);
+  const text = renderTerminal(dead).replace(/\x1b\[[0-9;]*m/g, '');
+  assert.match(text, /in the cage 0 exposed · 2 not measured/);
+  assert.match(text, /This says nothing about the cage/);
+
+  const fine = cageSummary([run('a', 'EXPOSED', false), run('a', 'CONTAINED', true), run('c', 'NOT_TESTED', false), run('c', 'NOT_TESTED', true)]);
+  assert.deepEqual([fine.bare, fine.caged, fine.unmeasured, fine.unmeasuredNote], [1, 0, 0, '']);
 });
 
 // The real thing: needs Linux, bubblewrap and unprivileged user namespaces.
