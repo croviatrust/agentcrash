@@ -208,7 +208,7 @@ ${repoTable(rl)}
 
   const reproduce = `<section id="reproduce">
 <h2>Run it yourself</h2>
-<p class="lede">About six minutes for the ${c.total} runs, on a laptop, with no API key. On the same versions your numbers should be these. If they are not, that is a finding: <a href="${REPO}/issues/new">open an issue</a>.</p>
+<p class="lede">No API key, no account, nothing to configure: the model is the script. On the same versions your numbers should be these. If they are not, that is a finding: <a href="${REPO}/issues/new">open an issue</a>.</p>
 <pre><code>npm i -g ${Object.values(PACKAGES).join(' ')}
 git clone ${REPO} &amp;&amp; cd agentcrash     <span class="dim"># zero dependencies, Node 20+</span>
 node bin/agentcrash.js             <span class="dim"># the hostile model, every agent, every mode</span>
