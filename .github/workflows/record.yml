@@ -1,0 +1,138 @@
+name: record
+
+# Keeps the public record (record/runs, published as the site's front page) in
+# step with what the six agents ship.
+#
+# Every six hours the CLIs are installed from npm. If one of them has a new
+# version, or the tests themselves changed, every test is run again, bare and
+# inside the roll cage, and the result is committed as one more run. If nothing
+# changed, nothing is committed: the site is republished with the time of the
+# check.
+#
+# Three jobs, because they must not share a token:
+#   measure   installs and runs six third-party CLIs. It can read this
+#             repository and nothing else: no write token, no secrets.
+#   record    never runs an agent. It reads the JSON the first job produced,
+#             refuses it if an agent is missing or the cage did not run, and
+#             commits it.
+#   publish   rebuilds the site.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run every test even if no agent has a new version
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ['.github/workflows/record.yml', 'scripts/record.mjs']
+
+permissions: {}
+
+# bash with pipefail: a step that pipes its output still fails when its command does.
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: record
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.plan.outputs.changed }}
+      checked: ${{ steps.plan.outputs.checked }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The roll cage needs bubblewrap and unprivileged user namespaces
+        run: |
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --unshare-user --unshare-net --ro-bind / / true
+      - name: Install the six agents, as anyone would today
+        run: npm install -g --no-fund --no-audit @anthropic-ai/claude-code @openai/codex @google/gemini-cli @qwen-code/qwen-code opencode-ai @charmland/crush
+      - name: Has anything changed since the last run on record?
+        id: plan
+        env:
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          node scripts/record.mjs plan $FORCE | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "checked=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      # agentcrash exits 1 when anything was exposed. That is the measurement,
+      # not a failure; anything else is.
+      - name: The hostile model, bare and in the cage
+        if: steps.plan.outputs.changed == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/raw"
+          code=0; node bin/agentcrash.js --cage --json "$RUNNER_TEMP/raw/model.json" || code=$?
+          test "$code" -le 1
+      - name: The hostile repository, bare and in the cage
+        if: steps.plan.outputs.changed == 'true'
+        run: |
+          code=0; node bin/agentcrash.js --repo --cage --json "$RUNNER_TEMP/raw/repo.json" || code=$?
+          test "$code" -le 1
+      - uses: actions/upload-artifact@v4
+        if: steps.plan.outputs.changed == 'true'
+        with:
+          name: raw
+          path: ${{ runner.temp }}/raw
+          if-no-files-found: error
+          retention-days: 90
+
+  record:
+    needs: measure
+    if: needs.measure.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: raw
+          path: ${{ runner.temp }}/raw
+      - name: Write the two runs into the record
+        env:
+          JOB: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for suite in model repo; do
+            node scripts/record.mjs import "$RUNNER_TEMP/raw/$suite.json" --suite "$suite" --cage \
+              --source-kind ci --source "GitHub Actions, ubuntu-24.04, the six CLIs installed from npm in the job" --url "$JOB"
+          done
+          node --test test/record.test.mjs
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add record/runs
+          git commit -m "record: run of $(date -u +%Y-%m-%d)" -m "Produced by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git pull -q --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+  publish:
+    needs: [measure, record]
+    if: always() && needs.measure.result == 'success' && (needs.record.result == 'success' || needs.record.result == 'skipped')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      checked: ${{ needs.measure.outputs.checked }}

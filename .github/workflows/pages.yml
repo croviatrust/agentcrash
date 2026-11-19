@@ -1,11 +1,20 @@
 name: pages
-# Publishes the static page (site/ plus the two source files it runs) to the
-# gh-pages branch. The page has no build step and no server.
+# Publishes the static site to the gh-pages branch: the record as the front
+# page (record/), and under /inspect/ the page that reads a repository in the
+# browser (site/ plus the two source files it runs). No build step beyond one
+# script, and no server.
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'src/inspect-core.js', 'src/remote.js', 'scripts/build-site.mjs', '.github/workflows/pages.yml']
+    paths: ['site/**', 'record/**', 'src/inspect-core.js', 'src/remote.js', 'scripts/build-site.mjs', '.github/workflows/pages.yml']
   workflow_dispatch:
+  # From the record workflow, after a check of the agents' versions.
+  workflow_call:
+    inputs:
+      checked:
+        description: When the installed agents were last compared with the record (ISO 8601)
+        type: string
+        default: ""
 permissions:
   contents: write
 concurrency:
@@ -16,10 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # A rebuild that is not a check keeps the time of the last one.
+      - name: What the published site says now
+        run: |
+          git fetch -q --depth 1 origin gh-pages && git show FETCH_HEAD:latest.json > "$RUNNER_TEMP/previous.json" || true
       - run: node scripts/build-site.mjs "$RUNNER_TEMP/site"
+        env:
+          RECORD_CHECKED_AT: ${{ inputs.checked }}
+          RECORD_PREVIOUS: ${{ runner.temp }}/previous.json
       - name: push to gh-pages
         run: |
           cd "$RUNNER_TEMP/site"
