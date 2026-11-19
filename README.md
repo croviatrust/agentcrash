@@ -40,6 +40,7 @@ agentcrash guard: you have not approved this; claude has not started.
 | [census](#how-common-is-this-a-census-of-public-github) | how much public project config does this today: 78% of sampled `.mcp.json` files start a command in a fresh clone | `census/census.json` |
 | [`cage`](#the-roll-cage) | runs the agent where a hijacked model has nothing to take: **101 exposed → 9**, and the 9 can be undone | Linux namespaces |
 | [crash test](#what-it-found) | the measurement behind all of it: a hostile puppet model drives the real binary, verdicts come from real file and network effects | your terminal |
+| [the record](#the-record) | the crash test, run again every time one of the six agents ships a release: what moved, with what the agent answered | [croviatrust.github.io/agentcrash](https://croviatrust.github.io/agentcrash/) |
 
 Not on npm yet: every command below is `node bin/agentcrash.js …` from the clone.
 
@@ -87,6 +88,27 @@ Things that are only visible when you test the client, not the model:
 These are design choices observed on the versions above, not vulnerabilities.
 
 Reproduce the table yourself: `node bin/agentcrash.js --html report.html`.
+
+## The record
+
+The table above is one day: 10 November 2026. Nine days later all six agents had shipped a new release, and the table was no longer true: in Crush, `--yolo` had stopped running `curl` and `env`, and four cells had gone from exposed to contained ([upstream commit `67d838f`](https://github.com/charmbracelet/crush/releases/tag/v0.101.0), released in 0.101.0; the other seven attacks still go through in that mode). Nothing else moved: 161 of the 165 cells were the same on six new versions.
+
+So the crash test is kept as a record, not as a table: **[croviatrust.github.io/agentcrash](https://croviatrust.github.io/agentcrash/)**.
+
+- **Every six hours** [a job](.github/workflows/record.yml) installs the six CLIs from npm. If one has a new version, or the tests themselves changed, every test is run again, bare and inside the roll cage, and the result is committed to [`record/runs/`](record/runs) as one more run. If nothing changed, nothing is committed.
+- **What moved** between a run and the one before it is written agent by agent, and three things are kept apart: a *release* (the version changed; cells that differ moved with it), a *repeat* (same version, measured again: every cell is expected to agree, and the site counts how many did), and an *unstable* cell (same version, same tests, different verdict: reported, never averaged away).
+- **Each run says where it comes from.** A run made by the job links to that job and its log. The ones made before the job existed are marked as published in this repository or as a reproduction on a named machine.
+- **The job that runs the agents cannot write here.** Six third-party CLIs are installed and driven by a hostile script in a job with a read-only token and no secrets. A second job, which never runs an agent, reads the JSON the first one produced, refuses it if an agent is missing or the caged half did not run, and commits it.
+- **What an agent answered is kept as evidence**, three lines a cell at most. The fake secrets in it are replaced by a label saying which one it was, and nothing of the machine is kept.
+
+The site is static, runs no script and loads nothing from anywhere else. The same record as data: [`latest.json`](https://croviatrust.github.io/agentcrash/latest.json), and a [feed](https://croviatrust.github.io/agentcrash/feed.xml) with one entry for each release of each agent.
+
+```bash
+node scripts/record.mjs plan                                  # do the installed agents differ from the last run on record?
+node bin/agentcrash.js --cage --json out.json                 # measure
+node scripts/record.mjs import out.json --suite model --cage --source "who ran it, and where"
+node scripts/build-site.mjs _site                             # the site, from record/runs
+```
 
 ## The roll cage
 
@@ -267,7 +289,7 @@ node bin/agentcrash.js inspect owner/repo                  # or github:owner/rep
 
 It says what `inspect` says on a clone of the same commit (`test/remote.test.mjs` compares the two). Public repositories only. Anonymous requests to GitHub's API are limited per address; when the file list is refused the config files are still read by name, the answer says that code loaded from `.opencode/` is missing from it, and `GITHUB_TOKEN` in the environment (sent to `api.github.com` only) lifts the limit.
 
-The same code runs as a static page ([`site/`](site/), built by `node scripts/build-site.mjs` and kept on the `gh-pages` branch): your browser fetches the files from GitHub and reads them there; no server of ours is involved, and the page's content security policy lets it talk to those two hosts only. Every result has a link (`?r=owner/repo`) that reads the repository again when opened. It is not hosted yet: until GitHub Pages is switched on for this repository, `node scripts/build-site.mjs out` and any static file server show it. What a repository wrote is put on the page as text: driven in Chrome against a repository whose server names, commands and file names were markup, nothing rendered and nothing ran (`node scripts/page-proof.mjs`).
+The same code runs as a static page, [croviatrust.github.io/agentcrash/inspect/](https://croviatrust.github.io/agentcrash/inspect/) ([`site/`](site/), built by `node scripts/build-site.mjs` and kept on the `gh-pages` branch): your browser fetches the files from GitHub and reads them there; no server of ours is involved, and the page's content security policy lets it talk to those two hosts only. Every result has a link (`?r=owner/repo`) that reads the repository again when opened. What a repository wrote is put on the page as text: driven in Chrome against a repository whose server names, commands and file names were markup, nothing rendered and nothing ran (`node scripts/page-proof.mjs`).
 
 ### In a pull request
 
