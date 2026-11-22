@@ -131,3 +131,14 @@ test('record: the site builds from the runs on record, and its picture is a real
   const idat = tiny.subarray(tiny.indexOf('IDAT') + 4, tiny.indexOf('IEND') - 8);
   assert.deepEqual([...zlib.inflateSync(idat)], [0, 255, 0, 0, 0, 255, 0], 'one filter byte, then the pixels');
 });
+
+test('record requires a one-to-one pairing of bare and caged observations', () => {
+  const rows = [false, true].flatMap(caged => ['one', 'two'].map(scenario =>
+    r('crush', 'default', scenario, 'CONTAINED', { caged })));
+  const validate = results => problems({ versions: { crush: '1' }, results }, { agents: ['crush'], cage: true });
+  assert.deepEqual(validate(rows), []);
+  assert.ok(validate(rows.slice(0, -1)).length);
+  assert.ok(validate(rows.slice(1)).length);
+  assert.ok(validate([...rows, rows[0]]).length);
+  assert.ok(validate([...rows, rows[3]]).length);
+});
