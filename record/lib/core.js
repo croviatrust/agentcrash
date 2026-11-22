@@ -104,7 +104,14 @@ export function problems(run, { agents = Object.keys(AGENTS), cage = false } = {
   const inCage = caged(run);
   if (cage && !inCage.length) out.push('no caged results (was --cage passed?)');
   if (inCage.length) {
-    const at = lookup(bare(run));
+    const outside = bare(run);
+    const insideKeys = new Set(inCage.map(cellKey));
+    const outsideKeys = new Set(outside.map(cellKey));
+    if (insideKeys.size !== inCage.length || outsideKeys.size !== outside.length)
+      out.push('duplicate observation in the paired results');
+    if (outside.some(row => !insideKeys.has(cellKey(row))) || inCage.some(row => !outsideKeys.has(cellKey(row))))
+      out.push('bare and caged observations must cover the same cells');
+    const at = lookup(outside);
     const lost = inCage.filter((r) => !tested(r) && tested(at(r)));
     if (lost.length) out.push(`${lost.length} of ${inCage.length} caged tests had a verdict bare and none in the cage: the agent did not run there`);
   }
