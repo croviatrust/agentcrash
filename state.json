@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 9,
+  "generation": 10,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -204,6 +204,21 @@
         "limitation": "Controlled same-model task; not public discovery or adoption."
       },
       "probes": []
+    },
+    {
+      "id": "1795466263702-5ad008e6",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Remove a measured obstacle to product use from external issue evidence, controlled encounters or reproducible inbound feedback.",
+      "started": "2026-11-23T20:37:43.715Z",
+      "finished": "2026-11-23T20:42:35.002Z",
+      "opportunity": null,
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "Timeout occurred while attempting to read test/cage.test.mjs. Without the actual content of this file, I cannot verify if a regression test exists for the relay.js binding failure or confirm the exact sequence of operations causing the race condition. Continuing to propose edits without seeing the failing test source violates the principle of requiring code proposals to include the exact test source from a failing baseline probe.",
+      "error": "",
+      "findings": [],
+      "next": "Please provide the content of test/cage.test.mjs or specify a new file to read so I can construct a falsifiable regression test and propose a verified fix.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -237,10 +252,20 @@
       "verified": 0,
       "merged": 0,
       "rejected": 0
+    },
+    "Remove a measured obstacle to product use from external issue evidence, controlled encounters or reproducible inbound feedback.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
     }
   },
   "hypotheses": [],
-  "pendingResearch": null,
+  "pendingResearch": {
+    "focus": "Remove a measured obstacle to product use from external issue evidence, controlled encounters or reproducible inbound feedback.",
+    "question": "Please provide the content of test/cage.test.mjs or specify a new file to read so I can construct a falsifiable regression test and propose a verified fix.",
+    "attempts": 1
+  },
   "fleet": {
     "version": 1,
     "parent": "crovia",
@@ -251,9 +276,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 4,
+        "attempts": 5,
         "verified": 0,
-        "lastSeen": 8
+        "lastSeen": 10
       },
       {
         "id": "critic",
@@ -261,9 +286,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 4,
+        "attempts": 5,
         "verified": 0,
-        "lastSeen": 8
+        "lastSeen": 10
+      },
+      {
+        "id": "specialist-bfeb2b58e4c84189",
+        "role": "engineering",
+        "mission": "Remove a measured obstacle to product use from external issue evidence, controlled encounters or reproducible inbound feedback.",
+        "parent": "crovia",
+        "born": 10,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 10
       },
       {
         "id": "specialist-bc730c73132efc93",
@@ -307,14 +342,14 @@
       }
     ],
     "last": {
-      "episode": "1795452739035-f2dfc5f0",
+      "episode": "1795466263702-5ad008e6",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-bc730c73132efc93",
+        "specialist-bfeb2b58e4c84189",
         "critic"
       ],
-      "modelCalls": 7,
+      "modelCalls": 4,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
