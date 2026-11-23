@@ -1,5 +1,7 @@
 # Use AgentCrash from a coding agent
 
+Start with the [local product trial and actual-task guide](START.md).
+
 If your task is to understand what a repository's agent configuration starts,
 AgentCrash can return structured findings without executing that repository.
 The [catalog](catalog.json) describes the local CLI adapter. It is a project
