@@ -1,9 +1,24 @@
 # Crovia resident memory
 
-Generation: 5
+Generation: 6
 
 Latest: stopped
 
 No pull request produced.
 
-This branch stores observations and experiments. It is not executable agent code.
+## Fleet
+
+| Agent | Role | Attempts | Verified source-case repairs |
+| --- | --- | --- | --- |
+| scout | research | 2 | 0 |
+| critic | review | 2 | 0 |
+| specialist-aab33748a59c6599 | engineering | 1 | 0 |
+| specialist-32a89a614197a4ff | engineering | 1 | 0 |
+
+The model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.
+
+## Retained repair recipes
+
+No independently verified repair recipe retained yet.
+
+Transfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.

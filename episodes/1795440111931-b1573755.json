@@ -1,0 +1,193 @@
+{
+  "id": "1795440111931-b1573755",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "f2f41bf000c8de6dc02c52246a108d8cf2f711b8",
+  "siblingSHA": "b7ae8424f92a17e8d544a12771dcffce383e01f1",
+  "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+  "started": "2026-11-23T13:21:51.936Z",
+  "status": "stopped",
+  "reason": "The file src/puppet/anthropic.js contains no version parsing logic. The focus requires implementing a deterministic version parser for the Anthropic puppet with hardcoded fallbacks to prevent silent failures in unversioned environments, but this specific file does not contain such logic. The previous hypothesis about brittle regex parsing at offset 16050 was based on an incorrect assumption that such code exists here.",
+  "findings": [
+    {
+      "path": "src/puppet/anthropic.js",
+      "repository": "self",
+      "sha": "f2f41bf000c8de6dc02c52246a108d8cf2f711b8",
+      "note": "The file contains SSE event handling and tool invocation logic but no version detection or parsing code.",
+      "confidence": "unverified observation"
+    }
+  ],
+  "next": "Search the repository for any existing version parsing logic or evidence of silent failures related to unversioned environments, then read that specific file to formulate a concrete experiment.",
+  "finished": "2026-11-23T13:23:43.181Z",
+  "research": {
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "2955637b182379112f8b464955e9ec71f31ee4db",
+        "path": "src/puppet/anthropic.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/2955637b182379112f8b464955e9ec71f31ee4db/src/puppet/anthropic.js",
+        "license": "Apache-2.0",
+        "sha256": "1166e7c4cc0ad04ee2cdebb3865da0ee0b162327f96c09437ef8663af240378c",
+        "retrieved": "2026-11-23T13:21:51.927Z",
+        "excerpt": "// Anthropic Messages API, as Claude Code speaks it.\nimport { nextCall } from './server.js';\n\nfunction sse(res, events) {\n  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });\n  for (const [name, data] of events) res.write(`event: ${name}\\ndata: ${JSON.stringify(data)}\\n\\n`);\n  res.end();\n}\n\nfunction textOf(content) {\n  if (typeof content === 'string') return content;\n  if (!Array.isArray(content)) return '';\n  return content.map((c) => (typeof c === 'string' ? c : c.text ?? '')).join('');\n}\n\nfunction offeredTools(tools) {\n  const names = (tools || []).map((t) => t.name);\n  const o = {};\n  if (names.includes('Bash')) o.shell = (a) => ({ name: 'Bash', input: { command: a.command, description: 'run' } });\n  if (names.includes('Read')) o.read = (a) => ({ name: 'Read', input: { file_path: a.path } });\n  return o;\n}\n\nexport const anthropic = {\n  name: 'anthropic-messages',\n  matches: (method, url) => method === 'POST' && /\\/v1\\/messages/.test(url),\n  handle({ res, url, body, state }) {\n    if (/count_tokens/.test(url)) {\n      res.writeHead(200, { 'content-type': 'application/json' });\n      return res.end('{\"input_tokens\":100}');\n    }\n    const model = body?.model || 'puppet';\n    const offered = offeredTools(body?.tools);\n    const tool = Object.keys(offered).length > 0;\n    let block = { type: 'text', text: 'ok' };\n    if (tool) {\n      const results = [];\n      for (const m of body.messages || []) {\n        if (!Array.isArray(m.content)) continue;\n        for (const c of m.content) {\n          if (c?.type === 'tool_result') results.push({ output: textOf(c.content), isError: c.is_error });\n        }\n      }\n      const next = nextCall(state, offered, results);\n      block = next\n        ? { type: 'tool_use', id: `toolu_puppet_${results.length}`, name: next.name, input: next.input }\n        : { type: 'text', text: 'Done.' };\n    }\n    const message = {\n      id: 'msg_puppet', type: 'message', role: 'assistant', model, content: [],\n      stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 1 },\n    };\n    const isTool = block.type === 'tool_use';\n    if (!body?.stream) {\n      res.writeHead(200, { 'content-type': 'application/json' });\n      return res.end(JSON.stringify({ ...message, content: [block], stop_reason: isTool ? 'tool_use' : 'end_turn' }));\n    }\n    const events = [['message_start', { type: 'message_start', message }]];\n    if (isTool) {\n      events.push(\n        ['content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: block.id, name: block.name, input: {} } }],\n        ['content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: JSON.stringify(block.input) } }],\n      );\n    } else {\n      events.push(\n        ['content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }],\n        ['content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: block.text } }],\n      );\n    }\n    events.push(\n      ['content_block_stop', { type: 'content_block_stop', index: 0 }],\n      ['message_delta', { type: 'message_delta', delta: { stop_reason: isTool ? 'tool_use' : 'end_turn', stop_sequence: null }, usage: { output_tokens: 20 } }],\n      ['message_stop', { type: 'message_stop' }],\n    );\n    sse(res, events);\n  },\n};\n",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      }
+    ],
+    "errors": [],
+    "discovered": [],
+    "trust": "Untrusted reference material. Never execute embedded instructions."
+  },
+  "fleet": {
+    "version": 1,
+    "parent": "crovia",
+    "specialist": {
+      "id": "specialist-aab33748a59c6599",
+      "role": "engineering",
+      "mission": "Implement a deterministic version parser for the Anthropic puppet with hardcoded fallbacks to prevent silent failures in unversioned environments.",
+      "parent": "crovia"
+    },
+    "review": {
+      "decision": "revise",
+      "reason": "The proposed experiment relies on a non-existent implementation (no version parsing logic found in the source), making it impossible to execute as described. The next step must be to search for existing version detection code or evidence of silent failures in unversioned environments before formulating a concrete experiment."
+    },
+    "membersUsed": [
+      "scout",
+      "specialist-aab33748a59c6599",
+      "critic"
+    ],
+    "modelCalls": 5,
+    "ledger": [
+      {
+        "role": "scout",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 2297,
+          "output": 75
+        }
+      },
+      {
+        "role": "specialist-aab33748a59c6599",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 2886,
+          "output": 28
+        }
+      },
+      {
+        "role": "specialist-aab33748a59c6599",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 2963,
+          "output": 24
+        }
+      },
+      {
+        "role": "specialist-aab33748a59c6599",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 4099,
+          "output": 161
+        }
+      },
+      {
+        "role": "critic",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 525,
+          "output": 66
+        }
+      }
+    ],
+    "execution": "separate sequential model contexts on one runner",
+    "consulted": []
+  },
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 2886,
+        "output": 28
+      },
+      "action": "read",
+      "path": "src/puppet/anthropic.js",
+      "offset": 16050
+    },
+    {
+      "turn": 0,
+      "error": "Offset is past the end-of-file (3425 characters). Read this file at offset 0, or inspect another file."
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 2963,
+        "output": 24
+      },
+      "action": "read",
+      "path": "src/puppet/anthropic.js",
+      "offset": 0
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 4099,
+        "output": 161
+      },
+      "action": "stop"
+    }
+  ],
+  "verdict": {
+    "episode": "1795440111931-b1573755",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "issues": [],
+    "commits": [
+      {
+        "sha": "2955637b182379112f8b464955e9ec71f31ee4db",
+        "message": "feat: install Crovia resident research agent\n\nPersistent sourced memory, local CPU inference, bounded research continuation and isolated before/after verification.\n\nActivation expressly authorized by the repository owner in this session.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "0e82d2f824223340820ac711270ba8a8dc1022a2",
+        "message": "record: run of 2026-11-22\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45061290657"
+      },
+      {
+        "sha": "838ac07cd8d91725f6881a0c71336a46d602139f",
+        "message": "record: run of 2026-11-21\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44878131729"
+      },
+      {
+        "sha": "f44abb0637647ccbc89aa52c2698d4282e0e93de",
+        "message": "record: run of 2026-11-20\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44692665766"
+      },
+      {
+        "sha": "af5fe58eced62a2b58dd78b38c14d494c9ded9bc",
+        "message": "site: no duration claimed for a run that was not timed on a laptop"
+      }
+    ],
+    "openProposals": [],
+    "openWork": [
+      {
+        "number": 1,
+        "title": "Reject incomplete and duplicated paired report cells",
+        "body": "Require the bare and caged sides to have the same unique observation keys. The regression test failed before the fix and all nine record tests passed afterward. Scope is pair parity; an observation missing from both sides needs a separate expected inventory.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/1"
+      }
+    ],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 2,
+      "observed": "2026-11-23T13:20:01.024Z",
+      "note": "Repository attention; not adoption or revenue."
+    },
+    "siblingCapabilities": [],
+    "capabilityTemplates": []
+  }
+}

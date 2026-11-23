@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 5,
+  "generation": 6,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -69,6 +69,27 @@
       "error": "",
       "findings": [],
       "next": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks."
+    },
+    {
+      "id": "1795440111931-b1573755",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+      "started": "2026-11-23T13:21:51.936Z",
+      "finished": "2026-11-23T13:23:43.181Z",
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The file src/puppet/anthropic.js contains no version parsing logic. The focus requires implementing a deterministic version parser for the Anthropic puppet with hardcoded fallbacks to prevent silent failures in unversioned environments, but this specific file does not contain such logic. The previous hypothesis about brittle regex parsing at offset 16050 was based on an incorrect assumption that such code exists here.",
+      "error": "",
+      "findings": [
+        {
+          "path": "src/puppet/anthropic.js",
+          "repository": "self",
+          "sha": "f2f41bf000c8de6dc02c52246a108d8cf2f711b8",
+          "note": "The file contains SSE event handling and tool invocation logic but no version detection or parsing code.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Search the repository for any existing version parsing logic or evidence of silent failures related to unversioned environments, then read that specific file to formulate a concrete experiment."
     }
   ],
   "outcomes": {},
@@ -92,7 +113,7 @@
       "rejected": 0
     },
     "Improve the resident's own strategy using the recorded outcomes of previous experiments.": {
-      "attempts": 2,
+      "attempts": 3,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -101,8 +122,8 @@
   "hypotheses": [],
   "pendingResearch": {
     "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
-    "question": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks.",
-    "attempts": 2
+    "question": "Search the repository for any existing version parsing logic or evidence of silent failures related to unversioned environments, then read that specific file to formulate a concrete experiment.",
+    "attempts": 3
   },
   "fleet": {
     "version": 1,
@@ -114,9 +135,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 1,
+        "attempts": 2,
         "verified": 0,
-        "lastSeen": 5
+        "lastSeen": 6
       },
       {
         "id": "critic",
@@ -124,9 +145,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
+        "attempts": 2,
+        "verified": 0,
+        "lastSeen": 6
+      },
+      {
+        "id": "specialist-aab33748a59c6599",
+        "role": "engineering",
+        "mission": "Implement a deterministic version parser for the Anthropic puppet with hardcoded fallbacks to prevent silent failures in unversioned environments.",
+        "parent": "crovia",
+        "born": 6,
         "attempts": 1,
         "verified": 0,
-        "lastSeen": 5
+        "lastSeen": 6
       },
       {
         "id": "specialist-32a89a614197a4ff",
@@ -140,14 +171,14 @@
       }
     ],
     "last": {
-      "episode": "1795439454386-79f24796",
+      "episode": "1795440111931-b1573755",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-32a89a614197a4ff",
+        "specialist-aab33748a59c6599",
         "critic"
       ],
-      "modelCalls": 4,
+      "modelCalls": 5,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
