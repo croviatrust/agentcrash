@@ -24,6 +24,17 @@ export function safePath(name) {
     throw new Error('Invalid relative path');
   return name;
 }
+// A typed experiment compiler, not a shell or a product repair template.
+export function processRegression(spec) {
+  safePath(spec.script);
+  if (!/^(src|bin)\/.*\.js$/.test(spec.script) || !Array.isArray(spec.args) || spec.args.length > 20 ||
+      spec.args.some(a => typeof a !== 'string' || a.length > 500 || a.includes('\0')) ||
+      !Number.isInteger(spec.expectedExit) || spec.expectedExit < 0 || spec.expectedExit > 255) throw new Error('Invalid process experiment contract');
+  const timeoutMs = spec.timeoutMs ?? 5000;
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 500 || timeoutMs > 10000) throw new Error('Process experiment timeout outside budget');
+  const value = JSON.stringify({ script: spec.script, args: spec.args, expectedExit: spec.expectedExit, timeoutMs });
+  return `import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nimport path from 'node:path';\nconst contract = ${value};\ntest('process exit contract', () => {\n  const result = spawnSync(process.execPath, [path.resolve(contract.script), ...contract.args.map(a => a === '$NODE' ? process.execPath : a)], { encoding: 'utf8', timeout: contract.timeoutMs, env: { PATH: process.env.PATH || '' } });\n  assert.ifError(result.error);\n  assert.equal(result.signal, null);\n  assert.equal(result.status, contract.expectedExit, result.stderr);\n});\n`;
+}
 export function readFile(root, name, offset = 0) {
   safePath(name);
   const resolved = fs.realpathSync(path.join(root, name));
@@ -189,6 +200,7 @@ Return exactly one JSON object per turn. You may add "decision": "one short sent
 {"action":"read","path":"src/file.js","offset":0,"repository":"self"} (or repository="sibling")
 {"action":"search","query":"literal text","repository":"self"} to find text in tracked small files.
 {"action":"probe","content":"complete regression test source"} runs a test against the unchanged baseline in isolation (at most twice). Inspect its diagnostics; syntax/import failures are not bugs. Code proposals must include the exact test source from a failing baseline probe when probes are required. The result supplies a probeId. In a proposal, reuse the exact test without rewriting it using {"path":"regression test path","probeId":"probe-1"}. No arbitrary commands.
+{"action":"probe_process","script":"src/command.js","args":["literal argument","$NODE"],"expectedExit":1,"timeoutMs":5000} is a compact Node-only process-exit experiment. $NODE in args means the current Node executable. The controller generates the regression, executes it in isolation and returns a probeId usable in propose. Read the script first.
 Probe requirement for this generation: ${requireProbe}.
 {"action":"propose","title":"...","hypothesis":"...","falsifier":"...","benefit":"...","edits":[{"path":"src/file.js","content":"COMPLETE file content"},{"path":"${language === 'node' ? 'resident-regressions/name.test.mjs' : 'tests/resident_name.rs'}","content":"regression test"}]}
 {"action":"stop","reason":"specific uncertainty","findings":[{"path":"src/file.js","repository":"self","note":"specific observation from a file you actually read"}],"next":"precise question or experiment for the next generation"}
@@ -234,13 +246,19 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
         if (typeof answer.next === 'string' && answer.next.trim()) episode.next = answer.next.slice(0, 1200);
         break;
       }
-      if (answer.action === 'probe') {
+      if (answer.action === 'probe' || answer.action === 'probe_process') {
         if (!probe) throw new Error('Probes unavailable in this execution');
         if (episode.probes.length >= 2) throw new Error('Two-probe budget exhausted');
+        if (answer.action === 'probe_process') {
+          if (language !== 'node' || !reads.has(answer.script)) throw new Error('Read the Node script before requesting a process experiment');
+          episode.trace.at(-1).processContract = { script: answer.script, args: answer.args, expectedExit: answer.expectedExit, timeoutMs: answer.timeoutMs ?? 5000 };
+          answer.content = processRegression(answer);
+        }
         const hash = digest(answer.content);
         if (episode.probes.some(p => p.testHash === hash && p.status !== 'infrastructure-failed')) throw new Error('This exact test was already probed');
         const observed = await probe({ root, repo, content: answer.content });
         const probeId = `probe-${episode.probes.length + 1}`;
+        if (answer.action === 'probe_process') observed.processContract = episode.trace.at(-1).processContract;
         observed.probeId = probeId; probeSources.set(probeId, answer.content);
         episode.probes.push(observed);
         messages.push({ role: 'user', content: JSON.stringify({ probe: observed, turnsLeft: turnBudget - turn - 1 }) });
@@ -276,7 +294,14 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       if (answer.action === 'read') {
         const key = `${answer.repository || 'self'}:${answer.path}`;
         if (completeReads.has(key)) throw new Error(`Already observed the complete file (${completeReads.get(key)} characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.`);
-        result = readFile(selected, answer.path, answer.offset || 0);
+        try { result = readFile(selected, answer.path, answer.offset || 0); }
+        catch (error) {
+          const newRegression = typeof answer.path === 'string' && (language === 'node' ? /^resident-regressions\/[A-Za-z0-9_-]+\.test\.mjs$/.test(answer.path) : /^tests\/resident_[A-Za-z0-9_]+\.rs$/.test(answer.path));
+          if (error.code !== 'ENOENT' || !newRegression || selected !== root) throw error;
+          messages.push({ role: 'user', content: JSON.stringify({ evidence: { path: answer.path, exists: false, expectedMissing: true,
+            instruction: 'New regression files and their directory are created by the controller. Their absence is expected, not a blocker. Use probe or probe_process to construct and execute the test; reference its probeId in your proposal.' }, turnsLeft: turnBudget - turn - 1 }) });
+          continue;
+        }
         result.complete = result.offset === 0 && result.text.length === result.total;
         if (result.complete) completeReads.set(key, result.total);
         if (!result.text) throw new Error(`Offset is past the end-of-file (${result.total} characters). Read this file at offset 0, or inspect another file.`);

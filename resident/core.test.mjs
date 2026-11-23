@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { infer, inferenceLimits, safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
+import { infer, inferenceLimits, processRegression, safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
 import { verify, commands } from './verify.mjs';
 import { publishable } from './github.mjs';
 
@@ -284,4 +284,39 @@ test('inference budgets are bounded and truncated generations are not parsed as 
   assert.equal(sent.options.num_predict, 1600);
   await assert.rejects(infer([], {}, { timeoutMs: 999999 }), /Invalid inference budget/);
   assert.ok(inferenceLimits('scout').maxTokens < inferenceLimits('specialist-example').maxTokens);
+});
+
+test('missing new regression files are explicit creation affordances, not missing-source blockers', async t => {
+  const root = fixture(t); let understood = false;
+  const actions = [{ action: 'read', path: 'resident-regressions/new.test.mjs' }, { action: 'stop', reason: 'Proceed with a new test next' }];
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy,
+    ask: async messages => { understood ||= messages.some(m => m.content.includes('"expectedMissing":true')); return { text: JSON.stringify(actions.shift()) }; } });
+  assert.ok(understood); assert.ok(!e.trace.some(t => /ENOENT/.test(t.error || '')));
+});
+test('typed process experiments produce executable failure and success contracts without a shell', async t => {
+  const root = fixture(t); fs.writeFileSync(path.join(root, 'src/exit.js'), 'process.exit(7);\n');
+  const { spawnSync } = await import('node:child_process');
+  const env = { ...process.env }; delete env.NODE_TEST_CONTEXT;
+  for (const expectedExit of [7, 9]) {
+    const source = processRegression({ script: 'src/exit.js', args: [], expectedExit });
+    const file = path.join(root, 'contract.test.mjs'); fs.writeFileSync(file, source);
+    const result = spawnSync(process.execPath, ['--test', file], { cwd: root, encoding: 'utf8', env, timeout: 10000 });
+    assert.equal(result.status, expectedExit === 7 ? 0 : 1, result.stdout);
+  }
+  for (const spec of [{ script: '../outside.js', args: [], expectedExit: 0 }, { script: 'src/exit.js', args: [], expectedExit: 999 }, { script: 'src/exit.js', args: [], expectedExit: 0, timeoutMs: 999999 }])
+    assert.throws(() => processRegression(spec));
+});
+test('a typed process experiment executes through the existing probe gate and its exact result is reusable', async t => {
+  const root = fixture(t), baseSHA = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const { runProbe } = await import('./probe.mjs'); const { spawnSync } = await import('node:child_process');
+  const env = { ...process.env }; delete env.NODE_TEST_CONTEXT;
+  const p = proposal(); p.edits[1] = { path: p.edits[1].path, probeId: 'probe-1' };
+  const actions = [{ action: 'read', path: 'src/value.js' }, { action: 'probe_process', script: 'src/value.js', args: [], expectedExit: 7 }, { action: 'propose', ...p }];
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, requireProbe: true,
+    probe: request => runProbe(request, { run: (dir, command) => {
+      const result = spawnSync(process.execPath, command.split(' ').slice(1), { cwd: dir, encoding: 'utf8', env, timeout: 10000 });
+      return { code: result.status, error: result.error?.message, log: `${result.stdout || ''}${result.stderr || ''}` };
+    } }), ask: async () => ({ text: JSON.stringify(actions.shift()) }) });
+  assert.equal(e.probes[0].sourceSHA, baseSHA); assert.equal(e.probes[0].status, 'baseline-failed'); assert.equal(e.probes[0].processContract.expectedExit, 7);
+  assert.equal(e.status, 'proposed'); assert.equal(digest(e.proposal.edits[1].content), e.probes[0].testHash);
 });

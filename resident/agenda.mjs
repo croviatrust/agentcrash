@@ -44,7 +44,7 @@ export function refreshAgenda(previous, repo, context, outcomes = {}, episodes =
   return agenda;
 }
 export function chooseCommitment(agenda, repo) {
-  return (agenda?.tasks || []).find(t => t.repo === repo && ['active', 'queued'].includes(t.status) && t.attempts < 3) || null;
+  return (agenda?.tasks || []).find(t => t.repo === repo && (['active', 'queued'].includes(t.status) && t.attempts < 3 || t.status === 'needs-research' && (t.recoveryCycles || 0) < 6 && Date.parse(t.cooldownUntil || 0) <= Date.now())) || null;
 }
 export function advanceAgenda(previous, episode, verdict) {
   const agenda = structuredClone(previous || { version: 1, tasks: [] });
@@ -58,10 +58,15 @@ export function advanceAgenda(previous, episode, verdict) {
     next: task.next, baseSHA: episode.baseSHA }].slice(-3);
   if (episode.pr || ['awaiting-crovia-identity', 'pr-blocked'].includes(episode.status)) {
     task.status = 'awaiting-review'; task.pr = episode.pr || null; task.candidate = episode.url;
+  } else if (episode.autonomy) {
+    task.recoveryCycles = (task.recoveryCycles || 0) + 1;
+    task.lastFailure = episode.autonomy.attempts.at(-1)?.observed || episode.autonomy.researchFailure || task.lastFailure;
+    task.status = task.recoveryCycles >= 6 ? 'blocked' : 'needs-research';
+    task.cooldownUntil = new Date(Date.parse(episode.finished || new Date().toISOString()) + 15 * 60000).toISOString();
   } else task.status = task.attempts >= 3 ? 'blocked' : 'active';
   return agenda;
 }
 export function missionBrief(task) {
   return task ? { id: task.id, goal: task.goal, objective: task.objective, source: task.source, evidenceHash: task.evidenceHash,
-    attempts: task.attempts, next: task.next, checkpoints: task.checkpoints } : null;
+    attempts: task.attempts, recoveryRequired: task.status === 'needs-research', next: task.next, checkpoints: task.checkpoints } : null;
 }
