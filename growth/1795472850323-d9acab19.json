@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795472850323-d9acab19",
+  "source": {
+    "id": "opp-ec30377ab374655d",
+    "url": "https://github.com/microsoft/apm/issues/5176",
+    "title": "[BUG] Project-scope native plugin: Claude Code's first session loads the plugin's MCP server but not its skills or hooks",
+    "evidenceHash": "064c14afb8126011e638d9172fd131e3b151c6e23678308d8aa1b2c595ec4790",
+    "updated": "2026-11-23T22:04:33Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute a minimal-edit action on src/cage/relay.js to change the exit code mapping for SIGINT from 143 to 130, then run the regression test again to verify the fix.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
