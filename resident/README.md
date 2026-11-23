@@ -180,3 +180,20 @@ engineering cycles. Encounter cycles consume at most eight model calls instead
 of adding work on top of the engineering budget. They do not promote repair
 capsules. A controlled local result is not organic discovery, independent-user
 adoption or demonstrated growth. See [the agent interface](../agents/README.md).
+
+## External needs and actual-use feedback
+
+Each observation cycle performs bounded read-only public GitHub issue searches.
+It checks repository visibility and canonical issue state, keeps URL, timestamp,
+content hash and excerpts, filters own-repository echoes and evidence older than
+180 days, and ranks topic matches with an explicit heuristic. This ranking is
+a research queue, not validated demand. Three attempts on unchanged issue
+evidence within retained recent history remove that source from the queue.
+
+The scout can select only a supplied opportunity id for the source linkage.
+The writer retains `opportunities.json` and `growth/<episode>.json` on the memory
+branch, connecting source, hypothesis, falsifier, checks and candidate. Inbound
+Agent trial issues are passed to research as unverified self-reports. No contact
+with issue authors or external publication is performed. Network/rate-limit
+errors are recorded and do not create fictional opportunities. A successful
+repair is still not automatically classified as adoption or publication.
