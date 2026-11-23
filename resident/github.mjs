@@ -34,6 +34,7 @@ export async function prepare(repo, output) {
   reconcile(state, ours);
   const open = ours.filter(p => p.state === 'open');
   const context = {
+    latestEncounter: state.lastEncounter,
     issues: issues.filter(i => !i.pull_request).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 2000) })),
     commits: commits.map(c => ({ sha: c.sha, message: c.commit.message.slice(0, 1000) })),
     openProposals: open.map(p => ({ number: p.number, title: p.title, url: p.html_url })),
@@ -93,6 +94,7 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
   const context = json(path.join(stateDir, 'context.json'));
   episode.status = verdict.status;
   episode.localEvidence = verdict.status;
+  if (episode.kind === 'encounter' && episode.encounter) episode.status = 'encounter-recorded';
   episode.error = verdict.error || verdict.checks?.filter(c => c.code !== 0).map(c => `${c.label}: ${c.log?.slice(-1800)}`).join('\n');
   episode.inference = episode.trace;
   delete episode.trace;
@@ -128,8 +130,9 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
   const files = [
     { path: 'state.json', content: JSON.stringify(next, null, 2) + '\n' },
     { path: `episodes/${episode.id}.json`, content: JSON.stringify({ ...episode, verdict, context }, null, 2) + '\n' },
-    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
+    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Latest controlled encounter\n\n${next.lastEncounter ? `[${next.lastEncounter.id}](encounters/${next.lastEncounter.id}.json) — same-model local task, not organic adoption.` : 'No encounter recorded yet.'}\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
   ];
+  if (episode.encounter) files.push({ path: `encounters/${episode.encounter.id}.json`, content: JSON.stringify(episode.encounter, null, 2) + '\n' });
   if (capsule) files.push({ path: `capabilities/${capsule.id}.json`, content: JSON.stringify(capsule, null, 2) + '\n' });
   const draft = communicationDraft(episode, verdict, capsule);
   if (draft) files.push({ path: `outreach/${episode.id}.md`, content: draft });

@@ -164,3 +164,19 @@ proposal, critique, execution, capsule promotion and cross-repository retrieval.
 Model responses in these fixtures are test doubles. `docker-proof.mjs` separately
 uses real containers for the source regression and promotion gate. Neither is a
 claim that the live model has autonomously acquired or transferred a useful skill.
+
+## Measured agent encounters
+
+AgentCrash alternates engineering with a controlled encounter on first activation
+and every fourth generation thereafter. Two fresh contexts of the configured
+model receive the same synthetic repository task and four-turn budget. One can
+read files; the other can also discover a local catalog and invoke the actual
+read-only product CLI. A fixture contract grades answers, including misses and
+false positives. The model cannot grade itself or execute arbitrary commands.
+
+Full traces and CLI output hashes persist under `encounters/` on `crovia-memory`;
+the latest compact outcome is passed to the scout and builder in subsequent
+engineering cycles. Encounter cycles consume at most eight model calls instead
+of adding work on top of the engineering budget. They do not promote repair
+capsules. A controlled local result is not organic discovery, independent-user
+adoption or demonstrated growth. See [the agent interface](../agents/README.md).
