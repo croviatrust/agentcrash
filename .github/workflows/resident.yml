@@ -19,7 +19,7 @@ jobs:
   think:
     if: vars.CROVIA_RESIDENT_PAUSED != 'true' && (github.event_name != 'issues' || startsWith(github.event.issue.title, '[Agent trial]'))
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 65
     permissions:
       contents: read
       issues: read
@@ -48,16 +48,17 @@ jobs:
         if: steps.observe.outputs.active == 'true' && vars.RESIDENT_API_URL == ''
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/ollama
-          key: crovia-brain-qwen3.5-4b-v1
+          path: ${{ runner.temp }}/ollama-models
+          key: crovia-brain-qwen3.5-4b-models-v2
       - name: Start CPU inference without an API key
         if: steps.observe.outputs.active == 'true' && vars.RESIDENT_API_URL == ''
         env:
           MODEL: ${{ vars.RESIDENT_MODEL || 'qwen3.5:4b' }}
         run: |
-          mkdir -p "$RUNNER_TEMP/ollama"
+          mkdir -p "$RUNNER_TEMP/ollama-models"
           docker run -d --name crovia-brain --memory=8g --cpus=3 -p 127.0.0.1:11434:11434 \
-            -v "$RUNNER_TEMP/ollama:/root/.ollama" ollama/ollama:0.40.17
+            --user "$(id -u):$(id -g)" -e HOME=/tmp -e OLLAMA_MODELS=/models \
+            -v "$RUNNER_TEMP/ollama-models:/models" ollama/ollama:0.40.17
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:11434/api/version; then break; fi
             sleep 2

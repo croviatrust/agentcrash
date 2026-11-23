@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { chooseFocus, activeResearch, digest, infer, investigate, tracked, readFile, json, writeJSON, initialState } from './core.mjs';
+import { chooseFocus, activeResearch, digest, infer, inferenceLimits, investigate, tracked, readFile, json, writeJSON, initialState } from './core.mjs';
 import { encounter, encounterSummary } from './encounter.mjs';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -33,7 +33,7 @@ function reviewEdits(root, proposal) {
       new: e.content.slice(Math.max(0, at - 350), at + 2400), excerptOnly: true };
   });
 }
-export async function runFleet({ root, sibling, repo, state, context, strategy, ask = messages => infer(messages), study = research, probe = runProbe, enableEncounters = false, onEvent = () => {} }) {
+export async function runFleet({ root, sibling, repo, state, context, strategy, ask = (messages, { role } = {}) => infer(messages, process.env, inferenceLimits(role)), study = research, probe = runProbe, enableEncounters = false, onEvent = () => {} }) {
   const commitment = chooseCommitment(state.agenda, repo);
   const assignedWork = commitment?.source === `https://github.com/${repo}/issues/${context.maintainerAssignment?.issueNumber}`;
   if (!assignedWork && enableEncounters && repo === 'croviatrust/agentcrash' && (!state.lastEncounter || (state.generation + 1) % 4 === 0)) {

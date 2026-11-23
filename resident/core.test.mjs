@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
+import { infer, inferenceLimits, safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
 import { verify, commands } from './verify.mjs';
 import { publishable } from './github.mjs';
 
@@ -219,4 +219,69 @@ test('publisher rejects a mismatched proposal or incomplete evidence', () => {
   assert.throws(() => publishable(e, { episode: 'y', proposalHash: digest(e.proposal) }));
   assert.throws(() => publishable(e, { episode: 'x', proposalHash: 'wrong' }));
   assert.equal(publishable(e, { episode: 'x', proposalHash: digest(e.proposal), status: 'verified', checks: [] }), false);
+});
+
+test('a complete source read is marked and a redundant tail read cannot masquerade as new evidence', async t => {
+  const root = fixture(t); let sawComplete = false;
+  const actions = [{ action: 'read', path: 'src/value.js' }, { action: 'read', path: 'src/value.js', offset: 5 }, { action: 'stop', reason: 'Use the already read implementation' }];
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy,
+    ask: async messages => { sawComplete ||= messages.some(m => m.content.includes('"complete":true')); return { text: JSON.stringify(actions.shift()) }; } });
+  assert.ok(sawComplete); assert.ok(e.trace.some(t => /complete file/.test(t.error || '')));
+  assert.equal(e.observedBlockers[0].phase, 'action');
+});
+test('an inference timeout followed by an invented file timeout gets one recovery opportunity', async t => {
+  const root = fixture(t); let call = 0, sawCorrection = false;
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy,
+    ask: async messages => {
+      call++;
+      if (call === 1) return { text: '{"action":"read","path":"src/value.js"}' };
+      if (call === 2) throw new Error('The operation was aborted due to timeout');
+      if (call === 3) return { text: '{"action":"stop","reason":"File read timeout"}' };
+      sawCorrection = messages.some(m => m.content.includes('not a file-read timeout'));
+      return { text: JSON.stringify({ action: 'propose', ...proposal() }) };
+    } });
+  assert.equal(e.status, 'proposed'); assert.ok(sawCorrection);
+  assert.equal(e.trace.filter(t => t.recovery).length, 1);
+  assert.equal(e.observedBlockers[0].phase, 'inference');
+  const saved = remember(initialState(), e); assert.equal(saved.recent[0].observedBlockers[0].phase, 'inference');
+});
+test('timeout recovery is bounded and does not prevent an honest stop', async t => {
+  const root = fixture(t); let calls = 0;
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy,
+    ask: async () => {
+      calls++; if (calls === 1) return { text: '{"action":"read","path":"src/value.js"}' };
+      if (calls === 2) throw new Error('inference timeout');
+      return { text: '{"action":"stop","reason":"timeout prevents completion","next":"Retry a small executable test"}' };
+    } });
+  assert.equal(calls, 4); assert.equal(e.status, 'stopped'); assert.equal(e.trace.filter(t => t.recovery).length, 1);
+});
+test('a probe reference reuses exact test bytes without weakening the failing-baseline gate', async t => {
+  const root = fixture(t), testSource = proposal().edits[1].content;
+  const baseSHA = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const candidate = proposal(); candidate.edits[1] = { path: candidate.edits[1].path, probeId: 'probe-1' };
+  const actions = [{ action: 'read', path: 'src/value.js' }, { action: 'probe', content: testSource }, { action: 'propose', ...candidate }];
+  const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, requireProbe: true,
+    probe: async () => ({ sourceSHA: baseSHA, testHash: digest(testSource), code: 1, status: 'baseline-failed' }),
+    ask: async () => ({ text: JSON.stringify(actions.shift()) }) });
+  assert.equal(e.status, 'proposed'); assert.equal(e.proposal.edits[1].content, testSource); assert.equal(e.probes[0].probeId, 'probe-1');
+});
+test('probe references cannot write source files or name nonexistent probe results', async t => {
+  const root = fixture(t);
+  for (const edit of [{ path: 'src/value.js', probeId: 'probe-1' }, { path: 'resident-regressions/new.test.mjs', probeId: 'unknown' }]) {
+    const p = proposal(); p.edits[1] = edit;
+    const actions = [{ action: 'read', path: 'src/value.js' }, { action: 'propose', ...p }, { action: 'stop', reason: 'Invalid reference' }];
+    const e = await investigate({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy,
+      ask: async () => ({ text: JSON.stringify(actions.shift()) }) });
+    assert.equal(e.status, 'stopped'); assert.ok(e.trace.some(t => /Unknown probe reference/.test(t.error || '')));
+  }
+});
+
+test('inference budgets are bounded and truncated generations are not parsed as file/action errors', async t => {
+  const saved = globalThis.fetch; t.after(() => { globalThis.fetch = saved; });
+  let sent;
+  globalThis.fetch = async (_, options) => { sent = JSON.parse(options.body); return new Response(JSON.stringify({ done_reason: 'length', message: { content: '{"action":' } })); };
+  await assert.rejects(infer([], {}, inferenceLimits('specialist-example')), /Inference output limit/);
+  assert.equal(sent.options.num_predict, 1600);
+  await assert.rejects(infer([], {}, { timeoutMs: 999999 }), /Invalid inference budget/);
+  assert.ok(inferenceLimits('scout').maxTokens < inferenceLimits('specialist-example').maxTokens);
 });

@@ -116,7 +116,7 @@ export function remember(state, episode) {
   // in separate episode files; GitHub's contents API stops embedding large files.
   const compact = e => ({ id: e.id, repo: e.repo, focus: e.focus, started: e.started, finished: e.finished,
     commitment: e.commitment ? { id: e.commitment.id, evidenceHash: e.commitment.evidenceHash } : undefined, opportunity: e.opportunity, status: e.status, localEvidence: e.localEvidence, reason: e.reason?.slice(0, 1600),
-    error: e.error?.slice(0, 1600), pr: e.pr, url: e.url,
+    observedBlockers: e.observedBlockers, error: e.error?.slice(0, 1600), pr: e.pr, url: e.url,
     findings: e.findings || [], next: e.next, encounterSummary: e.encounterSummary, probes: (e.probes || []).map(({ sourceSHA, testHash, status, code, log }) => ({ sourceSHA, testHash, status, code, log: log?.slice(-800) })),
     ...(e.proposal ? { proposal: { title: e.proposal.title, hypothesis: e.proposal.hypothesis,
       falsifier: e.proposal.falsifier, benefit: e.proposal.benefit } } : {}) });
@@ -156,18 +156,23 @@ export function activeResearch(state, focus) {
   const pending = state.pendingResearch;
   return pending?.attempts < 3 && pending.focus === focus ? pending : null;
 }
-export async function infer(messages, env = process.env) {
+export function inferenceLimits(role = '') {
+  return role.startsWith('specialist-') ? { timeoutMs: 360000, maxTokens: 1600 } : { timeoutMs: 200000, maxTokens: 900 };
+}
+export async function infer(messages, env = process.env, { timeoutMs = 200000, maxTokens = 2400 } = {}) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 30000 || timeoutMs > 360000 || !Number.isInteger(maxTokens) || maxTokens < 100 || maxTokens > 2400) throw new Error('Invalid inference budget');
   const remote = Boolean(env.RESIDENT_API_URL);
   const url = remote ? new URL(env.RESIDENT_API_URL) : new URL('http://127.0.0.1:11434/api/chat');
   if (remote && url.protocol !== 'https:') throw new Error('Remote inference requires HTTPS');
   const headers = { 'Content-Type': 'application/json' };
   if (remote && env.RESIDENT_API_KEY) headers.Authorization = `Bearer ${env.RESIDENT_API_KEY}`;
   const model = env.RESIDENT_MODEL || 'qwen3.5:4b';
-  const body = remote ? { model, messages, max_tokens: 2400, response_format: { type: 'json_object' } } :
-    { model, messages, stream: false, think: false, format: 'json', options: { num_ctx: 8192, num_predict: 2400, temperature: 0.2 } };
-  const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(200000) });
+  const body = remote ? { model, messages, max_tokens: maxTokens, response_format: { type: 'json_object' } } :
+    { model, messages, stream: false, think: false, format: 'json', options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.2 } };
+  const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) throw new Error(`Inference HTTP ${response.status}`);
   const data = await response.json();
+  if ((remote ? data.choices?.[0]?.finish_reason : data.done_reason) === 'length') throw new Error('Inference output limit reached; emit a smaller action rather than a long explanation');
   return { text: remote ? data.choices?.[0]?.message?.content : data.message?.content,
     usage: remote ? data.usage : { input: data.prompt_eval_count, output: data.eval_count }, model };
 }
@@ -177,27 +182,30 @@ export async function investigate({ root, sibling, repo, state, context, strateg
   validateStrategy(strategy);
   const focus = chooseFocus(strategy, state);
   const files = tracked(root);
-  const messages = [{ role: 'system', content: `You are Crovia, a resident engineering researcher. ${strategy.mission}
+  const messages = [{ role: 'system', content: `You are Crovia AgentHub, a persistent engineering investigator and builder. Be curious, skeptical and direct: choose a concrete next action, challenge unsupported assumptions, and change method when observed evidence contradicts it. Do not simulate feelings or claim capabilities you have not demonstrated. ${strategy.mission}
 Focus: ${focus}
 Principles: ${strategy.principles.join(' ')}
-Return exactly one JSON object per turn. Allowed actions:
+Return exactly one JSON object per turn. You may add "decision": "one short sentence explaining the purpose of the chosen action". This is an action summary, not a request for private reasoning. Allowed actions:
 {"action":"read","path":"src/file.js","offset":0,"repository":"self"} (or repository="sibling")
 {"action":"search","query":"literal text","repository":"self"} to find text in tracked small files.
-{"action":"probe","content":"complete regression test source"} runs a test against the unchanged baseline in isolation (at most twice). Inspect its diagnostics; syntax/import failures are not bugs. Code proposals must include the exact test source from a failing baseline probe when probes are required. No arbitrary commands.
+{"action":"probe","content":"complete regression test source"} runs a test against the unchanged baseline in isolation (at most twice). Inspect its diagnostics; syntax/import failures are not bugs. Code proposals must include the exact test source from a failing baseline probe when probes are required. The result supplies a probeId. In a proposal, reuse the exact test without rewriting it using {"path":"regression test path","probeId":"probe-1"}. No arbitrary commands.
 Probe requirement for this generation: ${requireProbe}.
 {"action":"propose","title":"...","hypothesis":"...","falsifier":"...","benefit":"...","edits":[{"path":"src/file.js","content":"COMPLETE file content"},{"path":"${language === 'node' ? 'resident-regressions/name.test.mjs' : 'tests/resident_name.rs'}","content":"regression test"}]}
 {"action":"stop","reason":"specific uncertainty","findings":[{"path":"src/file.js","repository":"self","note":"specific observation from a file you actually read"}],"next":"precise question or experiment for the next generation"}
-For an existing file, prefer {"path":"src/file.js","before":"exact unique old text","after":"new text"} instead of repeating the whole file. New files need content. Read every existing file before changing it. Do not read the same path and offset twice: use a new offset, inspect another file, propose or stop. Code edits only under ${language === 'node' ? 'src/ or record/lib/' : 'src/'} with .${language === 'node' ? 'js' : 'rs'} extension. Existing tests, workflows, credentials, package manifests and this controller cannot be edited. New regression tests must fail on the original code and pass after the change. Tests cannot use the network. A strategy experiment may edit only resident/strategy.json and must satisfy the fixed schema; schema validity is not evidence it improves results. No shell, no deletion, no external publishing. Inspect sibling code to discover complementary capabilities but edit only self. ${turnBudget} turns maximum. Prefer one small coherent change.` },
+For an existing file, prefer {"path":"src/file.js","before":"exact unique old text","after":"new text"} instead of repeating the whole file. New files need content. Read every existing file before changing it. A read with complete=true already contains the whole file. Do not read another offset of that file. If a reproduction and source are available, prefer executing the smallest regression probe over restating a plan. Inference timeouts do not mean a file read failed. Code edits only under ${language === 'node' ? 'src/ or record/lib/' : 'src/'} with .${language === 'node' ? 'js' : 'rs'} extension. Existing tests, workflows, credentials, package manifests and this controller cannot be edited. New regression tests must fail on the original code and pass after the change. Tests cannot use the network. A strategy experiment may edit only resident/strategy.json and must satisfy the fixed schema; schema validity is not evidence it improves results. No shell, no deletion, no external publishing. Inspect sibling code to discover complementary capabilities but edit only self. ${turnBudget} turns maximum. Prefer one small coherent change.` },
   { role: 'user', content: JSON.stringify({ repo, generation: state.generation, context, files: files.slice(0, 250),
     pendingResearch: activeResearch(state, focus), recent: state.recent.slice(-3).map(e => ({ status: e.status, focus: e.focus,
-      title: e.proposal?.title, error: e.error, reason: e.reason, findings: e.findings, next: e.next, pr: e.pr })),
+      title: e.proposal?.title, error: e.error, observedBlockers: e.observedBlockers, unverifiedModelReason: e.reason, findings: e.findings, next: e.next, pr: e.pr })),
     skills: state.skills }).slice(0, 14000) }];
   const sha = dir => execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   const episode = { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo, baseSHA: sha(root), siblingSHA: sibling ? sha(sibling) : null, focus, started: new Date().toISOString(), status: 'stopped', trace: [], probes: [] };
   const reads = new Set();
   const actions = new Set();
+  const completeReads = new Map(), probeSources = new Map();
+  let timeoutRecoveryOffered = false;
   const evidence = new Map();
   for (let turn = 0; turn < turnBudget; turn++) {
+    while (JSON.stringify(messages).length > 28000 && messages.length > 4) messages.splice(2, 2);
     if (turn === turnBudget - 2) messages.push({ role: 'user', content: 'Investigation time is over. The final two turns are reserved for a decision. Return propose with a concrete falsifiable change, or stop with evidence-linked findings and a precise next question. Do not read or search again. An honest unresolved question is better than an invented improvement.' });
     let answer, phase = 'inference';
     try {
@@ -206,10 +214,18 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       phase = 'action';
       answer = JSON.parse(response.text);
       episode.trace.at(-1).action = answer.action;
+      if (typeof answer.decision === 'string') episode.trace.at(-1).decision = answer.decision.slice(0, 300);
       if (answer.path) episode.trace.at(-1).path = String(answer.path).slice(0, 200);
       if (answer.action === 'read') episode.trace.at(-1).offset = answer.offset || 0;
       messages.push({ role: 'assistant', content: response.text });
       if (answer.action === 'stop') {
+        const timedOut = episode.trace.some(t => t.phase === 'inference' && /timeout|timed out|aborted/i.test(t.error || ''));
+        if (!timeoutRecoveryOffered && timedOut && evidence.size && /timeout|timed out/i.test(String(answer.reason)) && turn < turnBudget - 1) {
+          timeoutRecoveryOffered = true;
+          episode.trace.at(-1).recovery = 'inference-timeout-misattributed';
+          messages.push({ role: 'user', content: 'The controller observed an INFERENCE timeout, not a file-read timeout. Previously returned source remains available. Use the remaining turn(s) for one small executable probe or concrete edit. You may still stop with a specific unresolved blocker, but do not report a file error that did not occur.' });
+          continue;
+        }
         episode.reason = String(answer.reason).slice(0, 2000);
         episode.findings = (Array.isArray(answer.findings) ? answer.findings : []).slice(0, 3).flatMap(f => {
           const source = evidence.get(`${f.repository || 'self'}:${f.path}`);
@@ -224,12 +240,20 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
         const hash = digest(answer.content);
         if (episode.probes.some(p => p.testHash === hash && p.status !== 'infrastructure-failed')) throw new Error('This exact test was already probed');
         const observed = await probe({ root, repo, content: answer.content });
+        const probeId = `probe-${episode.probes.length + 1}`;
+        observed.probeId = probeId; probeSources.set(probeId, answer.content);
         episode.probes.push(observed);
         messages.push({ role: 'user', content: JSON.stringify({ probe: observed, turnsLeft: turnBudget - turn - 1 }) });
         continue;
       }
       if (answer.action === 'propose') {
-        const p = validateProposal(materialize(root, answer), language);
+        const supplied = { ...answer, edits: answer.edits?.map(edit => {
+          if (edit.probeId === undefined) return edit;
+          const prefix = language === 'node' ? 'resident-regressions/' : 'tests/resident_';
+          if (typeof edit.path !== 'string' || !edit.path.startsWith(prefix) || !probeSources.has(edit.probeId)) throw new Error('Unknown probe reference or non-regression destination');
+          return { path: edit.path, content: probeSources.get(edit.probeId) };
+        }) };
+        const p = validateProposal(materialize(root, supplied), language);
         for (const edit of p.edits) {
           if (fs.existsSync(path.join(root, edit.path)) && !reads.has(edit.path)) throw new Error(`Read ${edit.path} before editing it`);
           if (edit.path.startsWith(language === 'node' ? 'resident-regressions/' : 'tests/resident_') && fs.existsSync(path.join(root, edit.path))) throw new Error('Regression filename already exists');
@@ -250,7 +274,11 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       actions.add(actionKey);
       let result;
       if (answer.action === 'read') {
+        const key = `${answer.repository || 'self'}:${answer.path}`;
+        if (completeReads.has(key)) throw new Error(`Already observed the complete file (${completeReads.get(key)} characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.`);
         result = readFile(selected, answer.path, answer.offset || 0);
+        result.complete = result.offset === 0 && result.text.length === result.total;
+        if (result.complete) completeReads.set(key, result.total);
         if (!result.text) throw new Error(`Offset is past the end-of-file (${result.total} characters). Read this file at offset 0, or inspect another file.`);
         evidence.set(`${answer.repository || 'self'}:${answer.path}`, { path: answer.path,
           repository: answer.repository || 'self', sha: selected === root ? episode.baseSHA : episode.siblingSHA });
@@ -266,7 +294,7 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       messages.push({ role: 'user', content: JSON.stringify({ evidence: result, turnsLeft: turnBudget - turn - 1 }) });
     } catch (error) {
       episode.trace.push({ turn, phase, error: error.message });
-      messages.push({ role: 'user', content: JSON.stringify({ phase, error: error.message, instruction: 'Correct the action or stop honestly.' }) });
+      messages.push({ role: 'user', content: JSON.stringify({ phase, error: error.message, instruction: phase === 'inference' ? 'Only the model generation failed; prior tool results remain valid. Continue from the last evidence with a small executable action. This is not a file-read error.' : 'Correct the action or stop with the exact observed blocker.' }) });
       if (episode.trace.filter(t => t.error?.startsWith('Inference HTTP')).length >= 2) {
         episode.reason = 'Inference unavailable; preserve the failed attempt and retry next cycle.'; break;
       }
@@ -275,6 +303,7 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
     while (JSON.stringify(messages).length > 28000 && messages.length > 4) messages.splice(2, 2);
   }
   if (!episode.proposal && !episode.reason) episode.reason = 'Turn budget exhausted without a valid experiment.';
+  episode.observedBlockers = episode.trace.filter(t => t.error).slice(-4).map(({ phase, error }) => ({ phase, error: error.slice(0, 300) }));
   episode.finished = new Date().toISOString();
   return episode;
 }

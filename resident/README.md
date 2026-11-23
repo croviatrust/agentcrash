@@ -218,3 +218,25 @@ work complete. The ledger is bounded to 24 commitments and three checkpoints eac
 AgentHub is a working name for this continuity layer, not a claim of a new model,
 consciousness, independent invention or first-ever GitHub agent. Runtime remains
 event-driven GitHub Actions plus the configured inference model.
+
+## Recovery from observed failures
+
+AgentHub uses a stated operating style (curious, skeptical, direct) and short
+action-purpose summaries, not simulated emotions. Actual controller blockers
+are retained separately from unverified model explanations. Complete-file reads
+are explicitly marked; tail rereads of an already complete file are refused.
+An inference timeout is reported as model-generation failure. If the model then
+misattributes it to a file read, it gets one bounded recovery opportunity, while
+retaining the option to stop with a genuine blocker.
+
+Probe results have ids. A proposal may reference an existing probe's exact test
+bytes instead of regenerating them. The same baseline SHA/hash and independent
+before/after verification requirements still apply. Source destinations cannot
+use probe references. Specialist inference has up to 360 seconds and 1600 output
+tokens per call; scout/critic calls use 200 seconds and 900 tokens. The shared
+eight-call budget remains, with a 65-minute job cap including bounded probes.
+
+Ollama runs as the runner uid with only its model directory cached. Its ephemeral
+HOME/key material is outside the cache, avoiding the root-owned cache failures
+observed during the first assigned repair. These changes target measured runtime
+failures; they do not establish improved live model performance by themselves.
