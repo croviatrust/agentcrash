@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795467907725-1939c241",
+  "source": {
+    "id": "opp-378aebd4c577c697",
+    "url": "https://github.com/brianreborn/familia/issues/407",
+    "title": "Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+    "evidenceHash": "3dfce80ff2ab991b71322a43bf8729dd75eea9eada73a84eacca30ff6bc0b2e1",
+    "updated": "2026-11-23T19:44:20Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

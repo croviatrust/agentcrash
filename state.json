@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 10,
+  "generation": 11,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -219,6 +219,40 @@
       "findings": [],
       "next": "Please provide the content of test/cage.test.mjs or specify a new file to read so I can construct a falsifiable regression test and propose a verified fix.",
       "probes": []
+    },
+    {
+      "id": "1795467907725-1939c241",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+      "started": "2026-11-23T21:05:07.733Z",
+      "finished": "2026-11-23T21:08:33.865Z",
+      "commitment": {
+        "id": "work-1ca99c4589115e6ecff5",
+        "evidenceHash": "c4abc36a325dfad4aa1b"
+      },
+      "opportunity": {
+        "id": "opp-378aebd4c577c697",
+        "url": "https://github.com/brianreborn/familia/issues/407",
+        "title": "Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+        "evidenceHash": "3dfce80ff2ab991b71322a43bf8729dd75eea9eada73a84eacca30ff6bc0b2e1",
+        "updated": "2026-11-23T19:44:20Z",
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+      },
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The race condition in `relay.js` (proxy binds before child spawns) is confirmed by the code structure, but the exact failure mode requires a live test to falsify. Without network access for the agent task, I cannot run the proposed probe. The gap is: 'I need to observe an EADDRINUSE error from a caged process attempting to bind to a port already held by the relay proxy.'",
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "ff24f74407a357bddcb95f5a925d4c898917b1c3",
+          "note": "The code awaits `listen(proxyPort)` but then immediately spawns the child process. The loopback ports (`localPorts`) are bound in a separate `for` loop *after* the proxy, and there is no explicit cleanup or timeout mechanism to ensure these ports are released if the proxy fails or if the child process fails to start, leading to potential 'EADDRINUSE' errors when the child tries to bind to a port that was never successfully released by the proxy.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -258,12 +292,18 @@
       "verified": 0,
       "merged": 0,
       "rejected": 0
+    },
+    "Reproduce and reduce the failures in the latest controlled agent encounter.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
     }
   },
   "hypotheses": [],
   "pendingResearch": {
-    "focus": "Remove a measured obstacle to product use from external issue evidence, controlled encounters or reproducible inbound feedback.",
-    "question": "Please provide the content of test/cage.test.mjs or specify a new file to read so I can construct a falsifiable regression test and propose a verified fix.",
+    "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+    "question": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
     "attempts": 1
   },
   "fleet": {
@@ -276,9 +316,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 5,
+        "attempts": 6,
         "verified": 0,
-        "lastSeen": 10
+        "lastSeen": 11
       },
       {
         "id": "critic",
@@ -286,9 +326,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 5,
+        "attempts": 6,
         "verified": 0,
-        "lastSeen": 10
+        "lastSeen": 11
+      },
+      {
+        "id": "specialist-46c0e5f62559d5b0",
+        "role": "engineering",
+        "mission": "Reproduce and reduce the failures in the latest controlled agent encounter.\nNext checkpoint: Construct a falsifiable experiment\nSuggested method: Reproduce the MCP server egress failure in `enc-1795453240120-52e2f5ea` by isolating the `gate.sock` relay loopback port, then attempt a direct connection from the caged process to bypass the allow-li",
+        "parent": "crovia",
+        "born": 11,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 11
       },
       {
         "id": "specialist-bfeb2b58e4c84189",
@@ -342,14 +392,14 @@
       }
     ],
     "last": {
-      "episode": "1795466263702-5ad008e6",
+      "episode": "1795467907725-1939c241",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-bfeb2b58e4c84189",
+        "specialist-46c0e5f62559d5b0",
         "critic"
       ],
-      "modelCalls": 4,
+      "modelCalls": 7,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
@@ -404,5 +454,75 @@
       }
     ],
     "limitation": "Controlled same-model task; not public discovery or adoption."
+  },
+  "agenda": {
+    "version": 1,
+    "tasks": [
+      {
+        "id": "work-1ca99c4589115e6ecff5",
+        "repo": "croviatrust/agentcrash",
+        "goal": "adopt",
+        "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+        "source": "encounters/enc-1795453240120-52e2f5ea.json",
+        "evidenceHash": "c4abc36a325dfad4aa1b",
+        "status": "active",
+        "attempts": 1,
+        "checkpoints": [
+          {
+            "episode": "1795467907725-1939c241",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
+            "baseSHA": "ff24f74407a357bddcb95f5a925d4c898917b1c3"
+          }
+        ],
+        "lastEpisode": "1795467907725-1939c241",
+        "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access."
+      },
+      {
+        "id": "work-b3fa7fb504a6ee0bd549",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+        "source": "https://github.com/brianreborn/familia/issues/407",
+        "evidenceHash": "a1ddda59566f58068b2e",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-ea953d519c46ecda7e4d",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: [M1/M2] MCP proposal review, permissions and remote-agent security gates",
+        "source": "https://github.com/Jamula/FamilyTree/issues/46",
+        "evidenceHash": "57c6d470118bd446b178",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-3fec3489c764a0410d26",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: Security: bump Node base image and dependencies in backend and mcp-server (multer, nodemailer, body-parser, ...)",
+        "source": "https://github.com/trololol91/finance-tracker/issues/2",
+        "evidenceHash": "4f6cbe1f70e401294214",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-9430b897913c76820946",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: feat: Hook change: Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call throug... (from Claude Code v2.1.310)",
+        "source": "https://github.com/sequant-io/sequant/issues/1615",
+        "evidenceHash": "26b279ca5382f781083e",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      }
+    ]
   }
 }

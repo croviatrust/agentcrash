@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "work-1ca99c4589115e6ecff5",
+      "repo": "croviatrust/agentcrash",
+      "goal": "adopt",
+      "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+      "source": "encounters/enc-1795453240120-52e2f5ea.json",
+      "evidenceHash": "c4abc36a325dfad4aa1b",
+      "status": "active",
+      "attempts": 1,
+      "checkpoints": [
+        {
+          "episode": "1795467907725-1939c241",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
+          "baseSHA": "ff24f74407a357bddcb95f5a925d4c898917b1c3"
+        }
+      ],
+      "lastEpisode": "1795467907725-1939c241",
+      "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access."
+    },
+    {
+      "id": "work-b3fa7fb504a6ee0bd549",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+      "source": "https://github.com/brianreborn/familia/issues/407",
+      "evidenceHash": "a1ddda59566f58068b2e",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-ea953d519c46ecda7e4d",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: [M1/M2] MCP proposal review, permissions and remote-agent security gates",
+      "source": "https://github.com/Jamula/FamilyTree/issues/46",
+      "evidenceHash": "57c6d470118bd446b178",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-3fec3489c764a0410d26",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: Security: bump Node base image and dependencies in backend and mcp-server (multer, nodemailer, body-parser, ...)",
+      "source": "https://github.com/trololol91/finance-tracker/issues/2",
+      "evidenceHash": "4f6cbe1f70e401294214",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-9430b897913c76820946",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: feat: Hook change: Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call throug... (from Claude Code v2.1.310)",
+      "source": "https://github.com/sequant-io/sequant/issues/1615",
+      "evidenceHash": "26b279ca5382f781083e",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    }
+  ]
+}

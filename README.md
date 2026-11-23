@@ -1,21 +1,26 @@
 # Crovia resident memory
 
-Generation: 10
+Generation: 11
 
 Latest: stopped
 
 No pull request produced.
 
+## Persistent work
+
+[AgentHub agenda](agenda.json): commitments, checkpoints, blocked work and review status. Completed means merged, not adopted.
+
 ## External needs and experiments
 
-[Latest source evidence](opportunities.json) · [This experiment](growth/1795466263702-5ad008e6.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
+[Latest source evidence](opportunities.json) · [This experiment](growth/1795467907725-1939c241.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
 
 ## Fleet
 
 | Agent | Role | Attempts | Verified source-case repairs |
 | --- | --- | --- | --- |
-| scout | research | 5 | 0 |
-| critic | review | 5 | 0 |
+| scout | research | 6 | 0 |
+| critic | review | 6 | 0 |
+| specialist-46c0e5f62559d5b0 | engineering | 1 | 0 |
 | specialist-bfeb2b58e4c84189 | engineering | 1 | 0 |
 | specialist-bc730c73132efc93 | engineering | 1 | 0 |
 | specialist-f43683d6e5349387 | engineering | 1 | 0 |
