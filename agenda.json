@@ -2,6 +2,27 @@
   "version": 1,
   "tasks": [
     {
+      "id": "work-cd6a58b1132ae1d5fba5",
+      "repo": "croviatrust/agentcrash",
+      "goal": "maintain",
+      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "source": "https://github.com/croviatrust/agentcrash/issues/9",
+      "evidenceHash": "accc3b45ebbd85735f1c",
+      "status": "active",
+      "attempts": 1,
+      "checkpoints": [
+        {
+          "episode": "1795468529647-f067c327",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
+          "baseSHA": "7430e3c3cbecebb4403fb674c1335db0982f639a"
+        }
+      ],
+      "lastEpisode": "1795468529647-f067c327",
+      "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access."
+    },
+    {
       "id": "work-1ca99c4589115e6ecff5",
       "repo": "croviatrust/agentcrash",
       "goal": "adopt",

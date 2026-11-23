@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795468529647-f067c327",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

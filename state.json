@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 11,
+  "generation": 12,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -253,6 +253,33 @@
       ],
       "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
       "probes": []
+    },
+    {
+      "id": "1795468529647-f067c327",
+      "repo": "croviatrust/agentcrash",
+      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "started": "2026-11-23T21:15:29.651Z",
+      "finished": "2026-11-23T21:22:03.642Z",
+      "commitment": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "evidenceHash": "accc3b45ebbd85735f1c"
+      },
+      "opportunity": null,
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "Timeout occurred while reading file at offset 2300. The file size is 2349 bytes, so this offset was beyond the end of the file content provided in the previous read (which showed text ending around line 2349). I have already read the critical logic section containing the `child.on('exit', ...)` handler at offset 0-1000. The bug is visible: when a signal occurs, it maps to 15 (SIGINT/SIGTERM convention) or 9 (SIGKILL), ignoring the actual child's exit code if one exists alongside a signal, and specifically mapping SIGINT to 128+15=143 instead of 128+2=130. I have sufficient evidence to construct the falsifiable experiment.",
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "7430e3c3cbecebb4403fb674c1335db0982f639a",
+          "note": "Line 19: child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)); This logic prioritizes the signal over the exit code. For SIGINT, it calculates 128 + 15 = 143, but the expected shell status for SIGINT is 128 + 2 = 130. The 'code' parameter is ignored when a signal is present.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -298,12 +325,18 @@
       "verified": 0,
       "merged": 0,
       "rejected": 0
+    },
+    "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
     }
   },
   "hypotheses": [],
   "pendingResearch": {
-    "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
-    "question": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
+    "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+    "question": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
     "attempts": 1
   },
   "fleet": {
@@ -316,9 +349,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 6,
+        "attempts": 7,
         "verified": 0,
-        "lastSeen": 11
+        "lastSeen": 12
       },
       {
         "id": "critic",
@@ -326,9 +359,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 6,
+        "attempts": 7,
         "verified": 0,
-        "lastSeen": 11
+        "lastSeen": 12
+      },
+      {
+        "id": "specialist-2a8464a18b9fc037",
+        "role": "engineering",
+        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Construct a falsifiable experiment\nSuggested method: [Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay - Step 2",
+        "parent": "crovia",
+        "born": 12,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 12
       },
       {
         "id": "specialist-46c0e5f62559d5b0",
@@ -379,27 +422,17 @@
         "attempts": 1,
         "verified": 0,
         "lastSeen": 6
-      },
-      {
-        "id": "specialist-32a89a614197a4ff",
-        "role": "engineering",
-        "mission": "Implement a deterministic version string parser for the `claude` CLI that handles missing or malformed output by falling back to hardcoded constants, ensuring consistent behavior across hostile-repo vectors.",
-        "parent": "crovia",
-        "born": 5,
-        "attempts": 1,
-        "verified": 0,
-        "lastSeen": 5
       }
     ],
     "last": {
-      "episode": "1795467907725-1939c241",
+      "episode": "1795468529647-f067c327",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-46c0e5f62559d5b0",
+        "specialist-2a8464a18b9fc037",
         "critic"
       ],
-      "modelCalls": 7,
+      "modelCalls": 6,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
@@ -458,6 +491,27 @@
   "agenda": {
     "version": 1,
     "tasks": [
+      {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "repo": "croviatrust/agentcrash",
+        "goal": "maintain",
+        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "source": "https://github.com/croviatrust/agentcrash/issues/9",
+        "evidenceHash": "accc3b45ebbd85735f1c",
+        "status": "active",
+        "attempts": 1,
+        "checkpoints": [
+          {
+            "episode": "1795468529647-f067c327",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
+            "baseSHA": "7430e3c3cbecebb4403fb674c1335db0982f639a"
+          }
+        ],
+        "lastEpisode": "1795468529647-f067c327",
+        "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access."
+      },
       {
         "id": "work-1ca99c4589115e6ecff5",
         "repo": "croviatrust/agentcrash",
