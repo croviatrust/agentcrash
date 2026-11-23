@@ -22,7 +22,7 @@ export function reviewResult(value) {
   return { decision: value.decision, reason: value.reason.slice(0, 1600) };
 }
 function briefContext(context) {
-  return { opportunities: (context.opportunities || []).slice(0, 3).map(({ excerpt, ...source }) => ({ ...source, excerpt: excerpt?.slice(0, 900) })), inboundFeedback: (context.inboundFeedback || []).slice(0, 3).map(f => ({ ...f, body: f.body?.slice(0, 600) })), issues: (context.issues || []).slice(0, 4).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 500) })),
+  return { assignedTask: context.assignedTask, opportunities: (context.opportunities || []).slice(0, 3).map(({ excerpt, ...source }) => ({ ...source, excerpt: excerpt?.slice(0, 900) })), inboundFeedback: (context.inboundFeedback || []).slice(0, 3).map(f => ({ ...f, body: f.body?.slice(0, 600) })), issues: (context.issues || []).slice(0, 4).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 500) })),
     latestEncounter: context.latestEncounter, commits: (context.commits || []).slice(0, 2), openWork: context.openWork || [], siblingCapabilities: context.siblingCapabilities || [] };
 }
 function reviewEdits(root, proposal) {
@@ -34,7 +34,9 @@ function reviewEdits(root, proposal) {
   });
 }
 export async function runFleet({ root, sibling, repo, state, context, strategy, ask = messages => infer(messages), study = research, probe = runProbe, enableEncounters = false, onEvent = () => {} }) {
-  if (enableEncounters && repo === 'croviatrust/agentcrash' && (!state.lastEncounter || (state.generation + 1) % 4 === 0)) {
+  const commitment = chooseCommitment(state.agenda, repo);
+  const assignedWork = commitment?.source === `https://github.com/${repo}/issues/${context.maintainerAssignment?.issueNumber}`;
+  if (!assignedWork && enableEncounters && repo === 'croviatrust/agentcrash' && (!state.lastEncounter || (state.generation + 1) % 4 === 0)) {
     const report = await encounter({ project: root, ask, onEvent });
     return { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo,
       baseSHA: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
@@ -43,7 +45,6 @@ export async function runFleet({ root, sibling, repo, state, context, strategy, 
       reason: 'Controlled encounter recorded; no code repair or organic adoption inferred.',
       encounter: report, encounterSummary: encounterSummary(report) };
   }
-  const commitment = chooseCommitment(state.agenda, repo);
   const focus = commitment?.objective || chooseFocus(strategy, state);
   const ledger = []; let calls = 0;
   const call = async (role, messages) => {
