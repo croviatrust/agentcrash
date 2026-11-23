@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 4,
+  "generation": 5,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -56,6 +56,19 @@
         }
       ],
       "next": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?"
+    },
+    {
+      "id": "1795439454386-79f24796",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+      "started": "2026-11-23T13:10:54.394Z",
+      "finished": "2026-11-23T13:11:54.629Z",
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The specific error message or behavior causing version detection failure in a hostile-repo vector was not observed in the provided code context (offset 16050 was out of bounds). The previous finding about brittle regex parsing is an unverified hypothesis. Without seeing the actual failure mode or the full file content to locate the exact parsing logic, I cannot formulate a concrete edit that addresses the specific error.",
+      "error": "",
+      "findings": [],
+      "next": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks."
     }
   ],
   "outcomes": {},
@@ -79,7 +92,7 @@
       "rejected": 0
     },
     "Improve the resident's own strategy using the recorded outcomes of previous experiments.": {
-      "attempts": 1,
+      "attempts": 2,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -88,7 +101,55 @@
   "hypotheses": [],
   "pendingResearch": {
     "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
-    "question": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?",
-    "attempts": 1
-  }
+    "question": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks.",
+    "attempts": 2
+  },
+  "fleet": {
+    "version": 1,
+    "parent": "crovia",
+    "members": [
+      {
+        "id": "scout",
+        "role": "research",
+        "mission": "Find external evidence and define the next specialization",
+        "parent": "crovia",
+        "born": 5,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 5
+      },
+      {
+        "id": "critic",
+        "role": "review",
+        "mission": "Challenge the proposed experiment independently",
+        "parent": "crovia",
+        "born": 5,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 5
+      },
+      {
+        "id": "specialist-32a89a614197a4ff",
+        "role": "engineering",
+        "mission": "Implement a deterministic version string parser for the `claude` CLI that handles missing or malformed output by falling back to hardcoded constants, ensuring consistent behavior across hostile-repo vectors.",
+        "parent": "crovia",
+        "born": 5,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 5
+      }
+    ],
+    "last": {
+      "episode": "1795439454386-79f24796",
+      "status": "stopped",
+      "membersUsed": [
+        "scout",
+        "specialist-32a89a614197a4ff",
+        "critic"
+      ],
+      "modelCalls": 4,
+      "note": "Verified means source-case execution; business value and transfer remain unmeasured."
+    }
+  },
+  "capabilities": []
 }
