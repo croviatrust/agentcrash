@@ -7,6 +7,8 @@ import { evidenceValid, makeCapsule, capsuleIndex, evolveFleet, selectCapabiliti
 
 import { discoverOpportunities, growthRecord, feedbackSignals, feedbackCooldown } from './growth.mjs';
 
+import { refreshAgenda, advanceAgenda } from './agenda.mjs';
+
 const API = 'https://api.github.com';
 export async function api(route, { method = 'GET', body, missing = false } = {}) {
   const response = await fetch(`${API}${route}`, { method,
@@ -37,7 +39,7 @@ export async function prepare(repo, output) {
   const open = ours.filter(p => p.state === 'open');
   const context = {
     latestEncounter: state.lastEncounter,
-    issues: issues.filter(i => !i.pull_request).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 2000) })),
+    issues: issues.filter(i => !i.pull_request).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 2000), updated: i.updated_at })),
     commits: commits.map(c => ({ sha: c.sha, message: c.commit.message.slice(0, 1000) })),
     openProposals: open.map(p => ({ number: p.number, title: p.title, url: p.html_url })),
     openWork: prs.filter(p => p.state === 'open' && !p.head?.ref.startsWith('crovia/resident-')).slice(0, 5)
@@ -71,6 +73,7 @@ export async function prepare(repo, output) {
       }
     } catch (e) { context.capabilityLoadError = e.message; }
   }
+  state.agenda = refreshAgenda(state.agenda, repo, context, state.outcomes, state.recent);
   writeJSON(path.join(output, 'state.json'), state);
   writeJSON(path.join(output, 'context.json'), context);
   // Backpressure: improve the proposal process rather than flood the owner.
@@ -132,6 +135,7 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
     }
   }
   const next = remember(state, episode);
+  next.agenda = advanceAgenda(state.agenda, episode, verdict);
   const capsule = makeCapsule(episode, verdict);
   next.fleet = evolveFleet(state, episode, verdict, capsule);
   next.capabilities = [...(state.capabilities || []).filter(c => c.id !== capsule?.id), ...(capsule ? [capsuleIndex(capsule)] : [])].slice(-24);
@@ -139,11 +143,12 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
   const recipes = next.capabilities.length ? next.capabilities.map(c => `- [${c.id}](capabilities/${c.id}.json)`).join('\n') : 'No independently verified repair recipe retained yet.';
   const growth = growthRecord(episode, verdict);
   const files = [
+    { path: 'agenda.json', content: JSON.stringify(next.agenda, null, 2) + '\n' },
     { path: `growth/${episode.id}.json`, content: JSON.stringify(growth, null, 2) + '\n' },
     { path: 'opportunities.json', content: JSON.stringify({ observed: context.metrics?.observed, opportunities: context.opportunities || [], errors: context.opportunityErrors || [], inboundFeedback: context.inboundFeedback || [] }, null, 2) + '\n' },
     { path: 'state.json', content: JSON.stringify(next, null, 2) + '\n' },
     { path: `episodes/${episode.id}.json`, content: JSON.stringify({ ...episode, verdict, context }, null, 2) + '\n' },
-    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## External needs and experiments\n\n[Latest source evidence](opportunities.json) · [This experiment](growth/${episode.id}.json). Reported issues and inbound feedback remain unverified. No adoption inferred.\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Latest controlled encounter\n\n${next.lastEncounter ? `[${next.lastEncounter.id}](encounters/${next.lastEncounter.id}.json) — same-model local task, not organic adoption.` : 'No encounter recorded yet.'}\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
+    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## Persistent work\n\n[AgentHub agenda](agenda.json): commitments, checkpoints, blocked work and review status. Completed means merged, not adopted.\n\n## External needs and experiments\n\n[Latest source evidence](opportunities.json) · [This experiment](growth/${episode.id}.json). Reported issues and inbound feedback remain unverified. No adoption inferred.\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Latest controlled encounter\n\n${next.lastEncounter ? `[${next.lastEncounter.id}](encounters/${next.lastEncounter.id}.json) — same-model local task, not organic adoption.` : 'No encounter recorded yet.'}\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
   ];
   if (episode.encounter) files.push({ path: `encounters/${episode.encounter.id}.json`, content: JSON.stringify(episode.encounter, null, 2) + '\n' });
   if (capsule) files.push({ path: `capabilities/${capsule.id}.json`, content: JSON.stringify(capsule, null, 2) + '\n' });

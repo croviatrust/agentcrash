@@ -203,3 +203,18 @@ workflow. Feedback-triggered cycles are throttled when a cycle finished within
 the previous hour; the issue remains available for subsequent observation. The
 workflow pause and proposal-backpressure controls still apply. The hourly cron
 is a requested schedule, not a guarantee of an hourly completed generation.
+
+## AgentHub: persistent commitments
+
+The resident keeps an `agenda.json` work ledger in its memory branch. Source-linked
+objectives survive individual runs and carry checkpoints and next actions into
+the scout and specialist contexts. Failed encounters, project issues and ranked
+external needs supply work. Three inconclusive attempts block a commitment until
+its source evidence changes; candidate work waits for review rather than being
+recreated each cycle. An observed merge completes the patch commitment, not the
+underlying market need or proof of adoption. Missing search results never mark
+work complete. The ledger is bounded to 24 commitments and three checkpoints each.
+
+AgentHub is a working name for this continuity layer, not a claim of a new model,
+consciousness, independent invention or first-ever GitHub agent. Runtime remains
+event-driven GitHub Actions plus the configured inference model.
