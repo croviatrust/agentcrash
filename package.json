@@ -46,6 +46,7 @@
     "scenarios",
     "hooks",
     "commands",
+    "agents",
     "action",
     "action.yml",
     ".claude-plugin",

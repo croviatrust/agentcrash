@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "repository": "https://github.com/croviatrust/agentcrash",
+  "tools": [
+    {
+      "name": "inspect_repository",
+      "description": "Read a repository's coding-agent configuration before opening it. Report configured commands, model endpoint redirects and permission changes without executing repository code. Use when a task requires understanding what opening a repository could start. It does not prove the repository is safe or scan all source code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Local repository directory"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "cli": {
+        "runtime": "node",
+        "script": "bin/agentcrash.js",
+        "arguments": [
+          "inspect",
+          "<path>",
+          "--json"
+        ]
+      },
+      "documentation": "https://github.com/croviatrust/agentcrash/blob/main/agents/README.md",
+      "exitCodes": {
+        "0": "No blocking configuration findings",
+        "1": "Blocking configuration findings; parse stdout JSON",
+        "2": "Invalid request or inspection failure"
+      }
+    }
+  ]
+}

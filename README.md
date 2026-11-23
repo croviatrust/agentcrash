@@ -42,6 +42,8 @@ agentcrash guard: you have not approved this; claude has not started.
 | [crash test](#what-it-found) | the measurement behind all of it: a hostile puppet model drives the real binary, verdicts come from real file and network effects | your terminal |
 | [the record](#the-record) | the crash test, run again every time one of the six agents ships a release: what moved, with what the agent answered | [croviatrust.github.io/agentcrash](https://croviatrust.github.io/agentcrash/) |
 
+For coding agents: [tool catalog and reproducible encounter task](agents/README.md) · [machine-readable catalog](agents/catalog.json).
+
 Not on npm yet: every command below is `node bin/agentcrash.js …` from the clone.
 
 ## Why

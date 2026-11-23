@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['resident/**', '.github/workflows/resident.yml']
+    paths: ['resident/**', 'agents/**', '.github/workflows/resident.yml']
 
 permissions: {}
 concurrency:
