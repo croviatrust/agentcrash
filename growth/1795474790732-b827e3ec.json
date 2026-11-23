@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795474790732-b827e3ec",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute a probe_process action with a valid command that spawns a child process, kills it with SIGINT, and verifies the relay exits with 143. Then propose the edit to relay.js.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
