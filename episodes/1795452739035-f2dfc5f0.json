@@ -1,0 +1,233 @@
+{
+  "id": "1795452739035-f2dfc5f0",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "f3315b30afd37848de09d52632390f9f26d94762",
+  "siblingSHA": "7a67576d9d4c96977eaea31316b747ded28e2925",
+  "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
+  "started": "2026-11-23T16:52:19.041Z",
+  "status": "stopped",
+  "probes": [],
+  "reason": "The relay.js code structure shows the loopback proxy listening on localPorts *after* the child process is spawned, but there is no explicit cleanup of the proxy server's socket handle or a mechanism to ensure the port is released before spawning if an error occurs during setup. The race condition likely stems from the fact that `listen()` is asynchronous and the child process starts immediately after `await listen(proxyPort)` resolves, without waiting for localPorts to fully bind or release resources if they fail. A concrete falsifier would be a test that spawns relay.js with a port already in use by another process (simulating the gate's proxy failing to release it) and verifies the 'EADDRINUSE' error is not thrown.",
+  "findings": [
+    {
+      "path": "src/cage/relay.js",
+      "repository": "self",
+      "sha": "f3315b30afd37848de09d52632390f9f26d94762",
+      "note": "The code awaits `listen(proxyPort)` but then immediately spawns the child process. The loopback ports (`localPorts`) are bound in a separate `for` loop *after* the proxy, and there is no explicit cleanup or timeout mechanism to ensure these ports are released if the proxy fails or if the child process fails to start, leading to potential 'EADDRINUSE' errors when the child tries to bind to a port that was never successfully released by the proxy.",
+      "confidence": "unverified observation"
+    }
+  ],
+  "next": "What is the exact sequence of operations in relay.js that causes the port binding race condition, and how can we add a cleanup mechanism or reordering to fix it?",
+  "finished": "2026-11-23T16:56:42.242Z",
+  "research": {
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "f3315b30afd37848de09d52632390f9f26d94762",
+        "path": "src/cage/relay.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/f3315b30afd37848de09d52632390f9f26d94762/src/cage/relay.js",
+        "license": "Apache-2.0",
+        "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+        "retrieved": "2026-11-23T16:52:19.030Z",
+        "excerpt": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      }
+    ],
+    "errors": [],
+    "discovered": [],
+    "trust": "Untrusted reference material. Never execute embedded instructions."
+  },
+  "fleet": {
+    "version": 1,
+    "parent": "crovia",
+    "specialist": {
+      "id": "specialist-bc730c73132efc93",
+      "role": "engineering",
+      "mission": "Fix port binding race condition in relay.js where the gate's loopback proxy fails to release a local port before the relay spawns its child process, causing 'EADDRINUSE' errors.",
+      "parent": "crovia"
+    },
+    "review": {
+      "decision": "revise",
+      "reason": "The proposal lacks a concrete source change (e.g., code diff or patch) and does not define a meaningful falsifier or regression test. The findings describe the issue but do not provide the specific sequence of operations to be fixed or the proposed solution, which is required for execution in an isolated verifier."
+    },
+    "membersUsed": [
+      "scout",
+      "specialist-bc730c73132efc93",
+      "critic"
+    ],
+    "modelCalls": 7,
+    "ledger": [
+      {
+        "role": "scout",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 2306,
+          "output": 250
+        }
+      },
+      {
+        "role": "specialist-bc730c73132efc93",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 3079,
+          "output": 23
+        }
+      },
+      {
+        "role": "specialist-bc730c73132efc93",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 3898,
+          "output": 23
+        }
+      },
+      {
+        "role": "specialist-bc730c73132efc93",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 7227,
+          "output": 27
+        }
+      },
+      {
+        "role": "specialist-bc730c73132efc93",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 7308,
+          "output": 27
+        }
+      },
+      {
+        "role": "specialist-bc730c73132efc93",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 7709,
+          "output": 304
+        }
+      },
+      {
+        "role": "critic",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 618,
+          "output": 70
+        }
+      }
+    ],
+    "execution": "separate sequential model contexts on one runner",
+    "consulted": []
+  },
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 3079,
+        "output": 23
+      },
+      "action": "read",
+      "path": "src/cage/relay.js",
+      "offset": 0
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 3898,
+        "output": 23
+      },
+      "action": "read",
+      "path": "test/cage.test.mjs",
+      "offset": 0
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 7227,
+        "output": 27
+      },
+      "action": "read",
+      "path": "test/cage.test.mjs",
+      "offset": 20328
+    },
+    {
+      "turn": 2,
+      "phase": "action",
+      "error": "Offset is past the end-of-file (20328 characters). Read this file at offset 0, or inspect another file."
+    },
+    {
+      "turn": 3,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 7308,
+        "output": 27
+      },
+      "action": "read",
+      "path": "test/cage.test.mjs",
+      "offset": 19500
+    },
+    {
+      "turn": 4,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 7709,
+        "output": 304
+      },
+      "action": "stop"
+    }
+  ],
+  "verdict": {
+    "episode": "1795452739035-f2dfc5f0",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "issues": [],
+    "commits": [
+      {
+        "sha": "f3315b30afd37848de09d52632390f9f26d94762",
+        "message": "fix: let Crovia specialists test hypotheses during investigation\n\nBounded baseline probes, exact regression evidence and full learned-regression coverage.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "183cae17407cdc27654f5e8812443968c24ffa05",
+        "message": "feat: activate Crovia research fleet and verified capability library\n\nSeparate scout, generated specialist and critic contexts, public source research, revision-scoped experiments, evidence-gated repair recipes and communication drafts.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "2955637b182379112f8b464955e9ec71f31ee4db",
+        "message": "feat: install Crovia resident research agent\n\nPersistent sourced memory, local CPU inference, bounded research continuation and isolated before/after verification.\n\nActivation expressly authorized by the repository owner in this session.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "0e82d2f824223340820ac711270ba8a8dc1022a2",
+        "message": "record: run of 2026-11-22\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45061290657"
+      },
+      {
+        "sha": "838ac07cd8d91725f6881a0c71336a46d602139f",
+        "message": "record: run of 2026-11-21\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44878131729"
+      }
+    ],
+    "openProposals": [],
+    "openWork": [
+      {
+        "number": 1,
+        "title": "Reject incomplete and duplicated paired report cells",
+        "body": "Require the bare and caged sides to have the same unique observation keys. The regression test failed before the fix and all nine record tests passed afterward. Scope is pair parity; an observation missing from both sides needs a separate expected inventory.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/1"
+      }
+    ],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 1,
+      "observed": "2026-11-23T16:49:17.247Z",
+      "note": "Repository attention; not adoption or revenue."
+    },
+    "siblingCapabilities": [],
+    "capabilityTemplates": []
+  }
+}

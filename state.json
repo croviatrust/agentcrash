@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 7,
+  "generation": 8,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -10,7 +10,8 @@
       "finished": "2026-11-23T12:11:45.534Z",
       "status": "stopped",
       "error": "",
-      "findings": []
+      "findings": [],
+      "probes": []
     },
     {
       "id": "1795436043117-9e32dccf",
@@ -22,7 +23,8 @@
       "localEvidence": "stopped",
       "reason": "Turn budget exhausted without a valid experiment.",
       "error": "",
-      "findings": []
+      "findings": [],
+      "probes": []
     },
     {
       "id": "1795436668228-cf5563b5",
@@ -34,7 +36,8 @@
       "localEvidence": "stopped",
       "reason": "Turn budget exhausted without a valid experiment.",
       "error": "",
-      "findings": []
+      "findings": [],
+      "probes": []
     },
     {
       "id": "1795437832189-159c458b",
@@ -55,7 +58,8 @@
           "confidence": "unverified observation"
         }
       ],
-      "next": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?"
+      "next": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?",
+      "probes": []
     },
     {
       "id": "1795439454386-79f24796",
@@ -68,7 +72,8 @@
       "reason": "The specific error message or behavior causing version detection failure in a hostile-repo vector was not observed in the provided code context (offset 16050 was out of bounds). The previous finding about brittle regex parsing is an unverified hypothesis. Without seeing the actual failure mode or the full file content to locate the exact parsing logic, I cannot formulate a concrete edit that addresses the specific error.",
       "error": "",
       "findings": [],
-      "next": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks."
+      "next": "Read the entire file src/puppet/anthropic.js to locate the version parsing logic and observe its actual behavior or lack thereof, then propose a deterministic parser with hardcoded fallbacks.",
+      "probes": []
     },
     {
       "id": "1795440111931-b1573755",
@@ -89,7 +94,8 @@
           "confidence": "unverified observation"
         }
       ],
-      "next": "Search the repository for any existing version parsing logic or evidence of silent failures related to unversioned environments, then read that specific file to formulate a concrete experiment."
+      "next": "Search the repository for any existing version parsing logic or evidence of silent failures related to unversioned environments, then read that specific file to formulate a concrete experiment.",
+      "probes": []
     },
     {
       "id": "1795440975409-0bafa0c1",
@@ -110,13 +116,36 @@
           "confidence": "unverified observation"
         }
       ],
-      "next": "What is the exact error message or hang behavior observed when running 'node relay.js <sock> <proxyPort>,<localPort> -- cmd' that indicates a port conflict with the gate's proxy?"
+      "next": "What is the exact error message or hang behavior observed when running 'node relay.js <sock> <proxyPort>,<localPort> -- cmd' that indicates a port conflict with the gate's proxy?",
+      "probes": []
+    },
+    {
+      "id": "1795452739035-f2dfc5f0",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
+      "started": "2026-11-23T16:52:19.041Z",
+      "finished": "2026-11-23T16:56:42.242Z",
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The relay.js code structure shows the loopback proxy listening on localPorts *after* the child process is spawned, but there is no explicit cleanup of the proxy server's socket handle or a mechanism to ensure the port is released before spawning if an error occurs during setup. The race condition likely stems from the fact that `listen()` is asynchronous and the child process starts immediately after `await listen(proxyPort)` resolves, without waiting for localPorts to fully bind or release resources if they fail. A concrete falsifier would be a test that spawns relay.js with a port already in use by another process (simulating the gate's proxy failing to release it) and verifies the 'EADDRINUSE' error is not thrown.",
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "f3315b30afd37848de09d52632390f9f26d94762",
+          "note": "The code awaits `listen(proxyPort)` but then immediately spawns the child process. The loopback ports (`localPorts`) are bound in a separate `for` loop *after* the proxy, and there is no explicit cleanup or timeout mechanism to ensure these ports are released if the proxy fails or if the child process fails to start, leading to potential 'EADDRINUSE' errors when the child tries to bind to a port that was never successfully released by the proxy.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "What is the exact sequence of operations in relay.js that causes the port binding race condition, and how can we add a cleanup mechanism or reordering to fix it?",
+      "probes": []
     }
   ],
   "outcomes": {},
   "skills": {
     "Find a concrete failure in an existing user workflow and repair it with a regression test.": {
-      "attempts": 2,
+      "attempts": 3,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -143,8 +172,8 @@
   "hypotheses": [],
   "pendingResearch": {
     "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
-    "question": "What is the exact error message or hang behavior observed when running 'node relay.js <sock> <proxyPort>,<localPort> -- cmd' that indicates a port conflict with the gate's proxy?",
-    "attempts": 1
+    "question": "What is the exact sequence of operations in relay.js that causes the port binding race condition, and how can we add a cleanup mechanism or reordering to fix it?",
+    "attempts": 2
   },
   "fleet": {
     "version": 1,
@@ -156,9 +185,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 3,
+        "attempts": 4,
         "verified": 0,
-        "lastSeen": 7
+        "lastSeen": 8
       },
       {
         "id": "critic",
@@ -166,9 +195,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 3,
+        "attempts": 4,
         "verified": 0,
-        "lastSeen": 7
+        "lastSeen": 8
+      },
+      {
+        "id": "specialist-bc730c73132efc93",
+        "role": "engineering",
+        "mission": "Fix port binding race condition in relay.js where the gate's loopback proxy fails to release a local port before the relay spawns its child process, causing 'EADDRINUSE' errors.",
+        "parent": "crovia",
+        "born": 8,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 8
       },
       {
         "id": "specialist-f43683d6e5349387",
@@ -202,14 +241,14 @@
       }
     ],
     "last": {
-      "episode": "1795440975409-0bafa0c1",
+      "episode": "1795452739035-f2dfc5f0",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-f43683d6e5349387",
+        "specialist-bc730c73132efc93",
         "critic"
       ],
-      "modelCalls": 8,
+      "modelCalls": 7,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
