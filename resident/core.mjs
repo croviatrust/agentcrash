@@ -251,12 +251,14 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
         if (episode.probes.length >= 2) throw new Error('Two-probe budget exhausted');
         if (answer.action === 'probe_process') {
           if (language !== 'node' || !reads.has(answer.script)) throw new Error('Read the Node script before requesting a process experiment');
+          episode.trace.at(-1).processContract = { script: answer.script, args: answer.args, expectedExit: answer.expectedExit, timeoutMs: answer.timeoutMs ?? 5000 };
           answer.content = processRegression(answer);
         }
         const hash = digest(answer.content);
         if (episode.probes.some(p => p.testHash === hash && p.status !== 'infrastructure-failed')) throw new Error('This exact test was already probed');
         const observed = await probe({ root, repo, content: answer.content });
         const probeId = `probe-${episode.probes.length + 1}`;
+        if (answer.action === 'probe_process') observed.processContract = episode.trace.at(-1).processContract;
         observed.probeId = probeId; probeSources.set(probeId, answer.content);
         episode.probes.push(observed);
         messages.push({ role: 'user', content: JSON.stringify({ probe: observed, turnsLeft: turnBudget - turn - 1 }) });

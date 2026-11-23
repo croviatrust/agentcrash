@@ -317,6 +317,6 @@ test('a typed process experiment executes through the existing probe gate and it
       const result = spawnSync(process.execPath, command.split(' ').slice(1), { cwd: dir, encoding: 'utf8', env, timeout: 10000 });
       return { code: result.status, error: result.error?.message, log: `${result.stdout || ''}${result.stderr || ''}` };
     } }), ask: async () => ({ text: JSON.stringify(actions.shift()) }) });
-  assert.equal(e.probes[0].sourceSHA, baseSHA); assert.equal(e.probes[0].status, 'baseline-failed');
+  assert.equal(e.probes[0].sourceSHA, baseSHA); assert.equal(e.probes[0].status, 'baseline-failed'); assert.equal(e.probes[0].processContract.expectedExit, 7);
   assert.equal(e.status, 'proposed'); assert.equal(digest(e.proposal.edits[1].content), e.probes[0].testHash);
 });
