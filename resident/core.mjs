@@ -187,6 +187,18 @@ export async function infer(messages, env = process.env, { timeoutMs = 200000, m
   return { text: remote ? data.choices?.[0]?.message?.content : data.message?.content,
     usage: remote ? data.usage : { input: data.prompt_eval_count, output: data.eval_count }, model };
 }
+export function bindExecutedRegression(proposal, probes, sources, language, baseSHA) {
+  const prefix = language === 'node' ? 'resident-regressions/' : 'tests/resident_';
+  if (!Array.isArray(proposal.edits) || proposal.edits.some(e => typeof e.path === 'string' && e.path.startsWith(prefix)) ||
+      proposal.edits.length === 1 && proposal.edits[0].path === 'resident/strategy.json') return { proposal, bound: null };
+  const usable = probes.filter(p => p.sourceSHA === baseSHA && p.status === 'baseline-failed' && Number.isInteger(p.code) && p.code !== 0 && ![125,126,127].includes(p.code) && !p.error && typeof sources.get(p.probeId) === 'string');
+  if (usable.length !== 1) return { proposal, bound: null };
+  const selected = usable[0], content = sources.get(selected.probeId);
+  if (digest(content) !== selected.testHash) throw new Error('Executed regression bytes do not match probe evidence');
+  const id = digest({ baseSHA, testHash: selected.testHash }).slice(0, 16);
+  const name = language === 'node' ? `resident-regressions/observed-${id}.test.mjs` : `tests/resident_observed_${id}.rs`;
+  return { proposal: { ...proposal, edits: [...proposal.edits, { path: name, content }] }, bound: selected.probeId };
+}
 export async function investigate({ root, sibling, repo, state, context, strategy, ask = infer, turnBudget = LIMITS.turns, probe, requireProbe = false }) {
   if (!Number.isInteger(turnBudget) || turnBudget < 3 || turnBudget > LIMITS.turns) throw new Error('Invalid investigation budget');
   const language = profile(repo);
@@ -199,7 +211,7 @@ Principles: ${strategy.principles.join(' ')}
 Return exactly one JSON object per turn. You may add "decision": "one short sentence explaining the purpose of the chosen action". This is an action summary, not a request for private reasoning. Allowed actions:
 {"action":"read","path":"src/file.js","offset":0,"repository":"self"} (or repository="sibling")
 {"action":"search","query":"literal text","repository":"self"} to find text in tracked small files.
-{"action":"probe","content":"complete regression test source"} runs a test against the unchanged baseline in isolation (at most twice). Inspect its diagnostics; syntax/import failures are not bugs. Code proposals must include the exact test source from a failing baseline probe when probes are required. The result supplies a probeId. In a proposal, reuse the exact test without rewriting it using {"path":"regression test path","probeId":"probe-1"}. No arbitrary commands.
+{"action":"probe","content":"complete regression test source"} runs a test against the unchanged baseline in isolation (at most twice). Inspect its diagnostics; syntax/import failures are not bugs. Code proposals must include the exact test source from a failing baseline probe when probes are required. The result supplies a probeId. If exactly one failing probe exists on this source revision, a source-only proposal automatically includes that exact regression. If several exist, select an explicit probeId. In a proposal, reuse the exact test without rewriting it using {"path":"regression test path","probeId":"probe-1"}. No arbitrary commands.
 {"action":"probe_process","script":"src/command.js","args":["literal argument","$NODE"],"expectedExit":1,"timeoutMs":5000} is a compact Node-only process-exit experiment. $NODE in args means the current Node executable. The controller generates the regression, executes it in isolation and returns a probeId usable in propose. Read the script first.
 Probe requirement for this generation: ${requireProbe}.
 {"action":"propose","title":"...","hypothesis":"...","falsifier":"...","benefit":"...","edits":[{"path":"src/file.js","content":"COMPLETE file content"},{"path":"${language === 'node' ? 'resident-regressions/name.test.mjs' : 'tests/resident_name.rs'}","content":"regression test"}]}
@@ -265,6 +277,10 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
         continue;
       }
       if (answer.action === 'propose') {
+        episode.drafts = [...(episode.drafts || []), { turn, response: response.text.slice(0, 16000) }].slice(-2);
+        const binding = requireProbe ? bindExecutedRegression(answer, episode.probes, probeSources, language, episode.baseSHA) : { proposal: answer, bound: null };
+        if (binding.bound) episode.trace.at(-1).boundRegression = binding.bound;
+        answer = binding.proposal;
         const supplied = { ...answer, edits: answer.edits?.map(edit => {
           if (edit.probeId === undefined) return edit;
           const prefix = language === 'node' ? 'resident-regressions/' : 'tests/resident_';
