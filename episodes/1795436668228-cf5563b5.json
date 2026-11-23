@@ -1,0 +1,142 @@
+{
+  "id": "1795436668228-cf5563b5",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "df3243c08f2b4bb8790717ef7d6d02649f29b6c0",
+  "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
+  "focus": "Explore a new capability by constructing a small falsifiable experiment.",
+  "started": "2026-11-23T12:24:28.232Z",
+  "status": "stopped",
+  "reason": "Turn budget exhausted without a valid experiment.",
+  "finished": "2026-11-23T12:32:07.697Z",
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 1837,
+        "output": 40
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 4359,
+        "output": 42
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 6768,
+        "output": 40
+      },
+      "action": "read",
+      "path": "src/cage/index.js"
+    },
+    {
+      "turn": 3,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 7404,
+        "output": 41
+      },
+      "action": "read",
+      "path": "src/cage/relay.js"
+    },
+    {
+      "turn": 4,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5832,
+        "output": 40
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    },
+    {
+      "turn": 4,
+      "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
+    },
+    {
+      "turn": 5,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5914,
+        "output": 42
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    },
+    {
+      "turn": 6,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5256,
+        "output": 40
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    },
+    {
+      "turn": 6,
+      "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
+    },
+    {
+      "turn": 7,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5338,
+        "output": 42
+      },
+      "action": "read",
+      "path": "src/cage/run.js"
+    }
+  ],
+  "verdict": {
+    "episode": "1795436668228-cf5563b5",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "issues": [],
+    "commits": [
+      {
+        "sha": "0e82d2f824223340820ac711270ba8a8dc1022a2",
+        "message": "record: run of 2026-11-22\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45061290657"
+      },
+      {
+        "sha": "838ac07cd8d91725f6881a0c71336a46d602139f",
+        "message": "record: run of 2026-11-21\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44878131729"
+      },
+      {
+        "sha": "f44abb0637647ccbc89aa52c2698d4282e0e93de",
+        "message": "record: run of 2026-11-20\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44692665766"
+      },
+      {
+        "sha": "af5fe58eced62a2b58dd78b38c14d494c9ded9bc",
+        "message": "site: no duration claimed for a run that was not timed on a laptop"
+      },
+      {
+        "sha": "6a199862108992e215d68bfb00897b30d3bf9173",
+        "message": "record: run of 2026-11-19\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44615749638"
+      }
+    ],
+    "openProposals": [],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 2,
+      "observed": "2026-11-23T12:23:33.367Z",
+      "note": "Repository attention; not adoption or revenue."
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 2,
+  "generation": 3,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -179,6 +179,109 @@
           "error": "The operation was aborted due to timeout"
         }
       ]
+    },
+    {
+      "id": "1795436668228-cf5563b5",
+      "repo": "croviatrust/agentcrash",
+      "baseSHA": "df3243c08f2b4bb8790717ef7d6d02649f29b6c0",
+      "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
+      "focus": "Explore a new capability by constructing a small falsifiable experiment.",
+      "started": "2026-11-23T12:24:28.232Z",
+      "status": "stopped",
+      "reason": "Turn budget exhausted without a valid experiment.",
+      "finished": "2026-11-23T12:32:07.697Z",
+      "localEvidence": "stopped",
+      "error": "",
+      "inference": [
+        {
+          "turn": 0,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 1837,
+            "output": 40
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        },
+        {
+          "turn": 1,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 4359,
+            "output": 42
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        },
+        {
+          "turn": 2,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 6768,
+            "output": 40
+          },
+          "action": "read",
+          "path": "src/cage/index.js"
+        },
+        {
+          "turn": 3,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 7404,
+            "output": 41
+          },
+          "action": "read",
+          "path": "src/cage/relay.js"
+        },
+        {
+          "turn": 4,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 5832,
+            "output": 40
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        },
+        {
+          "turn": 4,
+          "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
+        },
+        {
+          "turn": 5,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 5914,
+            "output": 42
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        },
+        {
+          "turn": 6,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 5256,
+            "output": 40
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        },
+        {
+          "turn": 6,
+          "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
+        },
+        {
+          "turn": 7,
+          "model": "qwen3.5:4b",
+          "usage": {
+            "input": 5338,
+            "output": 42
+          },
+          "action": "read",
+          "path": "src/cage/run.js"
+        }
+      ]
     }
   ],
   "outcomes": {},
@@ -190,6 +293,12 @@
       "rejected": 0
     },
     "Remove a measurable obstacle to an agent adopting and using the product.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
+    },
+    "Explore a new capability by constructing a small falsifiable experiment.": {
       "attempts": 1,
       "verified": 0,
       "merged": 0,
