@@ -80,6 +80,11 @@ export function applyProposal(root, p) {
     if (fs.realpathSync(parent) !== fs.realpathSync(root) && !fs.realpathSync(parent).startsWith(fs.realpathSync(root) + path.sep))
       throw new Error('Parent escapes checkout');
     if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink()) throw new Error('Refusing symlink edit');
+    if (edit.path.endsWith('.rs') && fs.existsSync(target)) {
+      const original = fs.readFileSync(target, 'utf8');
+      const tests = original.indexOf('#[cfg(test)]');
+      if (tests !== -1 && !edit.content.endsWith(original.slice(tests))) throw new Error('Existing Rust unit tests must be preserved');
+    }
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, edit.content);
   }
@@ -95,7 +100,7 @@ export function remember(state, episode) {
   const key = episode.focus || 'unknown';
   const skill = next.skills[key] ||= { attempts: 0, verified: 0, merged: 0, rejected: 0 };
   skill.attempts++;
-  if (episode.status === 'verified') skill.verified++;
+  if (episode.status === 'verified' || episode.localEvidence === 'verified') skill.verified++;
   return next;
 }
 export function reconcile(state, prs) {
@@ -149,7 +154,8 @@ Return exactly one JSON object per turn. Allowed actions:
 {"action":"stop","reason":"specific reason, uncertainty or next experiment"}
 Read every existing file before changing it. Code edits only under src/ with .${language === 'node' ? 'js' : 'rs'} extension. Existing tests, workflows, credentials, package manifests and this controller cannot be edited. New regression tests must fail on the original code and pass after the change. Tests cannot use the network. A strategy experiment may edit only resident/strategy.json and must satisfy the fixed schema; schema validity is not evidence it improves results. No shell, no deletion, no external publishing. Inspect sibling code to discover complementary capabilities but edit only self. ${LIMITS.turns} turns maximum. Prefer one small coherent change.` },
   { role: 'user', content: JSON.stringify({ repo, generation: state.generation, recent: state.recent.slice(-5).map(e => ({ status: e.status, focus: e.focus, title: e.proposal?.title, error: e.error, pr: e.pr })), skills: state.skills, context, files: files.slice(0, 250) }).slice(0, 14000) }];
-  const episode = { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo, focus, started: new Date().toISOString(), status: 'stopped', trace: [] };
+  const sha = dir => execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+  const episode = { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo, baseSHA: sha(root), siblingSHA: sibling ? sha(sibling) : null, focus, started: new Date().toISOString(), status: 'stopped', trace: [] };
   const reads = new Set();
   for (let turn = 0; turn < LIMITS.turns; turn++) {
     let answer;
@@ -193,6 +199,7 @@ Read every existing file before changing it. Code edits only under src/ with .${
     // Keep the immutable mission, initial snapshot and most recent evidence.
     while (JSON.stringify(messages).length > 28000 && messages.length > 4) messages.splice(2, 2);
   }
+  if (!episode.proposal && !episode.reason) episode.reason = 'Turn budget exhausted without a valid experiment.';
   episode.finished = new Date().toISOString();
   return episode;
 }

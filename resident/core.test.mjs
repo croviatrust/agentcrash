@@ -42,6 +42,11 @@ test('new source file cannot overwrite a symlink', t => {
   fs.symlinkSync('value.js', path.join(root, 'src/link.js'));
   assert.throws(() => applyProposal(root, { edits: [{ path: 'src/link.js', content: 'x' }] }));
 });
+test('Rust inline tests cannot be silently removed from edited source', t => {
+  const root = fixture(t);
+  fs.writeFileSync(path.join(root, 'src/example.rs'), 'fn value() {}\n#[cfg(test)]\nmod tests { #[test] fn original() {} }\n');
+  assert.throws(() => applyProposal(root, { edits: [{ path: 'src/example.rs', content: 'fn value() {}\n' }] }));
+});
 test('source edits need regressions and cannot change authority or existing tests', () => {
   const p = proposal();
   assert.equal(validateProposal(p, 'node').kind, 'code');

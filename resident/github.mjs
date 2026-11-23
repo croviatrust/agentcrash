@@ -24,6 +24,12 @@ export async function prepare(repo, output) {
   ]);
   const state = stateFile ? JSON.parse(Buffer.from(stateFile.content, 'base64').toString('utf8')) : initialState();
   const ours = prs.filter(p => /^crovia\/resident-\d+-[a-f0-9]+$/.test(p.head?.ref || ''));
+  for (const episode of state.recent.filter(e => !e.pr && ['awaiting-crovia-identity', 'pr-blocked'].includes(e.status))) {
+    const branch = `crovia/resident-${episode.id}`;
+    const pr = ours.find(p => p.head.ref === branch);
+    if (pr) { episode.pr = pr.number; episode.url = pr.html_url; }
+    else if (!await api(`${base}/git/ref/heads/${branch}`, { missing: true })) episode.status = 'discarded';
+  }
   reconcile(state, ours);
   const open = ours.filter(p => p.state === 'open');
   const context = {
@@ -58,7 +64,7 @@ async function commitFiles(repo, branch, files, message, parent) {
   const commit = await api(`${base}/git/commits/${parent}`);
   const tree = await api(`${base}/git/trees`, { method: 'POST', body: { base_tree: commit.tree.sha,
     tree: files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: f.content })) } });
-  const created = await api(`${base}/git/commits`, { method: 'POST', body: { message, tree: tree.sha, parents: [parent],
+  const created = await api(`${base}/git/commits`, { method: 'POST', body: { message: `${message}\n\nSigned-off-by: Crovia <info@croviatrust.com>`, tree: tree.sha, parents: [parent],
     author: { name: 'Crovia', email: 'info@croviatrust.com' } } });
   await api(`${base}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha: created.sha } });
   return created.sha;
@@ -70,6 +76,7 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
   const state = json(path.join(stateDir, 'state.json'));
   const context = json(path.join(stateDir, 'context.json'));
   episode.status = verdict.status;
+  episode.localEvidence = verdict.status;
   episode.error = verdict.error || verdict.checks?.filter(c => c.code !== 0).map(c => `${c.label}: ${c.log?.slice(-1800)}`).join('\n');
   episode.inference = episode.trace;
   delete episode.trace;
