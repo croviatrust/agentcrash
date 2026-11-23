@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 1,
+  "generation": 2,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -92,11 +92,104 @@
           }
         }
       ]
+    },
+    {
+      "id": "1795436043117-9e32dccf",
+      "repo": "croviatrust/agentcrash",
+      "baseSHA": "015a7b518f3d21166511b3bd785bf0c67abaac95",
+      "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
+      "focus": "Remove a measurable obstacle to an agent adopting and using the product.",
+      "started": "2026-11-23T12:14:03.121Z",
+      "status": "stopped",
+      "reason": "Turn budget exhausted without a valid experiment.",
+      "finished": "2026-11-23T12:21:31.416Z",
+      "localEvidence": "stopped",
+      "error": "",
+      "inference": [
+        {
+          "turn": 0,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 1714,
+            "output": 22
+          }
+        },
+        {
+          "turn": 1,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 4212,
+            "output": 16
+          }
+        },
+        {
+          "turn": 2,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 4788,
+            "output": 16
+          }
+        },
+        {
+          "turn": 3,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 5364,
+            "output": 16
+          }
+        },
+        {
+          "turn": 4,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 5940,
+            "output": 16
+          }
+        },
+        {
+          "turn": 5,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 6516,
+            "output": 16
+          }
+        },
+        {
+          "turn": 6,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 7092,
+            "output": 16
+          }
+        },
+        {
+          "turn": 7,
+          "model": "qwen2.5-coder:1.5b",
+          "usage": {
+            "input": 7668,
+            "output": 16
+          }
+        },
+        {
+          "turn": 8,
+          "error": "The operation was aborted due to timeout"
+        },
+        {
+          "turn": 9,
+          "error": "The operation was aborted due to timeout"
+        }
+      ]
     }
   ],
   "outcomes": {},
   "skills": {
     "Find a concrete failure in an existing user workflow and repair it with a regression test.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
+    },
+    "Remove a measurable obstacle to an agent adopting and using the product.": {
       "attempts": 1,
       "verified": 0,
       "merged": 0,
