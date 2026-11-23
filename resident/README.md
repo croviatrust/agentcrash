@@ -240,3 +240,18 @@ Ollama runs as the runner uid with only its model directory cached. Its ephemera
 HOME/key material is outside the cache, avoiding the root-owned cache failures
 observed during the first assigned repair. These changes target measured runtime
 failures; they do not establish improved live model performance by themselves.
+
+## Typed process experiments
+
+`probe_process` lets the specialist specify an already-read Node script, bounded
+string arguments, an expected numeric exit and a timeout. `$NODE` in arguments
+resolves to the current Node executable. A fixed compiler creates a regression
+test and uses the existing isolated probe runner; no model-selected host shell
+command or host environment is passed through. The resulting probeId can supply
+the exact test bytes to a proposal. This is a general process-exit test primitive,
+not a repair template for the assigned bug. Independent verification is unchanged.
+
+A read of a missing permitted new regression file now explicitly reports that
+the controller creates the file and its directory. A missing existing source
+file remains an error. The critic is told explicitly that baseline failure and
+candidate success are the intended regression experiment, not a contradiction.
