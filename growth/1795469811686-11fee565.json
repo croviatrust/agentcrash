@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795469811686-11fee565",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

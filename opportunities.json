@@ -1,12 +1,12 @@
 {
-  "observed": "2026-11-23T21:12:35.101Z",
+  "observed": "2026-11-23T21:32:54.934Z",
   "opportunities": [
     {
       "url": "https://github.com/Jamula/FamilyTree/issues/46",
       "title": "[M1/M2] MCP proposal review, permissions and remote-agent security gates",
       "excerpt": "Track the follow-up engineering needed beyond the initial **synthetic local MCP** demonstration.\n\n## Acceptance criteria\n- [ ] Draft proposals cannot mutate approved family records or access private family data until M1 #9 and #10 security are complete\n- [ ] User/agent identity binding, scopes, consent, approval workflow, safe audit for create/update/link actions, no self approval\n- [ ] Validate prompt injection and cross-tenant enumeration; redact tool errors and prevent data exfiltration\n- [ ] Per-agent capability negotiation; human approval required for publication\n- [ ] Local per-user encrypted draft storage or similarly secure store with clear reset/delete; no secrets in repo\n- [ ] Production HTTP MCP requires authenticated identity, exact host allowlist, Origin validation, TLS and rate limits; never expose loopback-only server externally without protection\n- [ ] Investigate ChatGPT/Copilot/other agent connection capabilities at deployment time, without assuming this chat can reach localhost\n- [ ] No cloud resource provisioned or paid hosting added without specific owner approval\n\nDo not mark complete merely when read-only local tools work. Related: #9, #10, #12, #15.",
       "updated": "2026-11-23T17:36:34Z",
-      "retrieved": "2026-11-23T21:12:35.102Z",
+      "retrieved": "2026-11-23T21:32:54.935Z",
       "evidenceHash": "b33f560ad3331b769b0149c545dba06e96fdb41a924ee57bf0d80801819c48e5",
       "query": "\"MCP\" \"security\"",
       "repository": "Jamula/FamilyTree",
@@ -27,7 +27,7 @@
       "title": "Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
       "excerpt": "Parent: [#402](https://github.com/brianreborn/familia/issues/402) (Security focus for 0.3.0). Target: `main`. Unassigned so the swarm can claim. Suggested owners: Boundary Reviewer (tool policy, including residual TR-3/TR-4), Covert Channel Reviewer/Fixer (injection via tool results, egress), Platform Reviewer (inventory of what is actually wired).\n\n## Context\n\nWhat familia wires today (inventory starting point, not complete):\n\n- Agent-Reach: menu `reach.mcp` runs `scripts/agent_reach.py mcp-example` and prints `mcpServers` JSON for llama UI / code-bootstraps.\n- Hermes / graph: `scripts/hermes_harness.py`, `server_tools` on nodes. Some planned nodes use `server_tools: all`; guardian/pentest nodes stay empty (TOOLS-005 fail-closed). DESIGN.md: the existing approval gate still guards shell and MCP.\n- Auth env: `API_KEY_FILE`, `FAMILIA_API_KEY`, `LLAMA_API_KEY` (see `docs/api-key-design.md`, `scripts/familia_auth.py`). #394 is a test KeyError on `GITHUB_TOKEN` under FreeBSD.\n- Already fixed, do not re-open as new bugs: H4 (read-only tools by default after #292), #345 (off-loopback direct tools; closed).\n\nResidual product gaps with tests already on `main` (strict xfails in `tests/test_routing_toolroute_boundary.py` after #364 / [#362](https://github.com/brianreborn/familia/pull/362)). No public issue had been filed for these, so they live here rather than as a fifth tracker:\n\n- TR-3 residual: `normalize_role` does NFKC + casefold but does not `strip()` or drop Unicode format characters (category Cf, e.g. U+200B). Padded or lookalike fail-closed role names (`guardian` / `pentest` / `defender`) become unknown TYPEs, so tools can be forwarded. Case and fullwidth variants were already tightened in #362.\n- TR-4: a node-level `role: coder` (or other tool-capable type) can override a fail-closed model role, so a guardian model can be relabelled into a tool-forward path.\n\nRelated: green-roomz #43 (default-deny egress, research only), #236 leftover L14/L15.\n\n## Today's checklist (10 Nov 2026 PT, later today)\n\n- [ ] Inventory MCP servers and tools familia actually wires (Agent-Reach, Hermes server tools, llama-ui mcpServers, any code-bootstraps hook). Table: name, who launches it, default permission, network egress, whether it sees env secrets. Do not dump env values.\n- [ ] Run the existing boundary suite on `main`: `python3 -m pytest -q tests/test_routing_toolroute_bound",
       "updated": "2026-11-23T19:44:20Z",
-      "retrieved": "2026-11-23T21:12:35.102Z",
+      "retrieved": "2026-11-23T21:32:54.935Z",
       "evidenceHash": "3dfce80ff2ab991b71322a43bf8729dd75eea9eada73a84eacca30ff6bc0b2e1",
       "query": "\"MCP\" \"security\"",
       "repository": "brianreborn/familia",
@@ -48,7 +48,7 @@
       "title": "Security: bump Node base image and dependencies in backend and mcp-server (multer, nodemailer, body-parser, ...)",
       "excerpt": "Found by a scheduled Trivy scan (v0.76.2, DB of 2026-11-23) of the published `backend` and `mcp-server` images. Risk is rated by whether the code actually reaches the vulnerable path.\n\n## Risk: MEDIUM — worth doing soon\n\n| Package | Image | Fixed in | Why it matters here |\n|---|---|---|---|\n| multer 1.4.5-lts.1 (via `@nestjs/platform-express` 11.0.1) | backend | 2.3.0 | 10 denial-of-service advisories on multipart parsing. Used by `POST /scraper/import/upload` and the plugin upload. Both are behind `JwtAuthGuard`, so only a logged-in user can trigger them. Fix: bump `@nestjs/platform-express` to a current 11.x. |\n| nodemailer 8.0.1 | backend | 8.0.8 (9.x/10.x for all) | CVE-2026-82662 TLS certificate verification disabled in some paths (info disclosure of SMTP traffic); addressparser ReDoS. Used in `push.service.ts`. |\n| body-parser 1.20.3 / 2.2.1 | both | 1.20.9 / 2.4.0 | CVE-2026-111181 DoS via decompression stream error, reachable before auth on any JSON endpoint that accepts a compressed body. |\n| hono 4.11.4, @hono/node-server 1.19.9 (via `@modelcontextprotocol/node`) | mcp-server | 4.12.25 / 1.19.10 | serveStatic file access and CORS origin reflection. Low unless serveStatic or hono's CORS middleware is used; bump with the MCP packages anyway. |\n| joi 18.0.2 | backend | 18.3.1 | ReDoS in email / isoDate validation if user input goes through those rules. |\n| adm-zip 0.5.16 | backend | 0.6.1 | DoS / zip-bomb and permission bits on extract. Admin-only plugin upload; path traversal is already guarded. |\n\n## Risk: LOW — not reachable in practice, cleared by the same rebuild\n\n| Package | Fixed in | Why low |\n|---|---|---|\n| **proxy-addr 2.0.7** (critical, CVE-2026-90711) | 2.0.8 | Only matters with `trust proxy` set to subnets; neither app sets `trust proxy`. |\n| **OpenSSL 3.5.5** (critical, CVE-2026-31789) | 3.5.6+ | Heap overflow on 32-bit systems only; plus 6 high (DoS, one use-after-free in CMS/PKCS7). Cleared by a newer `node:24-alpine` base. |\n| **tar 7.5.1** (critical, CVE-2026-59873) + pacote, sigstore, glob, minimatch, brace-expansion | — | Inside npm's own bundled copy in the base image; npm is not run at runtime. |\n| mysql2, hono, effect, defu, deepmerge-ts, lodash | — | Pulled in by prisma / build tooling; not used at runtime with PostgreSQL. |\n| path-to-regexp 8.2.0 | 8.4.0 | ReDoS only with crafted *route definitions*, which are ours. |\n\n## Fix",
       "updated": "2026-11-23T19:50:00Z",
-      "retrieved": "2026-11-23T21:12:35.102Z",
+      "retrieved": "2026-11-23T21:32:54.935Z",
       "evidenceHash": "5f0f6fee58a75c593205cad9a7aef8c1d505b30b42bef0e34eb5944dda30e8de",
       "query": "\"MCP\" \"security\"",
       "repository": "trololol91/finance-tracker",
@@ -64,19 +64,19 @@
       "attempts": 0
     },
     {
-      "url": "https://github.com/sequant-io/sequant/issues/1615",
-      "title": "feat: Hook change: Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call throug... (from Claude Code v2.1.310)",
-      "excerpt": "**Upstream:** Claude Code v2.1.310\n**Category:** Hook Change\n**Assessment:** #1614\n\n### Context\n\nWindows: Fixed PreToolUse and PermissionRequest hooks letting a tool call through when Git Bash is missing and the hook's command is only quoted strings, such as a quoted path\n\n### Affected Files\n\n- `templates/hooks/pre-tool.sh`\n- `plugin/hooks/hooks.json`\n- `templates/settings.json`\n\n### Opportunity\n\n[To be analyzed during /spec phase]\n\n### Proposed Implementation\n\n[To be determined during /spec phase]\n\n### Acceptance Criteria\n\n- [ ] AC-1: [To be defined]\n\n---\n\n*Auto-created by /upstream assessment #1614*",
-      "updated": "2026-11-23T20:44:55Z",
-      "retrieved": "2026-11-23T21:12:35.102Z",
-      "evidenceHash": "e79b15ed215149ec68a89c58cf9ba3a4bd8a73f95caf625d482eff31107defe3",
+      "url": "https://github.com/sequant-io/sequant/issues/1697",
+      "title": "feat: Hook change: Fixed `PreToolUse` `mcp_tool` hooks on stdio and HTTP MCP servers being skipped ... (from Claude Code v2.1.321)",
+      "excerpt": "**Upstream:** Claude Code v2.1.321\n**Category:** Hook Change\n**Assessment:** #1695\n\n### Context\n\nFixed `PreToolUse` `mcp_tool` hooks on stdio and HTTP MCP servers being skipped when their answer was over 16 MiB; the tool call is now refused\n\n### Affected Files\n\n- `templates/hooks/pre-tool.sh`\n- `plugin/hooks/hooks.json`\n- `templates/settings.json`\n\n### Opportunity\n\n[To be analyzed during /spec phase]\n\n### Proposed Implementation\n\n[To be determined during /spec phase]\n\n### Acceptance Criteria\n\n- [ ] AC-1: [To be defined]\n\n---\n\n*Auto-created by /upstream assessment #1695*",
+      "updated": "2026-11-23T20:45:16Z",
+      "retrieved": "2026-11-23T21:32:54.935Z",
+      "evidenceHash": "a3644b22c5d06a8591412ce5ed5dcb06b6ea84e6fefdfda4e33c46ecb9936e85",
       "query": "\"Claude Code\" \"hooks\"",
       "repository": "sequant-io/sequant",
-      "number": 1615,
-      "id": "opp-4f573c03017c4f23",
+      "number": 1697,
+      "id": "opp-bbbcdc943f8c012e",
       "matched": [
-        "hook",
-        "permission"
+        "mcp",
+        "hook"
       ],
       "score": 6,
       "evidenceLevel": "reported open issue; neither validated demand nor endorsement",

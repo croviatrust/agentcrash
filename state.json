@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 12,
+  "generation": 13,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -280,6 +280,39 @@
       ],
       "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
       "probes": []
+    },
+    {
+      "id": "1795469811686-11fee565",
+      "repo": "croviatrust/agentcrash",
+      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "started": "2026-11-23T21:36:51.692Z",
+      "finished": "2026-11-23T21:40:02.654Z",
+      "commitment": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "evidenceHash": "accc3b45ebbd85735f1c"
+      },
+      "opportunity": null,
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The path 'resident-regressions' does not exist in the repository. The checkpoint instruction to write a test file at that location is based on an unsupported assumption about the directory structure.",
+      "observedBlockers": [
+        {
+          "phase": "action",
+          "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/resident-regressions'"
+        }
+      ],
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "19f704626d55b3c525dbb914932b693e58f38f90",
+          "note": "Source code confirms relay.js exits with 128 + (signal === 'SIGKILL' ? 9 : 15) when signal is present, which maps SIGINT to 143. This contradicts the expected 130.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -327,7 +360,7 @@
       "rejected": 0
     },
     "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay": {
-      "attempts": 1,
+      "attempts": 2,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -336,8 +369,8 @@
   "hypotheses": [],
   "pendingResearch": {
     "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-    "question": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
-    "attempts": 1
+    "question": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+    "attempts": 2
   },
   "fleet": {
     "version": 1,
@@ -349,9 +382,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 7,
+        "attempts": 8,
         "verified": 0,
-        "lastSeen": 12
+        "lastSeen": 13
       },
       {
         "id": "critic",
@@ -359,9 +392,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 7,
+        "attempts": 8,
         "verified": 0,
-        "lastSeen": 12
+        "lastSeen": 13
+      },
+      {
+        "id": "specialist-d81c21d4c263dc8d",
+        "role": "engineering",
+        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test m\nSuggested method: Write a falsifiable regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on th",
+        "parent": "crovia",
+        "born": 13,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 13
       },
       {
         "id": "specialist-2a8464a18b9fc037",
@@ -412,27 +455,17 @@
         "attempts": 1,
         "verified": 0,
         "lastSeen": 7
-      },
-      {
-        "id": "specialist-aab33748a59c6599",
-        "role": "engineering",
-        "mission": "Implement a deterministic version parser for the Anthropic puppet with hardcoded fallbacks to prevent silent failures in unversioned environments.",
-        "parent": "crovia",
-        "born": 6,
-        "attempts": 1,
-        "verified": 0,
-        "lastSeen": 6
       }
     ],
     "last": {
-      "episode": "1795468529647-f067c327",
+      "episode": "1795469811686-11fee565",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-2a8464a18b9fc037",
+        "specialist-d81c21d4c263dc8d",
         "critic"
       ],
-      "modelCalls": 6,
+      "modelCalls": 5,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
@@ -499,7 +532,7 @@
         "source": "https://github.com/croviatrust/agentcrash/issues/9",
         "evidenceHash": "accc3b45ebbd85735f1c",
         "status": "active",
-        "attempts": 1,
+        "attempts": 2,
         "checkpoints": [
           {
             "episode": "1795468529647-f067c327",
@@ -507,10 +540,17 @@
             "verdict": "stopped",
             "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
             "baseSHA": "7430e3c3cbecebb4403fb674c1335db0982f639a"
+          },
+          {
+            "episode": "1795469811686-11fee565",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+            "baseSHA": "19f704626d55b3c525dbb914932b693e58f38f90"
           }
         ],
-        "lastEpisode": "1795468529647-f067c327",
-        "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access."
+        "lastEpisode": "1795469811686-11fee565",
+        "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure."
       },
       {
         "id": "work-1ca99c4589115e6ecff5",
@@ -573,6 +613,17 @@
         "objective": "Investigate the reported need: feat: Hook change: Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call throug... (from Claude Code v2.1.310)",
         "source": "https://github.com/sequant-io/sequant/issues/1615",
         "evidenceHash": "26b279ca5382f781083e",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-076f5081f877a4ab417c",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: feat: Hook change: Fixed `PreToolUse` `mcp_tool` hooks on stdio and HTTP MCP servers being skipped ... (from Claude Code v2.1.321)",
+        "source": "https://github.com/sequant-io/sequant/issues/1697",
+        "evidenceHash": "21eed8742b67b9e2d9af",
         "status": "queued",
         "attempts": 0,
         "checkpoints": []

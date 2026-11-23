@@ -9,7 +9,7 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "active",
-      "attempts": 1,
+      "attempts": 2,
       "checkpoints": [
         {
           "episode": "1795468529647-f067c327",
@@ -17,10 +17,17 @@
           "verdict": "stopped",
           "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access.",
           "baseSHA": "7430e3c3cbecebb4403fb674c1335db0982f639a"
+        },
+        {
+          "episode": "1795469811686-11fee565",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+          "baseSHA": "19f704626d55b3c525dbb914932b693e58f38f90"
         }
       ],
-      "lastEpisode": "1795468529647-f067c327",
-      "next": "Construct a falsifiable experiment: Write a regression test in resident-regressions/relay-sigint.test.mjs that spawns relay.js with a child process killed by SIGINT, verifies the exit status is 130 (not 143), and fails on the current code. The test must be executable without network access."
+      "lastEpisode": "1795469811686-11fee565",
+      "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure."
     },
     {
       "id": "work-1ca99c4589115e6ecff5",
@@ -83,6 +90,17 @@
       "objective": "Investigate the reported need: feat: Hook change: Windows: Fixed PreToolUse and PermissionRequest hooks letting a tool call throug... (from Claude Code v2.1.310)",
       "source": "https://github.com/sequant-io/sequant/issues/1615",
       "evidenceHash": "26b279ca5382f781083e",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-076f5081f877a4ab417c",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: feat: Hook change: Fixed `PreToolUse` `mcp_tool` hooks on stdio and HTTP MCP servers being skipped ... (from Claude Code v2.1.321)",
+      "source": "https://github.com/sequant-io/sequant/issues/1697",
+      "evidenceHash": "21eed8742b67b9e2d9af",
       "status": "queued",
       "attempts": 0,
       "checkpoints": []
