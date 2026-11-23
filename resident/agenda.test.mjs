@@ -52,3 +52,13 @@ test('an assigned persistent objective reaches scout and builder instead of bein
     } });
   assert.ok(scout && builder); assert.equal(e.commitment.id, state.agenda.tasks[0].id);
 });
+
+test('a trusted assignment selects its actual issue ahead of existing work without reviving exhausted tasks', () => {
+  const old = refreshAgenda(null, repo, { issues: [{ number: 1, title: 'Older work' }] });
+  const supplied = { ...context, maintainerAssignment: { issueNumber: 42 } };
+  const agenda = refreshAgenda(old, repo, supplied);
+  assert.equal(chooseCommitment(agenda, repo).source, `https://github.com/${repo}/issues/42`);
+  agenda.tasks[0].status = 'blocked';
+  assert.equal(chooseCommitment(refreshAgenda(agenda, repo, supplied), repo).source, `https://github.com/${repo}/issues/1`);
+  assert.equal(refreshAgenda(old, repo, { maintainerAssignment: { issueNumber: 999 } }).tasks.length, 1);
+});

@@ -37,7 +37,11 @@ export async function prepare(repo, output) {
   }
   reconcile(state, ours);
   const open = ours.filter(p => p.state === 'open');
+  const assignmentFile = new URL('./assignment.json', import.meta.url);
+  const maintainerAssignment = fs.existsSync(assignmentFile) ? json(assignmentFile) : null;
   const context = {
+    maintainerAssignment,
+    assignedTask: issues.filter(i => !i.pull_request && i.number === maintainerAssignment?.issueNumber).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 5000) }))[0] || null,
     latestEncounter: state.lastEncounter,
     issues: issues.filter(i => !i.pull_request).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 2000), updated: i.updated_at })),
     commits: commits.map(c => ({ sha: c.sha, message: c.commit.message.slice(0, 1000) })),
