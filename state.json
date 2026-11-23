@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 8,
+  "generation": 9,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -140,6 +140,70 @@
       ],
       "next": "What is the exact sequence of operations in relay.js that causes the port binding race condition, and how can we add a cleanup mechanism or reordering to fix it?",
       "probes": []
+    },
+    {
+      "id": "1795453270812-f9916fb4",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Measure whether an agent can discover and use the product on a controlled task.",
+      "started": "2026-11-23T17:00:40.120Z",
+      "finished": "2026-11-23T17:01:10.812Z",
+      "status": "encounter-recorded",
+      "localEvidence": "stopped",
+      "reason": "Controlled encounter recorded; no code repair or organic adoption inferred.",
+      "error": "",
+      "findings": [],
+      "encounterSummary": {
+        "id": "enc-1795453240120-52e2f5ea",
+        "sourceSHA": "99bc69987c0128d4478eaf05e30b24557f18c26d",
+        "variant": "configured",
+        "kind": "controlled-local-task",
+        "cohorts": [
+          {
+            "cohort": "files-only",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": false,
+              "missing": {
+                "commands": [
+                  "node tools/server-8ff6c7badd97.mjs",
+                  "node scripts/prepare-8ff6c7badd97.mjs"
+                ],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          },
+          {
+            "cohort": "catalog-available",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": false,
+              "missing": {
+                "commands": [
+                  "node tools/server-8ff6c7badd97.mjs",
+                  "node scripts/prepare-8ff6c7badd97.mjs"
+                ],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          }
+        ],
+        "limitation": "Controlled same-model task; not public discovery or adoption."
+      },
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -167,14 +231,16 @@
       "verified": 0,
       "merged": 0,
       "rejected": 0
+    },
+    "Measure whether an agent can discover and use the product on a controlled task.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
     }
   },
   "hypotheses": [],
-  "pendingResearch": {
-    "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
-    "question": "What is the exact sequence of operations in relay.js that causes the port binding race condition, and how can we add a cleanup mechanism or reordering to fix it?",
-    "attempts": 2
-  },
+  "pendingResearch": null,
   "fleet": {
     "version": 1,
     "parent": "crovia",
@@ -252,5 +318,56 @@
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
-  "capabilities": []
+  "capabilities": [],
+  "lastEncounter": {
+    "id": "enc-1795453240120-52e2f5ea",
+    "sourceSHA": "99bc69987c0128d4478eaf05e30b24557f18c26d",
+    "variant": "configured",
+    "kind": "controlled-local-task",
+    "cohorts": [
+      {
+        "cohort": "files-only",
+        "discovered": false,
+        "toolCalls": 0,
+        "score": {
+          "completed": true,
+          "correct": false,
+          "missing": {
+            "commands": [
+              "node tools/server-8ff6c7badd97.mjs",
+              "node scripts/prepare-8ff6c7badd97.mjs"
+            ],
+            "endpoints": []
+          },
+          "extra": {
+            "commands": [],
+            "endpoints": []
+          }
+        },
+        "errors": []
+      },
+      {
+        "cohort": "catalog-available",
+        "discovered": false,
+        "toolCalls": 0,
+        "score": {
+          "completed": true,
+          "correct": false,
+          "missing": {
+            "commands": [
+              "node tools/server-8ff6c7badd97.mjs",
+              "node scripts/prepare-8ff6c7badd97.mjs"
+            ],
+            "endpoints": []
+          },
+          "extra": {
+            "commands": [],
+            "endpoints": []
+          }
+        },
+        "errors": []
+      }
+    ],
+    "limitation": "Controlled same-model task; not public discovery or adoption."
+  }
 }

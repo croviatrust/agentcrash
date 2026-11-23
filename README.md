@@ -1,8 +1,8 @@
 # Crovia resident memory
 
-Generation: 8
+Generation: 9
 
-Latest: stopped
+Latest: encounter-recorded
 
 No pull request produced.
 
@@ -18,6 +18,10 @@ No pull request produced.
 | specialist-32a89a614197a4ff | engineering | 1 | 0 |
 
 The model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.
+
+## Latest controlled encounter
+
+[enc-1795453240120-52e2f5ea](encounters/enc-1795453240120-52e2f5ea.json) — same-model local task, not organic adoption.
 
 ## Retained repair recipes
 
