@@ -32,11 +32,14 @@ export function refreshAgenda(previous, repo, context, outcomes = {}, episodes =
     if (outcome === 'merged') { task.status = 'completed'; task.completion = 'Candidate merged; user benefit and adoption remain unmeasured.'; }
     else if (outcome === 'rejected') task.status = 'rejected';
   }
+  for (const task of agenda.tasks) {
+    if (task.status === 'needs-research' && context.revision && task.lastFailure?.baseSHA && context.revision !== task.lastFailure.baseSHA) task.cooldownUntil = new Date(0).toISOString();
+  }
   // A trusted default-branch assignment selects an existing issue; it cannot
   // invent evidence or revive a completed/blocked commitment.
   const assigned = context.maintainerAssignment?.issueNumber;
   if (Number.isSafeInteger(assigned) && assigned > 0) {
-    const selected = agenda.tasks.find(t => t.repo === repo && t.source === `https://github.com/${repo}/issues/${assigned}` && ['queued', 'active'].includes(t.status));
+    const selected = agenda.tasks.find(t => t.repo === repo && t.source === `https://github.com/${repo}/issues/${assigned}` && (['queued', 'active'].includes(t.status) || t.status === 'needs-research' && (t.recoveryCycles || 0) < 6 && Date.parse(t.cooldownUntil || 0) <= Date.now()));
     if (selected) agenda.tasks = [selected, ...agenda.tasks.filter(t => t.id !== selected.id)];
   }
   // Retain open work before completed history, with a strict memory bound.

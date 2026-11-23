@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { infer, inferenceLimits, processRegression, safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
+import { bindExecutedRegression, infer, inferenceLimits, processRegression, safePath, readFile, validateProposal, applyProposal, initialState, remember, reconcile, chooseFocus, investigate, digest, validateStrategy, materialize, experimentKey } from './core.mjs';
 import { verify, commands } from './verify.mjs';
 import { publishable } from './github.mjs';
 
@@ -319,4 +319,34 @@ test('a typed process experiment executes through the existing probe gate and it
     } }), ask: async () => ({ text: JSON.stringify(actions.shift()) }) });
   assert.equal(e.probes[0].sourceSHA, baseSHA); assert.equal(e.probes[0].status, 'baseline-failed'); assert.equal(e.probes[0].processContract.expectedExit, 7);
   assert.equal(e.status, 'proposed'); assert.equal(digest(e.proposal.edits[1].content), e.probes[0].testHash);
+});
+
+test('source-only proposals bind exactly one genuine failing experiment and retain its bytes', () => {
+  const p = proposal(); p.edits.pop();
+  const content = proposal().edits[1].content;
+  const proof = { probeId: 'probe-1', sourceSHA: 'base', testHash: digest(content), code: 1, status: 'baseline-failed' };
+  const sources = new Map([['probe-1', content]]);
+  const bind = probes => bindExecutedRegression(p, probes, sources, 'node', 'base');
+  assert.equal(bind([proof]).bound, 'probe-1');
+  assert.equal(bind([proof]).proposal.edits[1].content, content);
+  assert.equal(p.edits.length, 1);
+  for (const change of [{sourceSHA:'old'}, {code:0}, {code:125}, {code:126}, {code:127}, {error:'timeout'}, {status:'passed'}])
+    assert.equal(bind([{...proof,...change}]).bound, null);
+  assert.equal(bind([proof, {...proof,probeId:'other'}]).bound, 'probe-1');
+  sources.set('other',content);
+  assert.equal(bind([proof, {...proof,probeId:'other'}]).bound, null);
+  assert.throws(() => bind([{...proof,testHash:'tampered'}]), /bytes/);
+  assert.equal(bindExecutedRegression(proposal(), [proof], sources, 'node', 'base').bound, null);
+  assert.equal(bindExecutedRegression({edits:[{path:'resident/strategy.json',content:'{}'}]}, [proof], sources, 'node', 'base').bound, null);
+});
+test('an omitted regression is bound to executed proof during investigation, with draft evidence retained', async t => {
+  const root = fixture(t), content = proposal().edits[1].content;
+  const baseSHA = execFileSync('git', ['rev-parse','HEAD'], {cwd:root,encoding:'utf8'}).trim();
+  const p = proposal(); p.edits.pop();
+  const actions = [{action:'read',path:'src/value.js'}, {action:'probe',content}, {action:'propose',...p}];
+  const e = await investigate({root,repo:'croviatrust/agentcrash',state:initialState(),context:{},strategy,requireProbe:true,
+    probe:async () => ({sourceSHA:baseSHA,testHash:digest(content),code:1,status:'baseline-failed'}),
+    ask:async () => ({text:JSON.stringify(actions.shift())})});
+  assert.equal(e.status,'proposed'); assert.equal(e.proposal.edits[1].content,content);
+  assert.equal(e.trace.at(-1).boundRegression,'probe-1'); assert.ok(e.drafts[0].response.includes('src/value.js'));
 });

@@ -71,3 +71,12 @@ test('a direct active maintainer assignment takes precedence over a routine enco
     ask: async (_, { role }) => ({ text: role === 'scout' ? '{"mission":"Reproduce the assigned defect"}' : role === 'critic' ? '{"decision":"revise","reason":"Need reproduction"}' : '{"action":"stop","reason":"Checkpoint"}' }) });
   assert.notEqual(e.kind, 'encounter'); assert.equal(e.commitment.id, state.agenda.tasks[0].id);
 });
+
+test('a changed checkout allows research without erasing failure history or exceeding recovery limits', () => {
+  const a=seed(), task=a.tasks[0]; Object.assign(task,{status:'needs-research',attempts:3,recoveryCycles:1,lastFailure:{baseSHA:'old'},cooldownUntil:new Date(Date.now()+600000).toISOString()});
+  assert.equal(chooseCommitment(refreshAgenda(a,repo,{...context,revision:'old'}),repo),null);
+  const changed=refreshAgenda(a,repo,{...context,revision:'new'});
+  assert.equal(chooseCommitment(changed,repo).id,task.id); assert.equal(changed.tasks[0].attempts,3); assert.equal(changed.tasks[0].recoveryCycles,1);
+  task.recoveryCycles=6;
+  assert.equal(chooseCommitment(refreshAgenda(a,repo,{...context,revision:'new'}),repo),null);
+});

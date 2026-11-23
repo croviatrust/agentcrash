@@ -42,6 +42,7 @@ export async function prepare(repo, output) {
   const assignmentFile = new URL('./assignment.json', import.meta.url);
   const maintainerAssignment = fs.existsSync(assignmentFile) ? json(assignmentFile) : null;
   const context = {
+    revision: commits[0]?.sha,
     learnedMethods: (state.learnedMethods || []).slice(0, 4),
     maintainerAssignment,
     assignedTask: issues.filter(i => !i.pull_request && i.number === maintainerAssignment?.issueNumber).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 5000) }))[0] || null,
