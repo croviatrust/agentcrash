@@ -62,3 +62,12 @@ test('a trusted assignment selects its actual issue ahead of existing work witho
   assert.equal(chooseCommitment(refreshAgenda(agenda, repo, supplied), repo).source, `https://github.com/${repo}/issues/1`);
   assert.equal(refreshAgenda(old, repo, { maintainerAssignment: { issueNumber: 999 } }).tasks.length, 1);
 });
+
+test('a direct active maintainer assignment takes precedence over a routine encounter cycle', async () => {
+  const state = initialState(); state.generation = 3; state.agenda = seed();
+  const e = await runFleet({ root: fileURLToPath(new URL('../', import.meta.url)), repo, state,
+    context: { maintainerAssignment: { issueNumber: 42 } }, enableEncounters: true,
+    strategy: json(new URL('./strategy.json', import.meta.url)), study: async () => ({ sources: [], errors: [] }),
+    ask: async (_, { role }) => ({ text: role === 'scout' ? '{"mission":"Reproduce the assigned defect"}' : role === 'critic' ? '{"decision":"revise","reason":"Need reproduction"}' : '{"action":"stop","reason":"Checkpoint"}' }) });
+  assert.notEqual(e.kind, 'encounter'); assert.equal(e.commitment.id, state.agenda.tasks[0].id);
+});

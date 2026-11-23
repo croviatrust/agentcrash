@@ -34,7 +34,9 @@ function reviewEdits(root, proposal) {
   });
 }
 export async function runFleet({ root, sibling, repo, state, context, strategy, ask = messages => infer(messages), study = research, probe = runProbe, enableEncounters = false, onEvent = () => {} }) {
-  if (enableEncounters && repo === 'croviatrust/agentcrash' && (!state.lastEncounter || (state.generation + 1) % 4 === 0)) {
+  const commitment = chooseCommitment(state.agenda, repo);
+  const assignedWork = commitment?.source === `https://github.com/${repo}/issues/${context.maintainerAssignment?.issueNumber}`;
+  if (!assignedWork && enableEncounters && repo === 'croviatrust/agentcrash' && (!state.lastEncounter || (state.generation + 1) % 4 === 0)) {
     const report = await encounter({ project: root, ask, onEvent });
     return { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo,
       baseSHA: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
@@ -43,7 +45,6 @@ export async function runFleet({ root, sibling, repo, state, context, strategy, 
       reason: 'Controlled encounter recorded; no code repair or organic adoption inferred.',
       encounter: report, encounterSummary: encounterSummary(report) };
   }
-  const commitment = chooseCommitment(state.agenda, repo);
   const focus = commitment?.objective || chooseFocus(strategy, state);
   const ledger = []; let calls = 0;
   const call = async (role, messages) => {
