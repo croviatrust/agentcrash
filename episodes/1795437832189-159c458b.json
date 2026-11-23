@@ -1,0 +1,133 @@
+{
+  "id": "1795437832189-159c458b",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "2955637b182379112f8b464955e9ec71f31ee4db",
+  "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
+  "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+  "started": "2026-11-23T12:43:52.194Z",
+  "status": "stopped",
+  "reason": "No new capability discovered; the codebase structure is stable but lacks a measurable failure mode to repair.",
+  "findings": [
+    {
+      "path": "src/adapters/index.js",
+      "repository": "self",
+      "sha": "2955637b182379112f8b464955e9ec71f31ee4db",
+      "note": "The version parsing logic at offset 16050 uses a regex that may fail if output contains non-semver lines before the version, and falls back to splitting by newlines which is brittle for multi-line outputs.",
+      "confidence": "unverified observation"
+    }
+  ],
+  "next": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?",
+  "finished": "2026-11-23T12:47:38.562Z",
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 1956,
+        "output": 21
+      },
+      "action": "read",
+      "path": "resident/strategy.json"
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 2269,
+        "output": 21
+      },
+      "action": "read",
+      "path": "src/runner.js"
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5318,
+        "output": 22
+      },
+      "action": "read",
+      "path": "src/adapters/index.js"
+    },
+    {
+      "turn": 3,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5091,
+        "output": 26
+      },
+      "action": "read",
+      "path": "src/adapters/index.js"
+    },
+    {
+      "turn": 4,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5237,
+        "output": 26
+      },
+      "action": "read",
+      "path": "src/adapters/index.js"
+    },
+    {
+      "turn": 5,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5371,
+        "output": 26
+      },
+      "action": "read",
+      "path": "src/adapters/index.js"
+    },
+    {
+      "turn": 6,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5564,
+        "output": 123
+      },
+      "action": "stop"
+    }
+  ],
+  "verdict": {
+    "episode": "1795437832189-159c458b",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "issues": [],
+    "commits": [
+      {
+        "sha": "2955637b182379112f8b464955e9ec71f31ee4db",
+        "message": "feat: install Crovia resident research agent\n\nPersistent sourced memory, local CPU inference, bounded research continuation and isolated before/after verification.\n\nActivation expressly authorized by the repository owner in this session.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "0e82d2f824223340820ac711270ba8a8dc1022a2",
+        "message": "record: run of 2026-11-22\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45061290657"
+      },
+      {
+        "sha": "838ac07cd8d91725f6881a0c71336a46d602139f",
+        "message": "record: run of 2026-11-21\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44878131729"
+      },
+      {
+        "sha": "f44abb0637647ccbc89aa52c2698d4282e0e93de",
+        "message": "record: run of 2026-11-20\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44692665766"
+      },
+      {
+        "sha": "af5fe58eced62a2b58dd78b38c14d494c9ded9bc",
+        "message": "site: no duration claimed for a run that was not timed on a laptop"
+      }
+    ],
+    "openProposals": [],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 1,
+      "observed": "2026-11-23T12:42:37.077Z",
+      "note": "Repository attention; not adoption or revenue."
+    }
+  }
+}

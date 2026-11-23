@@ -1,287 +1,61 @@
 {
   "version": 1,
-  "generation": 3,
+  "generation": 4,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
       "repo": "croviatrust/agentcrash",
       "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
       "started": "2026-11-23T12:08:30.821Z",
-      "status": "stopped",
       "finished": "2026-11-23T12:11:45.534Z",
+      "status": "stopped",
       "error": "",
-      "inference": [
-        {
-          "turn": 0,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 1658,
-            "output": 22
-          }
-        },
-        {
-          "turn": 1,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 4156,
-            "output": 22
-          }
-        },
-        {
-          "turn": 2,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 3,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 4,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 5,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 6,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 7,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 8,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        },
-        {
-          "turn": 9,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6654,
-            "output": 22
-          }
-        }
-      ]
+      "findings": []
     },
     {
       "id": "1795436043117-9e32dccf",
       "repo": "croviatrust/agentcrash",
-      "baseSHA": "015a7b518f3d21166511b3bd785bf0c67abaac95",
-      "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
       "focus": "Remove a measurable obstacle to an agent adopting and using the product.",
       "started": "2026-11-23T12:14:03.121Z",
-      "status": "stopped",
-      "reason": "Turn budget exhausted without a valid experiment.",
       "finished": "2026-11-23T12:21:31.416Z",
+      "status": "stopped",
       "localEvidence": "stopped",
+      "reason": "Turn budget exhausted without a valid experiment.",
       "error": "",
-      "inference": [
-        {
-          "turn": 0,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 1714,
-            "output": 22
-          }
-        },
-        {
-          "turn": 1,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 4212,
-            "output": 16
-          }
-        },
-        {
-          "turn": 2,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 4788,
-            "output": 16
-          }
-        },
-        {
-          "turn": 3,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 5364,
-            "output": 16
-          }
-        },
-        {
-          "turn": 4,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 5940,
-            "output": 16
-          }
-        },
-        {
-          "turn": 5,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 6516,
-            "output": 16
-          }
-        },
-        {
-          "turn": 6,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 7092,
-            "output": 16
-          }
-        },
-        {
-          "turn": 7,
-          "model": "qwen2.5-coder:1.5b",
-          "usage": {
-            "input": 7668,
-            "output": 16
-          }
-        },
-        {
-          "turn": 8,
-          "error": "The operation was aborted due to timeout"
-        },
-        {
-          "turn": 9,
-          "error": "The operation was aborted due to timeout"
-        }
-      ]
+      "findings": []
     },
     {
       "id": "1795436668228-cf5563b5",
       "repo": "croviatrust/agentcrash",
-      "baseSHA": "df3243c08f2b4bb8790717ef7d6d02649f29b6c0",
-      "siblingSHA": "73b1c69b43b1c1307af977ddf19862c83d15bfef",
       "focus": "Explore a new capability by constructing a small falsifiable experiment.",
       "started": "2026-11-23T12:24:28.232Z",
-      "status": "stopped",
-      "reason": "Turn budget exhausted without a valid experiment.",
       "finished": "2026-11-23T12:32:07.697Z",
+      "status": "stopped",
       "localEvidence": "stopped",
+      "reason": "Turn budget exhausted without a valid experiment.",
       "error": "",
-      "inference": [
+      "findings": []
+    },
+    {
+      "id": "1795437832189-159c458b",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+      "started": "2026-11-23T12:43:52.194Z",
+      "finished": "2026-11-23T12:47:38.562Z",
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "No new capability discovered; the codebase structure is stable but lacks a measurable failure mode to repair.",
+      "error": "",
+      "findings": [
         {
-          "turn": 0,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 1837,
-            "output": 40
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
-        },
-        {
-          "turn": 1,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 4359,
-            "output": 42
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
-        },
-        {
-          "turn": 2,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 6768,
-            "output": 40
-          },
-          "action": "read",
-          "path": "src/cage/index.js"
-        },
-        {
-          "turn": 3,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 7404,
-            "output": 41
-          },
-          "action": "read",
-          "path": "src/cage/relay.js"
-        },
-        {
-          "turn": 4,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 5832,
-            "output": 40
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
-        },
-        {
-          "turn": 4,
-          "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
-        },
-        {
-          "turn": 5,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 5914,
-            "output": 42
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
-        },
-        {
-          "turn": 6,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 5256,
-            "output": 40
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
-        },
-        {
-          "turn": 6,
-          "error": "Already observed this exact input. Use a new offset or file, propose an experiment, or stop."
-        },
-        {
-          "turn": 7,
-          "model": "qwen3.5:4b",
-          "usage": {
-            "input": 5338,
-            "output": 42
-          },
-          "action": "read",
-          "path": "src/cage/run.js"
+          "path": "src/adapters/index.js",
+          "repository": "self",
+          "sha": "2955637b182379112f8b464955e9ec71f31ee4db",
+          "note": "The version parsing logic at offset 16050 uses a regex that may fail if output contains non-semver lines before the version, and falls back to splitting by newlines which is brittle for multi-line outputs.",
+          "confidence": "unverified observation"
         }
-      ]
+      ],
+      "next": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?"
     }
   ],
   "outcomes": {},
@@ -303,7 +77,18 @@
       "verified": 0,
       "merged": 0,
       "rejected": 0
+    },
+    "Improve the resident's own strategy using the recorded outcomes of previous experiments.": {
+      "attempts": 1,
+      "verified": 0,
+      "merged": 0,
+      "rejected": 0
     }
   },
-  "hypotheses": []
+  "hypotheses": [],
+  "pendingResearch": {
+    "focus": "Improve the resident's own strategy using the recorded outcomes of previous experiments.",
+    "question": "What specific error message or behavior occurs when running 'claude --version' in a hostile-repo vector that causes version detection to fail?",
+    "attempts": 1
+  }
 }
