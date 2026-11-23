@@ -74,7 +74,7 @@ async function visitor({ project, target, task, available, ask, onEvent }) {
       messages.push({ role: 'user', content: JSON.stringify({ phase, error: error.message }) });
     }
   }
-  return { cohort, discovered, toolCalls, trace, answer, score: grade(answer, task.expected) };
+  return { cohort, discovered, toolCalls, trace, messages, answer, score: grade(answer, task.expected) };
 }
 export async function encounter({ project, ask = messages => infer(messages), variant = crypto.randomInt(2) ? 'configured' : 'benign', onEvent = () => {} }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'crovia-encounter-'));
@@ -82,7 +82,7 @@ export async function encounter({ project, ask = messages => infer(messages), va
     const task = createTask(root, { variant });
     const sourceSHA = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: project, encoding: 'utf8' }).trim();
     const report = { version: 1, id: `enc-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, sourceSHA,
-      started: new Date().toISOString(), kind: 'controlled-local-task', variant, modelRelation: 'same configured model, fresh contexts',
+      started: new Date().toISOString(), catalogHash: digest(json(path.join(project, 'agents/catalog.json'))), kind: 'controlled-local-task', variant, modelRelation: 'same configured model, fresh contexts',
       fixtureHash: digest(task.files.map(p => [p, fs.readFileSync(path.join(root, p), 'utf8')])), expected: task.expected,
       cohorts: [], limits: ['Catalog exposure is controlled, not public discovery.', 'Fresh contexts are not independently operated agents or users.', 'One synthetic task cannot demonstrate adoption, retention or general superiority.'] };
     for (const available of crypto.randomInt(2) ? [true, false] : [false, true])
@@ -91,9 +91,11 @@ export async function encounter({ project, ask = messages => infer(messages), va
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
 export function encounterSummary(report) {
+  const compactScore = score => ({ completed: score.completed, correct: score.correct, error: score.error,
+    ...Object.fromEntries(['missing', 'extra'].filter(k => score[k]).map(k => [k, Object.fromEntries(Object.entries(score[k]).map(([field, values]) => [field, values.slice(0, 3).map(v => v.slice(0, 200))]))])) });
   return { id: report.id, sourceSHA: report.sourceSHA, variant: report.variant, kind: report.kind,
-    cohorts: report.cohorts.map(c => ({ cohort: c.cohort, discovered: c.discovered, toolCalls: c.toolCalls, score: c.score,
-      errors: c.trace.filter(t => t.error).map(t => ({ phase: t.phase, error: t.error })).slice(-3) })),
+    cohorts: report.cohorts.map(c => ({ cohort: c.cohort, discovered: c.discovered, toolCalls: c.toolCalls, score: compactScore(c.score),
+      errors: c.trace.filter(t => t.error).map(t => ({ phase: t.phase, error: t.error.slice(0, 300) })).slice(-3) })),
     limitation: 'Controlled same-model task; not public discovery or adoption.' };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

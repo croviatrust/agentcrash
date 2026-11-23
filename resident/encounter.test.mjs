@@ -58,7 +58,7 @@ test('grading rejects self-reported success, omissions and false positives', () 
 test('fresh controlled cohorts use actual tool output and preserve trace evidence, not adoption claims', async () => {
   for (const variant of ['configured', 'benign']) {
     const report = await encounter({ project, variant, ask: scriptedVisitor() });
-    assert.equal(report.cohorts.length, 2); assert.ok(report.cohorts.every(c => c.score.correct));
+    assert.equal(report.cohorts.length, 2); assert.ok(report.cohorts.every(c => c.messages[1].role === 'user')); assert.match(report.catalogHash, /^[a-f0-9]{64}$/); assert.ok(report.cohorts.every(c => c.score.correct));
     const available = report.cohorts.find(c => c.cohort === 'catalog-available');
     assert.equal(available.toolCalls, 1); assert.match(available.trace.find(t => t.execution).execution.sha256, /^[a-f0-9]{64}$/);
     assert.equal(report.cohorts.find(c => c.cohort === 'files-only').toolCalls, 0);
