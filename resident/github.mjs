@@ -1,13 +1,15 @@
 // The writer imports only the trusted controller, never candidate code.
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { json, writeJSON, initialState, remember, reconcile, validateProposal, profile, digest, chooseFocus } from './core.mjs';
 import { evidenceValid, makeCapsule, capsuleIndex, evolveFleet, selectCapabilities, communicationDraft } from './learning.mjs';
 
 import { discoverOpportunities, growthRecord, feedbackSignals, feedbackCooldown } from './growth.mjs';
 
-import { refreshAgenda, advanceAgenda } from './agenda.mjs';
+import { refreshAgenda, advanceAgenda, chooseCommitment } from './agenda.mjs';
+
+import { retainMethods, failureView } from './autonomy.mjs';
 
 const API = 'https://api.github.com';
 export async function api(route, { method = 'GET', body, missing = false } = {}) {
@@ -40,6 +42,7 @@ export async function prepare(repo, output) {
   const assignmentFile = new URL('./assignment.json', import.meta.url);
   const maintainerAssignment = fs.existsSync(assignmentFile) ? json(assignmentFile) : null;
   const context = {
+    learnedMethods: (state.learnedMethods || []).slice(0, 4),
     maintainerAssignment,
     assignedTask: issues.filter(i => !i.pull_request && i.number === maintainerAssignment?.issueNumber).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 5000) }))[0] || null,
     latestEncounter: state.lastEncounter,
@@ -78,6 +81,18 @@ export async function prepare(repo, output) {
     } catch (e) { context.capabilityLoadError = e.message; }
   }
   state.agenda = refreshAgenda(state.agenda, repo, context, state.outcomes, state.recent);
+  const assigned = chooseCommitment(state.agenda, repo);
+  const previous = assigned?.attempts > 0 ? state.recent.findLast(e => e.commitment?.id === assigned.id && e.localEvidence !== 'verified') : null;
+  if (previous) {
+    try {
+      const file = await api(`${base}/contents/episodes/${previous.id}.json?ref=crovia-memory`, { missing: true });
+      if (file?.content?.length < 800000) {
+        const saved = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
+        context.previousFailure = failureView({ ...saved, trace: saved.inference || saved.trace || [] }, saved.verdict || { status: 'unknown' }, fileURLToPath(new URL('../', import.meta.url)));
+        context.previousFailure.attemptedMethod = saved.autonomy?.appliedMethod || null;
+      }
+    } catch (error) { context.previousFailureError = error.message; }
+  }
   writeJSON(path.join(output, 'state.json'), state);
   writeJSON(path.join(output, 'context.json'), context);
   // Backpressure: improve the proposal process rather than flood the owner.
@@ -139,6 +154,7 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
     }
   }
   const next = remember(state, episode);
+  next.learnedMethods = retainMethods(state.learnedMethods, episode, verdict);
   next.agenda = advanceAgenda(state.agenda, episode, verdict);
   const capsule = makeCapsule(episode, verdict);
   next.fleet = evolveFleet(state, episode, verdict, capsule);
@@ -147,12 +163,13 @@ export async function publish(repo, stateDir, episodeFile, verdictFile, baseSHA)
   const recipes = next.capabilities.length ? next.capabilities.map(c => `- [${c.id}](capabilities/${c.id}.json)`).join('\n') : 'No independently verified repair recipe retained yet.';
   const growth = growthRecord(episode, verdict);
   const files = [
+    { path: 'methods.json', content: JSON.stringify(next.learnedMethods, null, 2) + '\n' },
     { path: 'agenda.json', content: JSON.stringify(next.agenda, null, 2) + '\n' },
     { path: `growth/${episode.id}.json`, content: JSON.stringify(growth, null, 2) + '\n' },
     { path: 'opportunities.json', content: JSON.stringify({ observed: context.metrics?.observed, opportunities: context.opportunities || [], errors: context.opportunityErrors || [], inboundFeedback: context.inboundFeedback || [] }, null, 2) + '\n' },
     { path: 'state.json', content: JSON.stringify(next, null, 2) + '\n' },
     { path: `episodes/${episode.id}.json`, content: JSON.stringify({ ...episode, verdict, context }, null, 2) + '\n' },
-    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## Persistent work\n\n[AgentHub agenda](agenda.json): commitments, checkpoints, blocked work and review status. Completed means merged, not adopted.\n\n## External needs and experiments\n\n[Latest source evidence](opportunities.json) · [This experiment](growth/${episode.id}.json). Reported issues and inbound feedback remain unverified. No adoption inferred.\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Latest controlled encounter\n\n${next.lastEncounter ? `[${next.lastEncounter.id}](encounters/${next.lastEncounter.id}.json) — same-model local task, not organic adoption.` : 'No encounter recorded yet.'}\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
+    { path: 'README.md', content: `# Crovia resident memory\n\nGeneration: ${next.generation}\n\nLatest: ${episode.status}\n\n${episode.url || 'No pull request produced.'}\n\n## Recovery methods\n\n[Method hypotheses and independent validations](methods.json). A method is promoted only after independent execution accepts a candidate using it.\n\n## Persistent work\n\n[AgentHub agenda](agenda.json): commitments, checkpoints, blocked work and review status. Completed means merged, not adopted.\n\n## External needs and experiments\n\n[Latest source evidence](opportunities.json) · [This experiment](growth/${episode.id}.json). Reported issues and inbound feedback remain unverified. No adoption inferred.\n\n## Fleet\n\n| Agent | Role | Attempts | Verified source-case repairs |\n| --- | --- | --- | --- |\n${roster}\n\nThe model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.\n\n## Latest controlled encounter\n\n${next.lastEncounter ? `[${next.lastEncounter.id}](encounters/${next.lastEncounter.id}.json) — same-model local task, not organic adoption.` : 'No encounter recorded yet.'}\n\n## Retained repair recipes\n\n${recipes}\n\nTransfer to other cases and business growth are not inferred from these counters. This branch stores evidence and experiments.\n` }
   ];
   if (episode.encounter) files.push({ path: `encounters/${episode.encounter.id}.json`, content: JSON.stringify(episode.encounter, null, 2) + '\n' });
   if (capsule) files.push({ path: `capabilities/${capsule.id}.json`, content: JSON.stringify(capsule, null, 2) + '\n' });

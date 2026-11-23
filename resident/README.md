@@ -255,3 +255,27 @@ A read of a missing permitted new regression file now explicitly reports that
 the controller creates the file and its directory. A missing existing source
 file remains an error. The critic is told explicitly that baseline failure and
 candidate success are the intended regression experiment, not a contradiction.
+
+## Autonomous recovery loop
+
+The AgentCrash workflow now runs `autonomy.mjs`. Within a bounded mission it
+executes an engineering attempt, evaluates the result in isolation, and on
+failure invokes a separate recovery-researcher context. That model proposes a
+method hypothesis, a falsifier and a public research plan. The controller retrieves
+those sources and passes the method and observed failure to a new attempt on the
+same objective. This requires no operator prompt or source edit between attempts.
+
+A mission permits at most two engineering attempts and fourteen model calls,
+with a fifty-minute controller deadline. Model calls and containers receive the
+remaining time budget. The separate workflow verifier still checks the final
+candidate before publication. The writer retains `methods.json`; model statements
+and local success flags cannot promote a method. Only independent source-case
+execution can attach a validation. This is method-memory learning, not weight
+training, general intelligence, self-expanded authority or proven generalization.
+
+Failed autonomous work enters `needs-research` with its actual failure record.
+After a fifteen-minute cooldown, a later wake begins with recovery research before
+engineering instead of blindly repeating the same method. Six failed recovery
+cycles require escalation; the objective remains recorded. GitHub must still
+deliver a wake event, and its cron timing is not guaranteed. No method can change
+credentials, write permissions, source-edit scope, test gates or publication rules.
