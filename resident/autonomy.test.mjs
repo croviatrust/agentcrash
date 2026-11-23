@@ -67,7 +67,7 @@ test('a method is promoted only by the separate independent verifier, not a lear
 });
 test('shared call and retry budgets hold even if every engineering attempt fails', async t => {
   const root = fixture(t); let calls = 0, attempts = 0;
-  const e = await runAutonomy({ root, repo, state: initialState(), context: {}, strategy,
+  const e = await runAutonomy({ root, repo, state: initialState(), context: {}, strategy, maximumCalls: 14,
     fleet: async ({ ask, modelBudget }) => { attempts++; for (let i = 0; i < modelBudget; i++) await ask([], { role: 'specialist-fixture' }); return { id: `attempt-${attempts}`, repo, status: 'stopped', trace: [], reason: 'Unresolved' }; },
     evaluate: async e => ({ episode: e.id, status: 'stopped' }), study: async () => ({ sources: [], errors: [] }),
     ask: async (_, { role }) => { calls++; return { text: JSON.stringify(role === 'recovery-researcher' ? { method } : {}) }; } });
@@ -110,4 +110,14 @@ test('a failed recovery researcher preserves the work and cannot cause a blind e
     fleet: async () => { engineering++; throw new Error('Should not run'); }, ask: async () => ({ text: 'invalid JSON' }) });
   assert.equal(engineering, 0); assert.equal(e.status, 'stopped'); assert.equal(e.commitment.id, state.agenda.tasks[0].id);
   assert.match(e.trace[0].error, /JSON|Unexpected/);
+});
+
+test('a malformed recovery proposal is corrected by the researcher itself within its call budget', async t => {
+  const root = fixture(t), state = initialState(); state.agenda = refreshAgenda(null, repo, { issues: [{ number: 9, title: 'Actual task' }] }); state.agenda.tasks[0].attempts = 1;
+  let researchCalls = 0, sawError = false;
+  const e = await runAutonomy({ root, repo, state, context: { previousFailure: { episode: 'prior', observedBlockers: [] } }, strategy,
+    fleet: async ({ context }) => { assert.equal(context.recovery.method.mode, 'contract-first'); return { id: 'retry', repo, status: 'stopped', trace: [] }; },
+    evaluate: async e => ({ episode: e.id, status: 'stopped' }), study: async () => ({ sources: [], errors: [] }),
+    ask: async (messages) => { researchCalls++; if (researchCalls === 1) return { text: 'invalid JSON' }; sawError ||= messages.some(m => m.content.includes('Correct the method JSON')); return { text: JSON.stringify({ method }) }; } });
+  assert.ok(sawError); assert.equal(e.autonomy.lessons[0].method.mode, 'contract-first'); assert.ok(e.autonomy.modelCalls <= 16);
 });

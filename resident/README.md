@@ -265,7 +265,7 @@ method hypothesis, a falsifier and a public research plan. The controller retrie
 those sources and passes the method and observed failure to a new attempt on the
 same objective. This requires no operator prompt or source edit between attempts.
 
-A mission permits at most two engineering attempts and fourteen model calls,
+A mission permits at most two engineering attempts and sixteen model calls,
 with a fifty-minute controller deadline. Model calls and containers receive the
 remaining time budget. The separate workflow verifier still checks the final
 candidate before publication. The writer retains `methods.json`; model statements
