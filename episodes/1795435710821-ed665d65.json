@@ -1,0 +1,130 @@
+{
+  "id": "1795435710821-ed665d65",
+  "repo": "croviatrust/agentcrash",
+  "focus": "Find a concrete failure in an existing user workflow and repair it with a regression test.",
+  "started": "2026-11-23T12:08:30.821Z",
+  "status": "stopped",
+  "finished": "2026-11-23T12:11:45.534Z",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 1658,
+        "output": 22
+      }
+    },
+    {
+      "turn": 1,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 4156,
+        "output": 22
+      }
+    },
+    {
+      "turn": 2,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 3,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 4,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 5,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 6,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 7,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 8,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    },
+    {
+      "turn": 9,
+      "model": "qwen2.5-coder:1.5b",
+      "usage": {
+        "input": 6654,
+        "output": 22
+      }
+    }
+  ],
+  "verdict": {
+    "episode": "1795435710821-ed665d65",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "issues": [],
+    "commits": [
+      {
+        "sha": "0e82d2f824223340820ac711270ba8a8dc1022a2",
+        "message": "record: run of 2026-11-22\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45061290657"
+      },
+      {
+        "sha": "838ac07cd8d91725f6881a0c71336a46d602139f",
+        "message": "record: run of 2026-11-21\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44878131729"
+      },
+      {
+        "sha": "f44abb0637647ccbc89aa52c2698d4282e0e93de",
+        "message": "record: run of 2026-11-20\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44692665766"
+      },
+      {
+        "sha": "af5fe58eced62a2b58dd78b38c14d494c9ded9bc",
+        "message": "site: no duration claimed for a run that was not timed on a laptop"
+      },
+      {
+        "sha": "6a199862108992e215d68bfb00897b30d3bf9173",
+        "message": "record: run of 2026-11-19\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/44615749638"
+      }
+    ],
+    "openProposals": [],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 2,
+      "observed": "2026-11-23T12:07:41.149Z",
+      "note": "Repository attention; not adoption or revenue."
+    }
+  }
+}
