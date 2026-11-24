@@ -350,3 +350,13 @@ test('an omitted regression is bound to executed proof during investigation, wit
   assert.equal(e.status,'proposed'); assert.equal(e.proposal.edits[1].content,content);
   assert.equal(e.trace.at(-1).boundRegression,'probe-1'); assert.ok(e.drafts[0].response.includes('src/value.js'));
 });
+test('a repeated source read explicitly leaves execution and proposal available',async t=>{
+  const root=fixture(t),content=proposal().edits[1].content;
+  const baseSHA=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+  let saw=false;
+  const actions=[{action:'read',path:'src/value.js'},{action:'read',path:'src/value.js'},{action:'probe',content},{action:'propose',...proposal()}];
+  const e=await investigate({root,repo:'croviatrust/agentcrash',state:initialState(),context:{},strategy,requireProbe:true,
+    probe:async()=>({sourceSHA:baseSHA,testHash:digest(content),code:1,status:'baseline-failed'}),
+    ask:async messages=>{saw ||= messages.some(m=>m.content.includes('does NOT block probe'));return {text:JSON.stringify(actions.shift())};}});
+  assert.ok(saw);assert.equal(e.status,'proposed');
+});

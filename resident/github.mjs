@@ -12,13 +12,26 @@ import { refreshAgenda, advanceAgenda, chooseCommitment } from './agenda.mjs';
 import { retainMethods, failureView } from './autonomy.mjs';
 
 const API = 'https://api.github.com';
-export async function api(route, { method = 'GET', body, missing = false } = {}) {
-  const response = await fetch(`${API}${route}`, { method,
-    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${process.env.GH_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(30000) });
-  if (missing && response.status === 404) return null;
-  if (!response.ok) throw new Error(`GitHub ${method} ${route}: ${response.status}`);
-  return response.status === 204 ? null : response.json();
+export async function api(route, { method = 'GET', body, missing = false, fetcher = fetch, wait = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+  // Retry only reads: replaying a write after an ambiguous response can duplicate work.
+  const attempts = method === 'GET' ? 3 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    let response;
+    try {
+      response = await fetcher(`${API}${route}`, { method,
+        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${process.env.GH_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(30000) });
+    } catch (error) {
+      if (attempt + 1 === attempts) throw error;
+      await wait(500 * 2 ** attempt); continue;
+    }
+    if (missing && response.status === 404) return null;
+    if ([502, 503, 504].includes(response.status) && attempt + 1 < attempts) {
+      await response.body?.cancel(); await wait(500 * 2 ** attempt); continue;
+    }
+    if (!response.ok) throw new Error(`GitHub ${method} ${route}: ${response.status}`);
+    return response.status === 204 ? null : response.json();
+  }
 }
 export async function prepare(repo, output) {
   profile(repo);
