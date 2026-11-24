@@ -59,10 +59,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/ollama-models
-          key: crovia-brain-qwen3.5-4b-models-v2
+          key: crovia-models-v3-${{ vars.RESIDENT_MODEL || 'qwen3.5:4b' }}-${{ vars.RESIDENT_DECISION_MODEL || 'qwen3:8b' }}
       - name: Start CPU inference without an API key
         if: steps.observe.outputs.active == 'true' && vars.RESIDENT_API_URL == ''
         env:
+          DECISION_MODEL: ${{ vars.RESIDENT_DECISION_MODEL || 'qwen3:8b' }}
           MODEL: ${{ vars.RESIDENT_MODEL || 'qwen3.5:4b' }}
         run: |
           mkdir -p "$RUNNER_TEMP/ollama-models"
@@ -74,10 +75,12 @@ jobs:
             sleep 2
           done
           docker exec crovia-brain ollama pull "$MODEL" > "$RUNNER_TEMP/model-pull.log" 2>&1 || { tail -20 "$RUNNER_TEMP/model-pull.log"; exit 1; }
+          if [ "$DECISION_MODEL" != "$MODEL" ]; then docker exec crovia-brain ollama pull "$DECISION_MODEL"; fi
       - name: Investigate and propose
         if: steps.observe.outputs.active == 'true'
         env:
           RESIDENT_API_URL: ${{ vars.RESIDENT_API_URL }}
+          RESIDENT_DECISION_MODEL: ${{ vars.RESIDENT_DECISION_MODEL || (vars.RESIDENT_API_URL == '' && 'qwen3:8b') || '' }}
           RESIDENT_MODEL: ${{ vars.RESIDENT_MODEL }}
           RESIDENT_API_KEY: ${{ secrets.RESIDENT_API_KEY }}
           GH_TOKEN: ${{ github.token }}
