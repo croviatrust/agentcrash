@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795503519949-96218942",
+  "source": {
+    "id": "opp-378aebd4c577c697",
+    "url": "https://github.com/brianreborn/familia/issues/407",
+    "title": "Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+    "evidenceHash": "3565716af37aaa218f6d20d74ec23c29e428550d9b7dad8e2aa3c190e050edf6",
+    "updated": "2026-11-24T05:59:28Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Request a new experimental slot to execute probe_process or create regression test with fresh tool authority.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
