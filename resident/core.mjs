@@ -172,16 +172,17 @@ export function activeResearch(state, focus) {
   return pending?.attempts < 3 && pending.focus === focus ? pending : null;
 }
 export function inferenceLimits(role = '') {
+  if (['scout', 'critic', 'recovery-researcher'].includes(role)) return { decision: true, timeoutMs: 200000, maxTokens: 900 };
   return role.startsWith('specialist-') ? { timeoutMs: 360000, maxTokens: 1600 } : { timeoutMs: 200000, maxTokens: 900 };
 }
-export async function infer(messages, env = process.env, { timeoutMs = 200000, maxTokens = 2400 } = {}) {
+export async function infer(messages, env = process.env, { timeoutMs = 200000, maxTokens = 2400, decision = false } = {}) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 30000 || timeoutMs > 360000 || !Number.isInteger(maxTokens) || maxTokens < 100 || maxTokens > 2400) throw new Error('Invalid inference budget');
   const remote = Boolean(env.RESIDENT_API_URL);
   const url = remote ? new URL(env.RESIDENT_API_URL) : new URL('http://127.0.0.1:11434/api/chat');
   if (remote && url.protocol !== 'https:') throw new Error('Remote inference requires HTTPS');
   const headers = { 'Content-Type': 'application/json' };
   if (remote && env.RESIDENT_API_KEY) headers.Authorization = `Bearer ${env.RESIDENT_API_KEY}`;
-  const model = env.RESIDENT_MODEL || 'qwen3.5:4b';
+  const model = (decision && env.RESIDENT_DECISION_MODEL) || env.RESIDENT_MODEL || 'qwen3.5:4b';
   const body = remote ? { model, messages, max_tokens: maxTokens, response_format: { type: 'json_object' } } :
     { model, messages, stream: false, think: false, format: 'json', options: { num_ctx: 8192, num_predict: maxTokens, temperature: 0.2 } };
   const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs) });
