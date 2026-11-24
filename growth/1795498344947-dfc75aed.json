@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795498344947-dfc75aed",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "The tool authority restricts re-reading files or repeating the exact same probe action. The evidence (exit 143 on SIGINT) is sufficient to construct a falsifiable regression test that will fail on current code and pass after the fix. Since I cannot create new files or run new probes due to the 'already observed' constraint, I must stop and request a new experimental slot rather than inventing a solution.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

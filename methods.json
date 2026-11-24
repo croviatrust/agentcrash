@@ -147,5 +147,33 @@
         "trust": "untrusted evidence; license is metadata, not copying permission"
       }
     ]
+  },
+  {
+    "mode": "minimal-edit",
+    "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Code changes require a new regression test\"}],\"checks\":[]}",
+    "instructions": "Modify src/cage/relay.js line 46 to change `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` to `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 2) : code ?? 1)`. This preserves SIGTERM=143 and SIGKILL=137 while fixing SIGINT to 130. Submit this change with the instruction that a new regression test file must be created by the controller to verify the exit status.",
+    "falsifier": "If the modified relay.js still exits with 143 when the child receives SIGINT, it indicates the signal mapping logic was not applied or the spawn event handling is bypassed, requiring a deeper investigation of the child process lifecycle.",
+    "id": "method-16d99a91ac664de9eaa4",
+    "status": "unverified-hypothesis",
+    "validations": [],
+    "attempts": 1,
+    "sourceFailures": [
+      "1795496130071-486b88ca"
+    ],
+    "sources": []
+  },
+  {
+    "mode": "contract-first",
+    "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact input. Use a new offset or file, propose an experiment, or stop.\"}],\"checks\":[]}",
+    "instructions": "Execute a probe_process to spawn a child process that runs relay.js with a SIGINT trigger and captures the exit code. If the probe confirms the failure (exit 143), propose a custom executable method: Write a new file `test/cage/relay-sigint-status.test.mjs` containing only the reproduction test case using spawnSync to verify the status is 130. This avoids reading existing files and creates a fresh artifact for the controller.",
+    "falsifier": "If the probe confirms the exit code is already 130, the fix was not needed or the environment differs. If the new file cannot be created due to permissions, the tool authority is restricted.",
+    "id": "method-fafad29c8d6edbbac649",
+    "status": "unverified-hypothesis",
+    "validations": [],
+    "attempts": 1,
+    "sourceFailures": [
+      "1795497775590-6e86209b"
+    ],
+    "sources": []
   }
 ]
