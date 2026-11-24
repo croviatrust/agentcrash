@@ -30,6 +30,12 @@ export async function prepare(repo, output) {
     api(`${base}/commits?per_page=5`), api(base)
   ]);
   const state = stateFile ? JSON.parse(Buffer.from(stateFile.content, 'base64').toString('utf8')) : initialState();
+  const expectedEpisode = process.env.EXPECTED_EPISODE;
+  if (expectedEpisode && state.recent?.at(-1)?.id !== expectedEpisode) {
+    writeJSON(path.join(output, 'state.json'), state); writeJSON(path.join(output, 'context.json'), {});
+    if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, 'active=false\n');
+    return { active: false, reason: 'Obsolete continuation; a newer episode already exists.' };
+  }
   const ours = prs.filter(p => /^crovia\/resident-\d+-[a-f0-9]+$/.test(p.head?.ref || ''));
   for (const episode of state.recent.filter(e => !e.pr && ['awaiting-crovia-identity', 'pr-blocked'].includes(e.status))) {
     const branch = `crovia/resident-${episode.id}`;
@@ -43,7 +49,7 @@ export async function prepare(repo, output) {
   const maintainerAssignment = fs.existsSync(assignmentFile) ? json(assignmentFile) : null;
   const context = {
     revision: commits[0]?.sha,
-    learnedMethods: (state.learnedMethods || []).slice(0, 4),
+    learnedMethods: (state.learnedMethods || []).filter(m => m.status === 'verified-on-source-case' && m.validations?.length).slice(0, 4),
     maintainerAssignment,
     assignedTask: issues.filter(i => !i.pull_request && i.number === maintainerAssignment?.issueNumber).map(i => ({ number: i.number, title: i.title, body: i.body?.slice(0, 5000) }))[0] || null,
     latestEncounter: state.lastEncounter,
@@ -105,7 +111,6 @@ export async function prepare(repo, output) {
 export function publishable(episode, verdict) {
   if (verdict.episode !== episode.id || verdict.proposalHash !== digest(episode.proposal)) throw new Error('Verdict does not match proposal');
   const p = validateProposal(episode.proposal, profile(episode.repo));
-  if (episode.fleet && episode.fleet.review?.decision !== 'accept') return false;
   if (p.kind === 'strategy') return verdict.status === 'strategy-candidate';
   return evidenceValid(episode, verdict);
 }

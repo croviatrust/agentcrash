@@ -27,6 +27,10 @@ export function safePath(name) {
 // A typed experiment compiler, not a shell or a product repair template.
 export function processRegression(spec) {
   safePath(spec.script);
+  if (Array.isArray(spec.args)) {
+    const invalid = spec.args.findIndex(a => typeof a !== 'string');
+    if (invalid !== -1) throw new Error(`Invalid process experiment contract: args[${invalid}] must be a literal string, never null. Use the literal $NODE when a Node executable is required.`);
+  }
   if (!/^(src|bin)\/.*\.js$/.test(spec.script) || !Array.isArray(spec.args) || spec.args.length > 20 ||
       spec.args.some(a => typeof a !== 'string' || a.length > 500 || a.includes('\0')) ||
       !Number.isInteger(spec.expectedExit) || spec.expectedExit < 0 || spec.expectedExit > 255) throw new Error('Invalid process experiment contract');
@@ -218,8 +222,8 @@ Probe requirement for this generation: ${requireProbe}.
 {"action":"stop","reason":"specific uncertainty","findings":[{"path":"src/file.js","repository":"self","note":"specific observation from a file you actually read"}],"next":"precise question or experiment for the next generation"}
 For an existing file, prefer {"path":"src/file.js","before":"exact unique old text","after":"new text"} instead of repeating the whole file. New files need content. Read every existing file before changing it. A read with complete=true already contains the whole file. Do not read another offset of that file. If a reproduction and source are available, prefer executing the smallest regression probe over restating a plan. Inference timeouts do not mean a file read failed. Code edits only under ${language === 'node' ? 'src/ or record/lib/' : 'src/'} with .${language === 'node' ? 'js' : 'rs'} extension. Existing tests, workflows, credentials, package manifests and this controller cannot be edited. New regression tests must fail on the original code and pass after the change. Tests cannot use the network. A strategy experiment may edit only resident/strategy.json and must satisfy the fixed schema; schema validity is not evidence it improves results. No shell, no deletion, no external publishing. Inspect sibling code to discover complementary capabilities but edit only self. ${turnBudget} turns maximum. Prefer one small coherent change.` },
   { role: 'user', content: JSON.stringify({ repo, generation: state.generation, context, files: files.slice(0, 250),
-    pendingResearch: activeResearch(state, focus), recent: state.recent.slice(-3).map(e => ({ status: e.status, focus: e.focus,
-      title: e.proposal?.title, error: e.error, observedBlockers: e.observedBlockers, unverifiedModelReason: e.reason, findings: e.findings, next: e.next, pr: e.pr })),
+    pendingResearch: context.recovery ? null : activeResearch(state, focus), recent: state.recent.slice(-3).map(e => ({ status: e.status, focus: e.focus,
+      title: e.proposal?.title, error: e.error, observedBlockers: e.observedBlockers, pr: e.pr })),
     skills: state.skills }).slice(0, 14000) }];
   const sha = dir => execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
   const episode = { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, repo, baseSHA: sha(root), siblingSHA: sibling ? sha(sibling) : null, focus, started: new Date().toISOString(), status: 'stopped', trace: [], probes: [] };

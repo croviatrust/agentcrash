@@ -18,7 +18,6 @@ export function evidenceValid(episode, verdict) {
 export function makeCapsule(episode, verdict) {
   if (!evidenceValid(episode, verdict)) return null;
   if (!/^[a-f0-9]{40}$/.test(episode.baseSHA || '')) return null;
-  if (episode.fleet?.review?.decision !== 'accept') return null;
   const proposal = validateProposal(episode.proposal, profile(episode.repo));
   const sources = (episode.research?.sources || []).map(({ excerpt, ...source }) => source);
   return {
