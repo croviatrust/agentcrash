@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795505637744-d14324b5",
+  "source": {
+    "id": "opp-ef160a882f08c1da",
+    "url": "https://github.com/IBM/chuk-mcp-rs/issues/4",
+    "title": "🔒 [IBM OSPO Security Notification] — IBM/chuk-mcp-rs",
+    "evidenceHash": "149d8f141e858d114048121656eb61dd8db5a57a758d2a8e3be76649fabc5ac4",
+    "updated": "2026-11-24T07:04:16Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute a new probe_process using the recorded failing probeId (b099e631c97d818f49c54293273b55ebf1b21529) to re-establish the Node.js runtime context and generate a fresh regression test that will fail on the current code, enabling a compliant propose action.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
