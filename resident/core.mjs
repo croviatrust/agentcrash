@@ -308,7 +308,7 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       if (turn >= turnBudget - 2) throw new Error('Decision required: propose, or stop with sourced findings and the next question.');
       if (!selected) throw new Error('Sibling unavailable');
       const actionKey = JSON.stringify([answer.action, answer.repository || 'self', answer.path, answer.offset || 0, answer.query]);
-      if (actions.has(actionKey)) throw new Error('Already observed this exact input. Use a new offset or file, propose an experiment, or stop.');
+      if (actions.has(actionKey)) throw new Error('Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.');
       actions.add(actionKey);
       let result;
       if (answer.action === 'read') {
@@ -339,7 +339,7 @@ For an existing file, prefer {"path":"src/file.js","before":"exact unique old te
       messages.push({ role: 'user', content: JSON.stringify({ evidence: result, turnsLeft: turnBudget - turn - 1 }) });
     } catch (error) {
       episode.trace.push({ turn, phase, error: error.message });
-      messages.push({ role: 'user', content: JSON.stringify({ phase, error: error.message, instruction: phase === 'inference' ? 'Only the model generation failed; prior tool results remain valid. Continue from the last evidence with a small executable action. This is not a file-read error.' : 'Correct the action or stop with the exact observed blocker.' }) });
+      messages.push({ role: 'user', content: JSON.stringify({ phase, error: error.message, instruction: phase === 'inference' ? 'Only the model generation failed; prior tool results remain valid. Continue from the last evidence with a small executable action. This is not a file-read error.' : 'Correct this specific action; other tools remain available. A repeated read does not prevent probe/probe_process or creation of a new regression in propose. Reuse a failing probeId if already recorded. Stop only for an actual unresolved blocker.' }) });
       if (episode.trace.filter(t => t.error?.startsWith('Inference HTTP')).length >= 2) {
         episode.reason = 'Inference unavailable; preserve the failed attempt and retry next cycle.'; break;
       }
