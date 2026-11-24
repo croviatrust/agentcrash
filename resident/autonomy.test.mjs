@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { runAutonomy, retainMethods, validateMethod } from './autonomy.mjs';
+import { runAutonomy, retainMethods, validateMethod, recoveryEvidence } from './autonomy.mjs';
 import { initialState, json } from './core.mjs';
 import { runProbe } from './probe.mjs';
 import { verify } from './verify.mjs';
@@ -120,4 +120,18 @@ test('a malformed recovery proposal is corrected by the researcher itself within
     evaluate: async e => ({ episode: e.id, status: 'stopped' }), study: async () => ({ sources: [], errors: [] }),
     ask: async (messages) => { researchCalls++; if (researchCalls === 1) return { text: 'invalid JSON' }; sawError ||= messages.some(m => m.content.includes('Correct the method JSON')); return { text: JSON.stringify({ method }) }; } });
   assert.ok(sawError); assert.equal(e.autonomy.lessons[0].method.mode, 'contract-first'); assert.ok(e.autonomy.modelCalls <= 16);
+});
+
+test('recovery input excludes unsupported explanations and rejected method claims', async t => {
+  const root = fixture(t), state = initialState(); state.agenda = refreshAgenda(null, repo, {issues:[{number:9,title:'Real task'}]});
+  state.agenda.tasks[0].attempts=1;
+  const prior={episode:'prior',status:'stopped',observedBlockers:[{phase:'action',error:'Invalid process experiment contract'}],
+    modelReasonUnverified:'FALSE_DIRECTORY_CLAIM',attemptedMethod:{observation:'FALSE_SIGNAL_CLAIM'},candidateDraft:'UNEXECUTED_DRAFT'};
+  assert.equal(recoveryEvidence(prior).modelReasonUnverified,undefined);
+  let saw=false;
+  await runAutonomy({root,repo,state,context:{previousFailure:prior,learnedMethods:[{status:'unverified-hypothesis',observation:'FALSE_OLD_LESSON'}]},strategy,
+    fleet:async ({context}) => {assert.ok(!context.recovery.method.observation.includes('WRONG_RESEARCH_CLAIM'));return {id:'next',repo,status:'stopped',trace:[]};},
+    evaluate:async e=>({episode:e.id,status:'stopped'}),study:async()=>({sources:[],errors:[]}),
+    ask:async messages=>{const packet=JSON.stringify(messages);saw ||= packet.includes('Invalid process experiment contract');for(const bad of ['FALSE_DIRECTORY_CLAIM','FALSE_SIGNAL_CLAIM','FALSE_OLD_LESSON','UNEXECUTED_DRAFT']) assert.ok(!packet.includes(bad));return {text:JSON.stringify({method:{...method,observation:'WRONG_RESEARCH_CLAIM'}})};}});
+  assert.ok(saw);
 });

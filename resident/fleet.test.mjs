@@ -10,6 +10,7 @@ import { evidenceValid, makeCapsule, capsuleIndex, communicationDraft, evolveFle
 import { initialState, digest, remember, json } from './core.mjs';
 import { runProbe } from './probe.mjs';
 import { investigate } from './core.mjs';
+import { publishable } from './github.mjs';
 import { spawnSync } from 'node:child_process';
 import { verify, commands } from './verify.mjs';
 
@@ -35,9 +36,10 @@ const study = async () => ({ sources: [{ repository: 'fixture/reference', revisi
 async function episode(t, decision = 'accept') {
   const root = fixture(t), roles = [];
   const actions = [{ action: 'read', path: 'src/value.js' }, { action: 'probe', content: proposal().edits[1].content }, proposal()];
-  const e = await runFleet({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, study, probe: request => runProbe(request, { run: localRun }),
+  const e = await runFleet({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, study, evaluate: e => verify(root, e, { run: localRun }), probe: request => runProbe(request, { run: localRun }),
     ask: async (messages, { role }) => {
       roles.push(role);
+      if (role === 'critic') { const packet = JSON.parse(messages.at(-1).content); assert.equal(packet.execution.status, 'verified'); }
       const value = role === 'scout' ? { mission: 'Repair zero input handling', query: 'fixture' } : role === 'critic' ? { decision, reason: 'Check zero and retain the old value contract.' } : actions.shift();
       return { text: JSON.stringify(value), model: 'test-double', usage: { input: 1, output: 1 } };
     } });
@@ -112,16 +114,20 @@ test('a generation uses distinct scout, generated specialist and critic contexts
   assert.equal(e.status, 'proposed');
   assert.equal(e.fleet.execution, 'separate sequential model contexts on one runner');
 });
-test('critic rejection prevents a proposal reaching execution as accepted work', async t => {
+test('execution precedes advisory criticism and only real evidence permits publication', async t => {
   const { e, root } = await episode(t, 'reject');
-  assert.equal(e.status, 'review-rejected');
-  const verdict = await verify(root, e);
-  assert.equal(verdict.status, 'stopped');
-  assert.equal(makeCapsule(e, verdict), null);
+  assert.equal(e.status, 'proposed');
+  assert.equal(e.fleet.review.decision, 'reject');
+  assert.equal(e.evaluation.status, 'verified');
+  const verdict = await executeFixture(root, e);
+  assert.equal(verdict.status, 'verified');
+  assert.ok(makeCapsule(e, verdict));
+  assert.ok(publishable(e, verdict));
+  assert.equal(publishable(e, {...verdict, checks: []}), false);
 });
 test('fleet model calls stay inside a shared eight-call budget even on repeated errors', async t => {
   const root = fixture(t); let calls = 0;
-  const e = await runFleet({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, study, probe: request => runProbe(request, { run: localRun }),
+  const e = await runFleet({ root, repo: 'croviatrust/agentcrash', state: initialState(), context: {}, strategy, study, evaluate: e => verify(root, e, { run: localRun }), probe: request => runProbe(request, { run: localRun }),
     ask: async (_, { role }) => { calls++; return { text: role === 'scout' ? '{}' : role === 'critic' ? '{"decision":"revise","reason":"No valid experiment"}' : '{"action":"unknown"}' }; } });
   assert.equal(calls, 8); assert.equal(e.fleet.modelCalls, 8);
 });
@@ -129,7 +135,7 @@ test('expired research does not keep directing the scout or a new specialist', a
   const root = fixture(t), state = initialState();
   state.pendingResearch = { focus: strategy.focus[0], attempts: 3, question: 'EXPIRED_RESEARCH_QUESTION_123' };
   let seenExpired = false, observed = 0;
-  await runFleet({ root, repo: 'croviatrust/agentcrash', state, context: {}, strategy, study, probe: request => runProbe(request, { run: localRun }),
+  await runFleet({ root, repo: 'croviatrust/agentcrash', state, context: {}, strategy, study, evaluate: e => verify(root, e, { run: localRun }), probe: request => runProbe(request, { run: localRun }),
     ask: async (messages, { role }) => {
       observed++;
       seenExpired ||= JSON.stringify(messages).includes('EXPIRED_RESEARCH_QUESTION_123');

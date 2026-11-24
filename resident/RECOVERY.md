@@ -1,0 +1,9 @@
+# Recovery execution contract
+
+A source proposal first passes the fixed scope and executed-baseline-probe checks. The trusted controller then runs baseline suite, failing regression, candidate regression and candidate suite in isolated snapshots. Only after execution does the model critic receive the checks. Criticism is advisory and is archived; it cannot suppress an experiment or override execution. The separate workflow verifier repeats the proof without inference credentials before the writer can publish a candidate. Candidates still require maintainer review and are never merged by this controller.
+
+Observed tool errors, process contracts, exit statuses, source reads and test checks are separate from model explanations. Recovery researchers do not receive prior unsupported explanations or unverified method catalogs as evidence. Prior claims remain available in archived episodes. Method observations passed to specialists are grounded in controller-recorded outcomes, while operational instructions remain hypotheses. A method is retained as verified on one source case only after independent verification; this is not model weight training or proven transfer.
+
+After memory is saved, a separate trusted job rechecks the latest failed commitment, honors its cooldown, then explicitly dispatches the next resident workflow. A receipt records dispatch acceptance, not successful execution. The next run checks the expected episode to discard stale continuations. Pending candidates, six recovery cycles, six dispatch hops, a pause, newer work or dispatch errors stop the chain. Cron remains a fallback; there is no claim that GitHub guarantees its delivery. Inference and candidate execution never receive the continuation job's Actions write token.
+
+Diagnosis is not learning success: read the independently recorded before/after checks and candidate branch. Failed work is retained with its objective and counters; no counter is reset to claim progress.

@@ -6,6 +6,15 @@ on:
   issues:
     types: [opened, reopened]
   workflow_dispatch:
+    inputs:
+      expected_episode:
+        description: Resume only if this is still the latest episode
+        type: string
+        default: ''
+      continuation_depth:
+        description: Bounded continuation depth, maximum six
+        type: string
+        default: '0'
   push:
     branches: [main]
     paths: ['resident/**', 'agents/**', '.github/workflows/resident.yml']
@@ -43,6 +52,7 @@ jobs:
         id: observe
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_EPISODE: ${{ inputs.expected_episode }}
         run: node controller/resident/github.mjs prepare "$GITHUB_REPOSITORY" "$RUNNER_TEMP/memory"
       - name: Restore the local brain
         if: steps.observe.outputs.active == 'true' && vars.RESIDENT_API_URL == ''
@@ -156,3 +166,24 @@ jobs:
           node controller/resident/github.mjs publish "$GITHUB_REPOSITORY" \
             "$RUNNER_TEMP/experiment/memory" "$RUNNER_TEMP/experiment/episode.json" \
             "$RUNNER_TEMP/verdict/verdict.json" "$BASE_SHA"
+
+  continue-research:
+    needs: remember
+    if: needs.remember.result == 'success' && vars.CROVIA_RESIDENT_PAUSED != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resume eligible failed work after its cooldown
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTINUATION_DEPTH: ${{ inputs.continuation_depth || '0' }}
+        run: node resident/wake.mjs
