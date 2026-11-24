@@ -93,5 +93,59 @@
         "trust": "untrusted evidence; license is metadata, not copying permission"
       }
     ]
+  },
+  {
+    "mode": "contract-first",
+    "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Invalid process experiment contract\"}],\"checks\":[]}",
+    "instructions": "1. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null to prevent interference with the probe's exit code capture.\n2. Run the probe_process tool again using this new temporary script path and the same expectedExit value (130). This isolates the child process execution logic from the relay's network handling, allowing the tool to verify if the status mapping is correct in a controlled environment.\n3. If successful, use the result to draft the minimal edit in src/cage/relay.js that maps SIGINT correctly.",
+    "falsifier": "If the probe_process action still fails with 'Invalid process experiment contract' after using the temporary script, it confirms the error is due to the tool's inability to parse the original relay.js invocation format, not a logic error in the code itself. If the probe succeeds and returns 130 (or fails with 143), it validates the current behavior before proposing the fix.",
+    "id": "method-b50ddf703ed3f6accf9a",
+    "status": "unverified-hypothesis",
+    "validations": [],
+    "attempts": 1,
+    "sourceFailures": [
+      "1795474790732-b827e3ec"
+    ],
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+        "path": "src/cage/relay.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/0c929b7a48dfcb2d0acf98e56192668e9e94783e/src/cage/relay.js",
+        "license": "Apache-2.0",
+        "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+        "retrieved": "2026-11-24T04:46:34.914Z",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      }
+    ]
+  },
+  {
+    "mode": "contract-first",
+    "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+    "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+    "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+    "id": "method-993094abdaf4f9f832b0",
+    "status": "unverified-hypothesis",
+    "validations": [],
+    "attempts": 1,
+    "sourceFailures": [
+      "1795495725714-c08398a5"
+    ],
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+        "path": "src/cage/relay.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/0c929b7a48dfcb2d0acf98e56192668e9e94783e/src/cage/relay.js",
+        "license": "Apache-2.0",
+        "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+        "retrieved": "2026-11-24T04:53:24.927Z",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      }
+    ]
   }
 ]

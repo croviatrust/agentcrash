@@ -9,15 +9,8 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "needs-research",
-      "attempts": 4,
+      "attempts": 5,
       "checkpoints": [
-        {
-          "episode": "1795469811686-11fee565",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
-          "baseSHA": "19f704626d55b3c525dbb914932b693e58f38f90"
-        },
         {
           "episode": "1795472850323-d9acab19",
           "status": "stopped",
@@ -31,14 +24,21 @@
           "verdict": "stopped",
           "next": "Execute a probe_process action with a valid command that spawns a child process, kills it with SIGINT, and verifies the relay exits with 143. Then propose the edit to relay.js.",
           "baseSHA": "996ba47d9add6d3bac3c4d60aff789a0b1f40f47"
+        },
+        {
+          "episode": "1795496130071-486b88ca",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+          "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e"
         }
       ],
-      "lastEpisode": "1795474790732-b827e3ec",
-      "next": "Execute a probe_process action with a valid command that spawns a child process, kills it with SIGINT, and verifies the relay exits with 143. Then propose the edit to relay.js.",
-      "recoveryCycles": 2,
+      "lastEpisode": "1795496130071-486b88ca",
+      "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+      "recoveryCycles": 3,
       "lastFailure": {
-        "episode": "1795474790732-b827e3ec",
-        "baseSHA": "996ba47d9add6d3bac3c4d60aff789a0b1f40f47",
+        "episode": "1795496130071-486b88ca",
+        "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
           "id": "work-cd6a58b1132ae1d5fba5",
@@ -46,34 +46,24 @@
           "source": "https://github.com/croviatrust/agentcrash/issues/9"
         },
         "status": "stopped",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status mapping in relay.js\",\"hypothesis\":\"The relay currently maps SIGINT to exit code 143 (128+15) because it treats all signals as SIGHUP-like termination. The correct shell convention for SIGINT is 128+2=130.\",\"falsifier\":\"Running the regression test on the original code must fail with status 143; running it after the fix must pass with status 130.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's actual exit status, fixing the SIGINT discrepancy observed in issue #9.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (!signal) {\\n    process.exit(code ?? 1);\\n  } else {\\n    // Map signals to conventional exit codes: SIGINT=130, SIGTERM=143, SIGKILL=137\\n    const sigMap = { 'SIGINT': 130, 'SIGTERM': 143, 'SIGKILL': 137 };\\n    process.exit(sigMap[signal] ?? 128 + (signal === 'SIGKILL' ? 9 : 15));\\n  }\\n});\"}]}",
         "observedBlockers": [
           {
             "phase": "action",
-            "error": "Invalid process experiment contract"
+            "error": "Code changes require a new regression test"
           }
         ],
-        "modelReasonUnverified": "The probe_process action requires a valid command to execute, but passing 'null' as the command argument is invalid for spawnSync. The falsifier notes that reproducing the 143 exit code in isolation is difficult without a proper child process that can be killed with SIGINT. I need to construct a minimal reproduction script that spawns a child process, kills it with SIGINT, and checks the relay's exit status.",
+        "modelReasonUnverified": "Code proposal requires an existing failing regression test to satisfy the acceptance criteria. No such test exists in the repository.",
         "actions": [
           {
             "action": "read",
             "path": "src/cage/relay.js"
           },
           {
-            "action": "probe_process",
-            "processContract": {
-              "script": "src/cage/relay.js",
-              "args": [
-                "/tmp/unused-agenthub-task.sock",
-                "0",
-                "--",
-                null
-              ],
-              "expectedExit": 143,
-              "timeoutMs": 5000
-            }
+            "action": "propose"
           },
           {
-            "error": "Invalid process experiment contract",
+            "error": "Code changes require a new regression test",
             "phase": "action"
           },
           {
@@ -89,15 +79,15 @@
           }
         ],
         "attemptedMethod": {
-          "mode": "custom",
-          "observation": "Previous attempts failed because the controller attempted to write a regression test file to a non-existent directory ('controller/resident-regressions'), triggering an ENOENT error before any code analysis could occur. The actual task requires modifying 'src/cage/relay.js' to correctly map SIGINT (signal 2) to exit code 130, while preserving other signals and numeric codes.",
-          "instructions": "Execute a custom action that directly edits the source file 'src/cage/relay.js'. Locate the line `child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));`. Modify the logic inside this callback to check if `signal` is 'SIGINT'. If true, return 130. Otherwise, apply the existing logic for SIGTERM (143) and SIGKILL (137). Do not generate any new test files or attempt directory creation in the controller step; rely on the system's ability to handle file writes within the source tree.",
-          "falsifier": "If this method fails, it will indicate that the signal string comparison logic is syntactically correct but logically flawed, or that the environment does not support spawning a process that sends SIGINT to itself (which is impossible for Node.js main thread directly via spawnSync without a child process). The falsifier is an inability to reproduce the 143 exit code in the test script due to environmental constraints rather than a logic error in relay.js.",
-          "id": "method-e94b09123fcbb1bffee7",
+          "mode": "contract-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+          "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+          "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+          "id": "method-993094abdaf4f9f832b0",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-23T23:17:47.211Z"
+      "cooldownUntil": "2026-11-24T05:16:42.792Z"
     },
     {
       "id": "work-1ca99c4589115e6ecff5",

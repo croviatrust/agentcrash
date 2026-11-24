@@ -1,0 +1,743 @@
+{
+  "id": "1795496130071-486b88ca",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+  "siblingSHA": "31843a03e91d8d782faf6ed1b40a4596a7da7e2b",
+  "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+  "started": "2026-11-24T04:55:30.075Z",
+  "status": "stopped",
+  "probes": [],
+  "drafts": [
+    {
+      "turn": 1,
+      "response": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status mapping in relay.js\",\"hypothesis\":\"The relay currently maps SIGINT to exit code 143 (128+15) because it treats all signals as SIGHUP-like termination. The correct shell convention for SIGINT is 128+2=130.\",\"falsifier\":\"Running the regression test on the original code must fail with status 143; running it after the fix must pass with status 130.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's actual exit status, fixing the SIGINT discrepancy observed in issue #9.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (!signal) {\\n    process.exit(code ?? 1);\\n  } else {\\n    // Map signals to conventional exit codes: SIGINT=130, SIGTERM=143, SIGKILL=137\\n    const sigMap = { 'SIGINT': 130, 'SIGTERM': 143, 'SIGKILL': 137 };\\n    process.exit(sigMap[signal] ?? 128 + (signal === 'SIGKILL' ? 9 : 15));\\n  }\\n});\"}]}"
+    }
+  ],
+  "reason": "Code proposal requires an existing failing regression test to satisfy the acceptance criteria. No such test exists in the repository.",
+  "findings": [
+    {
+      "path": "src/cage/relay.js",
+      "repository": "self",
+      "sha": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+      "note": "The file contains the exit handler logic that maps signals incorrectly (SIGINT->143 instead of 130). The code is ready for editing, but the proposal tool requires a regression test to be included.",
+      "confidence": "unverified observation"
+    }
+  ],
+  "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+  "observedBlockers": [
+    {
+      "phase": "action",
+      "error": "Code changes require a new regression test"
+    }
+  ],
+  "finished": "2026-11-24T05:01:42.792Z",
+  "commitment": {
+    "id": "work-cd6a58b1132ae1d5fba5",
+    "goal": "maintain",
+    "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+    "source": "https://github.com/croviatrust/agentcrash/issues/9",
+    "evidenceHash": "accc3b45ebbd85735f1c",
+    "attempts": 4,
+    "recoveryRequired": true,
+    "next": "Execute a probe_process action with a valid command that spawns a child process, kills it with SIGINT, and verifies the relay exits with 143. Then propose the edit to relay.js.",
+    "checkpoints": [
+      {
+        "episode": "1795469811686-11fee565",
+        "status": "stopped",
+        "verdict": "stopped",
+        "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
+        "baseSHA": "19f704626d55b3c525dbb914932b693e58f38f90"
+      },
+      {
+        "episode": "1795472850323-d9acab19",
+        "status": "stopped",
+        "verdict": "stopped",
+        "next": "Execute a minimal-edit action on src/cage/relay.js to change the exit code mapping for SIGINT from 143 to 130, then run the regression test again to verify the fix.",
+        "baseSHA": "5d327897129b077ce9e221aa88e493365250d154"
+      },
+      {
+        "episode": "1795474790732-b827e3ec",
+        "status": "stopped",
+        "verdict": "stopped",
+        "next": "Execute a probe_process action with a valid command that spawns a child process, kills it with SIGINT, and verifies the relay exits with 143. Then propose the edit to relay.js.",
+        "baseSHA": "996ba47d9add6d3bac3c4d60aff789a0b1f40f47"
+      }
+    ]
+  },
+  "opportunity": null,
+  "research": {
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+        "path": "src/cage/relay.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/0c929b7a48dfcb2d0acf98e56192668e9e94783e/src/cage/relay.js",
+        "license": "Apache-2.0",
+        "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+        "retrieved": "2026-11-24T04:55:30.031Z",
+        "excerpt": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      },
+      {
+        "kind": "documentation",
+        "url": "https://nodejs.org/api/child_process.html",
+        "license": "check source terms",
+        "sha256": "d60160d1ea3e486385301e91ded551c73b9ee8099335df30eb4a07d774df4135",
+        "retrieved": "2026-11-24T04:55:30.068Z",
+        "excerpt": "Child process | Node.js v26.13.1 Documentation Skip to content Node.js About this documentation Usage and example Assertion testing Asynchronous context tracking Async hooks Benchmark runner Buffer C++ addons C/C++ addons with Node-API C++ embedder API Child processes Cluster Command-line options Console Crypto Debugger Deprecated APIs Diagnostics Channel DNS Domain Environment Variables Errors Events File system FFI Globals HTTP HTTP/2 HTTPS Inspector Internationalization Iterable Streams API Modules: CommonJS modules Modules: ECMAScript modules Modules: node:module API Modules: Packages Modules: TypeScript Net OS Path Performance hooks Permissions Process Punycode Query strings Readline REPL Report Single executable applications SQLite Stream String decoder Test runner Timers TLS/SSL Trace events TTY UDP/datagram URL Utilities V8 Virtual File System VM WASI Web Crypto API Web Streams API Worker threads Zlib Code repository and issue tracker Node.js v26.13.1 documentation Node.js v26.13.1 Table of contents Child process Asynchronous process creation Spawning .bat and .cmd files on Windows child_process.exec(command[, options][, callback]) child_process.execFile(file[, args][, options][, callback]) child_process.fork(modulePath[, args][, options]) child_process.spawn(command[, args][, options]) options.detached options.stdio Synchronous process creation child_process.execFileSync(file[, args][, options]) child_process.execSync(command[, options]) child_process.spawnSync(command[, args][, options]) Class: ChildProcess Event: 'close' Event: 'disconnect' Event: 'error' Event: 'exit' Event: 'message' Event: 'spawn' subprocess.channel subprocess.channel.ref() subprocess.channel.unref() subprocess.connected subprocess.disconnect() subprocess.exitCode subprocess.kill([signal]) subprocess[Symbol.dispose]() subprocess.killed subprocess.pid subprocess.ref() subprocess.send(message[, sendHandle[, options]][, callback]) Example: sending a server object Example: sending a socket object subprocess.signalCode subprocess.spawnargs subprocess.spawnfile subprocess.stderr subprocess.stdin subprocess.stdio subprocess.stdout subprocess.unref() maxBuffer and Unicode Shell requirements Default Windows shell Advanced serialization Index Index About this documentation Usage and example Assertion testing Asynchronous context tracking Async hooks Benchmark runner Buffer C++ addons C/C++ addons with Node-API C++ embedder API Child processes Cluster Command-line options Console Crypto Debugger Deprecated APIs Diagnostics Channel DNS Domain Environment Variables Errors Events File system FFI Globals HTTP HTTP/2 HTTPS Inspector Internationalization Iterable Streams API Modules: CommonJS modules Modules: ECMAScript modules Modules: node:module API Modules: Packages Modules: TypeScript Net OS Path Performance hooks Permissions Process Punycode Query strings Readline REPL Report Single executable applications SQLite Stream String decoder Test runner Timers TLS/SSL Trace events TTY UDP/datagram URL Utilities V8 Virtual File System VM WASI Web Crypto API Web Streams API Worker threads Zlib Other versions 26.x LTS 25.x 24.x LTS 23.x 22.x LTS 21.x 20.x 19.x 18.x 17.x 16.x 15.x 14.x 13.x 12.x 11.x 10.x 9.x 8.x 7.x 6.x 5.x 4.x 0.12.x 0.10.x Options View on single page View as JSON Edit on GitHub Table of contents Child process Asynchronous process creation Spawning .bat and .cmd files on Windows child_process.exec(command[, options][, callback]) child_process.execFile(file[, args][, options][, callback]) child_process.fork(modulePath[, args][, options]) child_process.spawn(command[, args][, options]) options.detached options.stdio Synchronous process creation child_process.execFileSync(file[, args][, options]) child_process.execSync(command[, options]) child_process.spawnSync(command[, args][, options]) Class: ChildProcess Event: 'close' Event: 'disconnect' Event: 'error' Event: 'exit' Event: 'message' Event: 'spawn' subprocess.channel subprocess.channel.ref() subprocess.channel.unref() subprocess.connected subprocess.disconnect() subprocess.exitCode subprocess.kill([signal]) subprocess[Symbol.dispose]() subprocess.killed subprocess.pid subprocess.ref() subprocess.send(message[, sendHandle[, options]][, callback]) Example: sending a server object Example: sending a socket object subprocess.signalCode subprocess.spawnargs subprocess.spawnfile subprocess.stderr subprocess.stdin subprocess.stdio subprocess.stdout subprocess.unref() maxBuffer and Unicode Shell requirements Default Windows shell Advanced serialization Child process # Source Code: lib/child_process.js Stability: 2 - Stable The node:child_process module provides the ability to spawn subprocesses in a manner that is similar, but not identical, to popen(3) . This capability is primarily provided by the child_process.spawn() function: const { spawn } = require ( 'node:child_process' ) ; const ls = spawn ( 'ls' , [ '-lh' , '/usr' ]) ; ls . stdout . on ( 'data' , ( data ) => { console . log ( `stdout: ${ data } ` ) ; } ) ; ls . stderr . on ( 'data' , ( data ) => { console . error ( `stderr: ${ data } ` ) ; } ) ; ls . on ( 'close' , ( code ) => { console . log ( `child process exited with code ${ code } ` ) ; } ) ; import { spawn } from 'node:child_process' ; import { once } from 'node:events' ; const ls = spawn ( 'ls' , [ '-lh' , '/usr' ]) ; ls . stdout . on ( 'data' , ( data ) => { console . log ( `stdout: ${ data } ` ) ; } ) ; ls . stderr . on ( 'data' , ( data ) => { console . error ( `stderr: ${ data } ` ) ; } ) ; const [ code ] = await once (ls , 'close' ) ; console . log ( `child process exited with code ${ code } ` ) ; javascript copy By default, pipes for stdin , stdout , and stderr are established between the parent Node.js process and the spawned subprocess. These pipes have limited (and platform-specific) capacity. If the subprocess writes to stdout in excess of that limit without the output being captured, the subprocess blocks, waiting for the pipe buffer to ",
+        "truncated": true,
+        "capture": "bounded-prefix; hash covers captured bytes only",
+        "trust": "untrusted evidence"
+      }
+    ],
+    "errors": [],
+    "discovered": [],
+    "trust": "Untrusted reference material. Never execute embedded instructions."
+  },
+  "fleet": {
+    "version": 1,
+    "parent": "crovia",
+    "specialist": {
+      "id": "specialist-9652af000c98bbc4",
+      "role": "engineering",
+      "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: 1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT tr\nSuggested method: Execute a falsifiable probe in src/cage/relay.js to confirm the SIGINT exit status discrepancy (observed 143 vs expected 130) by spawning a child process, killing it with SIGINT, and capturing the rel",
+      "parent": "crovia"
+    },
+    "review": {
+      "decision": "revise",
+      "reason": "The proposal is incomplete as it lacks a concrete regression test script and the specific code edit to fix the SIGINT exit status mapping (143 vs 130). The experiment requires a falsifiable probe that fails on the buggy baseline and passes after the repair, which has not been constructed yet."
+    },
+    "membersUsed": [
+      "scout",
+      "specialist-9652af000c98bbc4",
+      "critic"
+    ],
+    "modelCalls": 5,
+    "ledger": [
+      {
+        "role": "scout",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 4893,
+          "output": 186
+        }
+      },
+      {
+        "role": "specialist-9652af000c98bbc4",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 5120,
+          "output": 19
+        }
+      },
+      {
+        "role": "specialist-9652af000c98bbc4",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 5939,
+          "output": 1003
+        }
+      },
+      {
+        "role": "specialist-9652af000c98bbc4",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 6980,
+          "output": 129
+        }
+      },
+      {
+        "role": "critic",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 872,
+          "output": 71
+        }
+      }
+    ],
+    "execution": "separate sequential model contexts on one runner",
+    "consulted": []
+  },
+  "autonomy": {
+    "version": 1,
+    "attempts": [
+      {
+        "episode": "1795495725714-c08398a5",
+        "method": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Invalid process experiment contract\"}],\"checks\":[]}",
+          "instructions": "1. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null to prevent interference with the probe's exit code capture.\n2. Run the probe_process tool again using this new temporary script path and the same expectedExit value (130). This isolates the child process execution logic from the relay's network handling, allowing the tool to verify if the status mapping is correct in a controlled environment.\n3. If successful, use the result to draft the minimal edit in src/cage/relay.js that maps SIGINT correctly.",
+          "falsifier": "If the probe_process action still fails with 'Invalid process experiment contract' after using the temporary script, it confirms the error is due to the tool's inability to parse the original relay.js invocation format, not a logic error in the code itself. If the probe succeeds and returns 130 (or fails with 143), it validates the current behavior before proposing the fix.",
+          "id": "method-b50ddf703ed3f6accf9a",
+          "status": "unverified-hypothesis"
+        },
+        "status": "stopped",
+        "verdict": {
+          "episode": "1795495725714-c08398a5",
+          "status": "stopped",
+          "checks": [],
+          "proposalHash": null
+        },
+        "trace": [
+          {
+            "turn": 0,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5099,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 1,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5918,
+              "output": 68
+            },
+            "action": "probe_process"
+          },
+          {
+            "turn": 1,
+            "phase": "action",
+            "error": "Read the Node script before requesting a process experiment"
+          },
+          {
+            "turn": 2,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6026,
+              "output": 18
+            },
+            "action": "read",
+            "path": "/tmp/relay-test.sh",
+            "offset": 0
+          },
+          {
+            "turn": 2,
+            "phase": "action",
+            "error": "Invalid relative path"
+          },
+          {
+            "turn": 3,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6078,
+              "output": 158
+            },
+            "action": "stop"
+          }
+        ],
+        "observed": {
+          "episode": "1795495725714-c08398a5",
+          "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+          "snippetRevision": "Current checkout; prior findings require re-verification.",
+          "task": {
+            "id": "work-cd6a58b1132ae1d5fba5",
+            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+            "source": "https://github.com/croviatrust/agentcrash/issues/9"
+          },
+          "status": "stopped",
+          "observedBlockers": [
+            {
+              "phase": "action",
+              "error": "Read the Node script before requesting a process experiment"
+            },
+            {
+              "phase": "action",
+              "error": "Invalid relative path"
+            }
+          ],
+          "modelReasonUnverified": "Cannot read /tmp/relay-test.sh as it is a temporary file that does not exist yet; the previous probe_process attempt failed because the script was not created. I must create the script first before running the process experiment.",
+          "actions": [
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "action": "probe_process"
+            },
+            {
+              "error": "Read the Node script before requesting a process experiment",
+              "phase": "action"
+            },
+            {
+              "action": "read",
+              "path": "/tmp/relay-test.sh"
+            },
+            {
+              "error": "Invalid relative path",
+              "phase": "action"
+            },
+            {
+              "action": "stop"
+            }
+          ],
+          "checks": [],
+          "probes": [],
+          "snippets": [
+            {
+              "path": "src/cage/relay.js",
+              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+            }
+          ],
+          "attemptedMethod": {
+            "mode": "contract-first",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Invalid process experiment contract\"}],\"checks\":[]}",
+            "instructions": "1. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null to prevent interference with the probe's exit code capture.\n2. Run the probe_process tool again using this new temporary script path and the same expectedExit value (130). This isolates the child process execution logic from the relay's network handling, allowing the tool to verify if the status mapping is correct in a controlled environment.\n3. If successful, use the result to draft the minimal edit in src/cage/relay.js that maps SIGINT correctly.",
+            "falsifier": "If the probe_process action still fails with 'Invalid process experiment contract' after using the temporary script, it confirms the error is due to the tool's inability to parse the original relay.js invocation format, not a logic error in the code itself. If the probe succeeds and returns 130 (or fails with 143), it validates the current behavior before proposing the fix.",
+            "id": "method-b50ddf703ed3f6accf9a",
+            "status": "unverified-hypothesis"
+          }
+        }
+      },
+      {
+        "episode": "1795496130071-486b88ca",
+        "method": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+          "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+          "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+          "id": "method-993094abdaf4f9f832b0",
+          "status": "unverified-hypothesis"
+        },
+        "status": "stopped",
+        "verdict": {
+          "episode": "1795496130071-486b88ca",
+          "status": "stopped",
+          "checks": [],
+          "proposalHash": null
+        },
+        "trace": [
+          {
+            "turn": 0,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5120,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 1,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5939,
+              "output": 1003
+            },
+            "action": "propose"
+          },
+          {
+            "turn": 1,
+            "phase": "action",
+            "error": "Code changes require a new regression test"
+          },
+          {
+            "turn": 2,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6980,
+              "output": 129
+            },
+            "action": "stop"
+          }
+        ],
+        "observed": {
+          "episode": "1795496130071-486b88ca",
+          "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+          "snippetRevision": "Current checkout; prior findings require re-verification.",
+          "task": {
+            "id": "work-cd6a58b1132ae1d5fba5",
+            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+            "source": "https://github.com/croviatrust/agentcrash/issues/9"
+          },
+          "status": "stopped",
+          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status mapping in relay.js\",\"hypothesis\":\"The relay currently maps SIGINT to exit code 143 (128+15) because it treats all signals as SIGHUP-like termination. The correct shell convention for SIGINT is 128+2=130.\",\"falsifier\":\"Running the regression test on the original code must fail with status 143; running it after the fix must pass with status 130.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's actual exit status, fixing the SIGINT discrepancy observed in issue #9.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (!signal) {\\n    process.exit(code ?? 1);\\n  } else {\\n    // Map signals to conventional exit codes: SIGINT=130, SIGTERM=143, SIGKILL=137\\n    const sigMap = { 'SIGINT': 130, 'SIGTERM': 143, 'SIGKILL': 137 };\\n    process.exit(sigMap[signal] ?? 128 + (signal === 'SIGKILL' ? 9 : 15));\\n  }\\n});\"}]}",
+          "observedBlockers": [
+            {
+              "phase": "action",
+              "error": "Code changes require a new regression test"
+            }
+          ],
+          "modelReasonUnverified": "Code proposal requires an existing failing regression test to satisfy the acceptance criteria. No such test exists in the repository.",
+          "actions": [
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "action": "propose"
+            },
+            {
+              "error": "Code changes require a new regression test",
+              "phase": "action"
+            },
+            {
+              "action": "stop"
+            }
+          ],
+          "checks": [],
+          "probes": [],
+          "snippets": [
+            {
+              "path": "src/cage/relay.js",
+              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+            }
+          ],
+          "attemptedMethod": {
+            "mode": "contract-first",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+            "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+            "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+            "id": "method-993094abdaf4f9f832b0",
+            "status": "unverified-hypothesis"
+          }
+        }
+      }
+    ],
+    "lessons": [
+      {
+        "method": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Invalid process experiment contract\"}],\"checks\":[]}",
+          "instructions": "1. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null to prevent interference with the probe's exit code capture.\n2. Run the probe_process tool again using this new temporary script path and the same expectedExit value (130). This isolates the child process execution logic from the relay's network handling, allowing the tool to verify if the status mapping is correct in a controlled environment.\n3. If successful, use the result to draft the minimal edit in src/cage/relay.js that maps SIGINT correctly.",
+          "falsifier": "If the probe_process action still fails with 'Invalid process experiment contract' after using the temporary script, it confirms the error is due to the tool's inability to parse the original relay.js invocation format, not a logic error in the code itself. If the probe succeeds and returns 130 (or fails with 143), it validates the current behavior before proposing the fix.",
+          "id": "method-b50ddf703ed3f6accf9a",
+          "status": "unverified-hypothesis"
+        },
+        "hypothesis": {
+          "mode": "contract-first",
+          "observation": "The probe_process action failed with 'Invalid process experiment contract' because the provided script path ('src/cage/relay.js') and arguments do not match the expected signature for the `probe_process` tool, which likely requires a temporary executable wrapper or specific argument formatting to simulate the child process environment without triggering the relay's own socket logic prematurely. The error indicates the tool cannot execute the specified contract as-is.",
+          "instructions": "1. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null to prevent interference with the probe's exit code capture.\n2. Run the probe_process tool again using this new temporary script path and the same expectedExit value (130). This isolates the child process execution logic from the relay's network handling, allowing the tool to verify if the status mapping is correct in a controlled environment.\n3. If successful, use the result to draft the minimal edit in src/cage/relay.js that maps SIGINT correctly.",
+          "falsifier": "If the probe_process action still fails with 'Invalid process experiment contract' after using the temporary script, it confirms the error is due to the tool's inability to parse the original relay.js invocation format, not a logic error in the code itself. If the probe succeeds and returns 130 (or fails with 143), it validates the current behavior before proposing the fix.",
+          "id": "method-b50ddf703ed3f6accf9a",
+          "status": "unverified-hypothesis"
+        },
+        "sourceFailure": "1795474790732-b827e3ec",
+        "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Invalid process experiment contract"
+          }
+        ],
+        "sources": [
+          {
+            "kind": "repository",
+            "repository": "croviatrust/agentcrash",
+            "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+            "path": "src/cage/relay.js",
+            "url": "https://github.com/croviatrust/agentcrash/blob/0c929b7a48dfcb2d0acf98e56192668e9e94783e/src/cage/relay.js",
+            "license": "Apache-2.0",
+            "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+            "retrieved": "2026-11-24T04:46:34.914Z",
+            "excerpt": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const o",
+            "truncated": false,
+            "trust": "untrusted evidence; license is metadata, not copying permission"
+          }
+        ],
+        "errors": []
+      },
+      {
+        "method": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+          "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+          "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+          "id": "method-993094abdaf4f9f832b0",
+          "status": "unverified-hypothesis"
+        },
+        "hypothesis": {
+          "mode": "contract-first",
+          "observation": "The probe_process tool failed because it attempted to read a relative path (/tmp/relay-test.sh) before the Node script (src/cage/relay.js) was analyzed, triggering a dependency order violation. The error 'Read the Node script before requesting a process experiment' indicates the tool requires source context to validate or execute experiments safely.",
+          "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+          "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+          "id": "method-993094abdaf4f9f832b0",
+          "status": "unverified-hypothesis"
+        },
+        "sourceFailure": "1795495725714-c08398a5",
+        "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Read the Node script before requesting a process experiment"
+          },
+          {
+            "phase": "action",
+            "error": "Invalid relative path"
+          }
+        ],
+        "sources": [
+          {
+            "kind": "repository",
+            "repository": "croviatrust/agentcrash",
+            "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+            "path": "src/cage/relay.js",
+            "url": "https://github.com/croviatrust/agentcrash/blob/0c929b7a48dfcb2d0acf98e56192668e9e94783e/src/cage/relay.js",
+            "license": "Apache-2.0",
+            "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+            "retrieved": "2026-11-24T04:53:24.927Z",
+            "excerpt": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const o",
+            "truncated": false,
+            "trust": "untrusted evidence; license is metadata, not copying permission"
+          }
+        ],
+        "errors": []
+      }
+    ],
+    "appliedMethod": {
+      "mode": "contract-first",
+      "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid relative path\"}],\"checks\":[]}",
+      "instructions": "1. Read the source file src/cage/relay.js first to understand the spawn and exit handling logic.\n2. Create a temporary executable script at /tmp/relay-test.sh that invokes node with the exact arguments from the task objective (including the SIGINT trigger) but redirects stdout/stderr to /dev/null.\n3. Run the probe_process tool using the newly created absolute path /tmp/relay-test.sh as the target process, ensuring the Node script has been read first in the session context.",
+      "falsifier": "If this method fails again, it implies the tool's 'read script' prerequisite is not satisfied by the sequence of actions or that the temporary script itself contains syntax errors preventing execution validation.",
+      "id": "method-993094abdaf4f9f832b0",
+      "status": "unverified-hypothesis"
+    },
+    "researchFailure": null,
+    "modelCalls": 13,
+    "maximumCalls": 16,
+    "elapsedMs": 1022843,
+    "deadlineMs": 3000000,
+    "note": "Method hypotheses are not validated until the separate independent verifier accepts the final candidate. No weights or tool authority are changed."
+  },
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5120,
+        "output": 19
+      },
+      "action": "read",
+      "path": "src/cage/relay.js",
+      "offset": 0
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5939,
+        "output": 1003
+      },
+      "action": "propose"
+    },
+    {
+      "turn": 1,
+      "phase": "action",
+      "error": "Code changes require a new regression test"
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 6980,
+        "output": 129
+      },
+      "action": "stop"
+    }
+  ],
+  "verdict": {
+    "episode": "1795496130071-486b88ca",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "revision": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+    "learnedMethods": [],
+    "maintainerAssignment": {
+      "issueNumber": 9,
+      "note": "Maintainer-assigned real repair; acceptance and baseline reproduction are in issue #9. No implementation is supplied."
+    },
+    "assignedTask": {
+      "number": 9,
+      "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption."
+    },
+    "latestEncounter": {
+      "id": "enc-1795453240120-52e2f5ea",
+      "sourceSHA": "99bc69987c0128d4478eaf05e30b24557f18c26d",
+      "variant": "configured",
+      "kind": "controlled-local-task",
+      "cohorts": [
+        {
+          "cohort": "files-only",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": false,
+            "missing": {
+              "commands": [
+                "node tools/server-8ff6c7badd97.mjs",
+                "node scripts/prepare-8ff6c7badd97.mjs"
+              ],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        },
+        {
+          "cohort": "catalog-available",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": false,
+            "missing": {
+              "commands": [
+                "node tools/server-8ff6c7badd97.mjs",
+                "node scripts/prepare-8ff6c7badd97.mjs"
+              ],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        }
+      ],
+      "limitation": "Controlled same-model task; not public discovery or adoption."
+    },
+    "issues": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "updated": "2026-11-23T21:08:15Z"
+      }
+    ],
+    "commits": [
+      {
+        "sha": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+        "message": "Execute before advisory review, ground recovery in observations and explicitly resume failed work (#14)"
+      },
+      {
+        "sha": "c86d93751f27648d72e19e67575be0b226fa6930",
+        "message": "record: run of 2026-11-24\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45292100779"
+      },
+      {
+        "sha": "996ba47d9add6d3bac3c4d60aff789a0b1f40f47",
+        "message": "Bind executed regression evidence and retain rejected drafts for autonomous recovery (#13)"
+      },
+      {
+        "sha": "5d327897129b077ce9e221aa88e493365250d154",
+        "message": "feat: autonomously research failed methods, retry and validate method memory\n\nObserved failure -> recovery researcher -> reference retrieval -> changed retry -> isolated evaluation. Resume recorded failures with research, retain hypotheses separately from independently validated methods, and preserve bounded compute and tool authority.\n\nValidation: 82 controller tests, workflow syntax, real Docker proof and full Node 20/22/24 Linux/macOS CI passed. Relay source remains unchanged for live evaluation on issue #9.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      },
+      {
+        "sha": "19f704626d55b3c525dbb914932b693e58f38f90",
+        "message": "fix: recover from observed model failures and reuse exact tested work\n\nBounded recovery, complete-read tracking, observed blockers, exact probe references and role-specific inference budgets. Fix models-only cache ownership and preserve source verification boundaries.\n\nValidation: 71 local controller tests, workflow YAML validation, GitHub controller check and Node 20/22/24 Linux CI passed. macOS jobs remained queued. Target issue #9 source is unchanged for live retry.\n\nSigned-off-by: Crovia <info@croviatrust.com>"
+      }
+    ],
+    "openProposals": [],
+    "openWork": [
+      {
+        "number": 1,
+        "title": "Reject incomplete and duplicated paired report cells",
+        "body": "Require the bare and caged sides to have the same unique observation keys. The regression test failed before the fix and all nine record tests passed afterward. Scope is pair parity; an observation missing from both sides needs a separate expected inventory.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/1"
+      }
+    ],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 2,
+      "observed": "2026-11-24T04:43:32.109Z",
+      "note": "Repository attention; not adoption or revenue."
+    },
+    "opportunities": [],
+    "opportunityErrors": [
+      {
+        "query": "\"MCP\" \"security\"",
+        "error": "Evidence HTTP 403"
+      },
+      {
+        "query": "\"Claude Code\" \"hooks\"",
+        "error": "Evidence HTTP 403"
+      }
+    ],
+    "inboundFeedback": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "evidenceLevel": "self-reported inbound feedback; unverified"
+      }
+    ],
+    "siblingCapabilities": [],
+    "capabilityTemplates": [],
+    "previousFailure": {
+      "episode": "1795474790732-b827e3ec",
+      "baseSHA": "996ba47d9add6d3bac3c4d60aff789a0b1f40f47",
+      "snippetRevision": "Current checkout; prior findings require re-verification.",
+      "task": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "source": "https://github.com/croviatrust/agentcrash/issues/9"
+      },
+      "status": "stopped",
+      "observedBlockers": [
+        {
+          "phase": "action",
+          "error": "Invalid process experiment contract"
+        }
+      ],
+      "modelReasonUnverified": "The probe_process action requires a valid command to execute, but passing 'null' as the command argument is invalid for spawnSync. The falsifier notes that reproducing the 143 exit code in isolation is difficult without a proper child process that can be killed with SIGINT. I need to construct a minimal reproduction script that spawns a child process, kills it with SIGINT, and checks the relay's exit status.",
+      "actions": [
+        {
+          "action": "read",
+          "path": "src/cage/relay.js"
+        },
+        {
+          "action": "probe_process",
+          "processContract": {
+            "script": "src/cage/relay.js",
+            "args": [
+              "/tmp/unused-agenthub-task.sock",
+              "0",
+              "--",
+              null
+            ],
+            "expectedExit": 143,
+            "timeoutMs": 5000
+          }
+        },
+        {
+          "error": "Invalid process experiment contract",
+          "phase": "action"
+        },
+        {
+          "action": "stop"
+        }
+      ],
+      "checks": [],
+      "probes": [],
+      "snippets": [
+        {
+          "path": "src/cage/relay.js",
+          "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+        }
+      ],
+      "attemptedMethod": {
+        "mode": "custom",
+        "observation": "Previous attempts failed because the controller attempted to write a regression test file to a non-existent directory ('controller/resident-regressions'), triggering an ENOENT error before any code analysis could occur. The actual task requires modifying 'src/cage/relay.js' to correctly map SIGINT (signal 2) to exit code 130, while preserving other signals and numeric codes.",
+        "instructions": "Execute a custom action that directly edits the source file 'src/cage/relay.js'. Locate the line `child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));`. Modify the logic inside this callback to check if `signal` is 'SIGINT'. If true, return 130. Otherwise, apply the existing logic for SIGTERM (143) and SIGKILL (137). Do not generate any new test files or attempt directory creation in the controller step; rely on the system's ability to handle file writes within the source tree.",
+        "falsifier": "If this method fails, it will indicate that the signal string comparison logic is syntactically correct but logically flawed, or that the environment does not support spawning a process that sends SIGINT to itself (which is impossible for Node.js main thread directly via spawnSync without a child process). The falsifier is an inability to reproduce the 143 exit code in the test script due to environmental constraints rather than a logic error in relay.js.",
+        "id": "method-e94b09123fcbb1bffee7",
+        "status": "unverified-hypothesis"
+      }
+    }
+  }
+}

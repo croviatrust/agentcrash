@@ -1,89 +1,16 @@
 {
-  "observed": "2026-11-23T22:40:32.805Z",
-  "opportunities": [
+  "observed": "2026-11-24T04:43:32.109Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/microsoft/apm/issues/5176",
-      "title": "[BUG] Project-scope native plugin: Claude Code's first session loads the plugin's MCP server but not its skills or hooks",
-      "excerpt": "Reporting and investigating a bug need no permission. Before implementing a\nsubstantive fix for inclusion in APM, obtain human scope approval and a review\ncontact on this issue. Trivial documentation corrections have standing\npreapproval. See [Contributing](https://github.com/microsoft/apm/blob/main/CONTRIBUTING.md).\n\nFor vulnerabilities, use [SECURITY.md](https://github.com/microsoft/apm/blob/main/SECURITY.md)\ninstead of a public issue. Remove credentials and other sensitive data from logs.\n\n**Describe the bug**\n`apm install` at project scope deploys a Claude-format plugin to `.agents/plugins/<plugin>/` and declares it in `.claude/settings.json` with a **relative** marketplace path (`\"path\": \"./.agents/plugins\"`). In the first Claude Code session on a machine where Claude has not seen that marketplace yet (any CI run, `claude -p`, claude-code-action, a fresh clone), Claude loads the plugin and starts its MCP server. It does not load the plugin's skills, and the plugin's `SessionStart` hook does not fire. The second session in the same `HOME` loads everything.\n\nClaude's own native install writes the same settings except for the path. `claude plugin marketplace add ./.agents/plugins --scope project` followed by `claude plugin install <plugin>@<marketplace> --scope project` writes an **absolute** path, and that loads fully in a first session.\n\nThe skills go missing with no error from either tool. This is the symptom reported in #4995 for `claude -p` and claude-code-action.\n\n**To Reproduce**\nCell id `claude-headless-project` of the real-harness probe (`scripts/real_harness/probe.py` on branch `danielmeppiel-ql-real-harness-lane`). Same result in `claude-normal-project` (interactive TUI) and `claude-worktree-project`.\n1. Fresh `HOME`, with the folder trusted in `~/.claude.json` (`projects[<abs path>].hasTrustDialogAccepted: true`).\n2. A plugin with `.claude-plugin/plugin.json`, `skills/rh-probe-skill/SKILL.md`, `hooks/hooks.json` (a `SessionStart` hook that appends to a marker file) and `.mcp.json` (a stdio server).\n3. In a git repository: `apm.yml` with `targets: [claude]` and that plugin as a local dependency, then `apm install`.\n4. `claude -p \"hi\" --output-format stream-json --verbose`, then read the `system/init` event.\n\nResult (Claude Code 2.1.323 and 2.1.326, apm at `main` 837562cd86c):\n\n| Variant (same plugin bytes) | Plugin in init `plugins` | MCP handsh",
-      "updated": "2026-11-23T22:28:18Z",
-      "retrieved": "2026-11-23T22:40:32.805Z",
-      "evidenceHash": "f6ae7738f418ba3e4ef6abfeca8c73f98165d497afe7cabd1da9a81ec823e4e1",
+      "query": "\"MCP\" \"security\"",
+      "error": "Evidence HTTP 403"
+    },
+    {
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "microsoft/apm",
-      "number": 5176,
-      "id": "opp-ec30377ab374655d",
-      "matched": [
-        "mcp",
-        "hook",
-        "permission",
-        "security"
-      ],
-      "score": 10,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/harshsinghmp/musememory/issues/451",
-      "title": "security(mcp): memory_freeze_run reads any file path the process can open",
-      "excerpt": "**Severity:** high · **Control:** MCP · **Source:** muse-security audit (2026-11-23)\n\n## Evidence\n`src/snapshot.ts:123-130`:\n```ts\nlet task = options.task;\nif (existsSync(task)) { task = readFileSync(task, \"utf-8\").trim(); }\n```\nreachable from `src/mcp.ts:2780-2787`, where `task` is the raw tool argument. `{\"task\":\"/home/user/.ssh/id_rsa\"}` is a valid call on the default tool surface; the content is also written into `.memory/runs/<id>/snapshot.json`, which `memory_freeze_list` serves later.\n\n## Impact\nAn LLM steered by prompt injection — or any unauthenticated HTTP client (see the auth issue) — turns a benign \"freeze this run\" tool into an arbitrary-file-read primitive covering SSH keys, `.env` and cloud credentials. The content lands in model context and in a persisted snapshot.\n\n## Fix\nTreat `task` as data only: drop the `existsSync`/`readFileSync` branch, or add a separate `task_file` argument validated with `resolveWithin(workspaceRoot, …)` plus a size cap. Redact through `redactSecrets` before it enters the snapshot.\n\n## Unblock\n`memory_freeze_run({task:\"/etc/passwd\"})` must not return the file's contents.",
-      "updated": "2026-11-23T21:36:49Z",
-      "retrieved": "2026-11-23T22:40:32.805Z",
-      "evidenceHash": "fe7ca8e7360fcac67320973d1e685d4961d672db2a4f6e9349f95c0aad2b871f",
-      "query": "\"MCP\" \"security\"",
-      "repository": "harshsinghmp/musememory",
-      "number": 451,
-      "id": "opp-fb1627a6bdd398e4",
-      "matched": [
-        "mcp",
-        "prompt injection",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/harshsinghmp/musememory/issues/453",
-      "title": "security(mcp): HTTP transport fails open when no token is configured",
-      "excerpt": "**Severity:** high · **Control:** MCP · **Source:** muse-security audit (2026-11-23)\n\n## Evidence\n`src/mcp.ts:3784-3787`:\n```ts\nconst isAuthRequired = options.requireAuth || validTokens.size > 0;\nif (!isAuthRequired) return { authenticated: true };\n```\n`src/cli/ecosystem.ts:560-583` takes `--host`/`--port` from flags while `--token` is optional, and only passes `allowedOrigins`/`allowedHosts` when flagged.\n\n## Impact\n`memory serve --host 0.0.0.0` — a documented way to let containers connect — exposes every tool unauthenticated, including `memory_delete` with `confirm:true`. The loopback default remains reachable via DNS rebinding because host/origin validation is off by default.\n\n## Fix\nRequire a token (or an explicit `--insecure`) whenever `host` is not loopback, and refuse to start otherwise. Always populate `allowedHosts`/`allowedOrigins` from the bind address when unspecified.\n\n## Unblock\nStarting with a non-loopback host and no token either fails at startup or rejects requests with 401.",
-      "updated": "2026-11-23T21:36:54Z",
-      "retrieved": "2026-11-23T22:40:32.805Z",
-      "evidenceHash": "079d453ad6451cb5a7ce5647cf270662a30507cfed5b2ea9cafe9e955c66fa6f",
-      "query": "\"MCP\" \"security\"",
-      "repository": "harshsinghmp/musememory",
-      "number": 453,
-      "id": "opp-7e00f2a18dc08995",
-      "matched": [
-        "mcp",
-        "startup",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/trololol91/finance-tracker/issues/2",
-      "title": "Security: bump Node base image and dependencies in backend and mcp-server (multer, nodemailer, body-parser, ...)",
-      "excerpt": "Found by a scheduled Trivy scan (v0.76.2, DB of 2026-11-23) of the published `backend` and `mcp-server` images. Risk is rated by whether the code actually reaches the vulnerable path.\n\n## Risk: MEDIUM — worth doing soon\n\n| Package | Image | Fixed in | Why it matters here |\n|---|---|---|---|\n| multer 1.4.5-lts.1 (via `@nestjs/platform-express` 11.0.1) | backend | 2.3.0 | 10 denial-of-service advisories on multipart parsing. Used by `POST /scraper/import/upload` and the plugin upload. Both are behind `JwtAuthGuard`, so only a logged-in user can trigger them. Fix: bump `@nestjs/platform-express` to a current 11.x. |\n| nodemailer 8.0.1 | backend | 8.0.8 (9.x/10.x for all) | CVE-2026-82662 TLS certificate verification disabled in some paths (info disclosure of SMTP traffic); addressparser ReDoS. Used in `push.service.ts`. |\n| body-parser 1.20.3 / 2.2.1 | both | 1.20.9 / 2.4.0 | CVE-2026-111181 DoS via decompression stream error, reachable before auth on any JSON endpoint that accepts a compressed body. |\n| hono 4.11.4, @hono/node-server 1.19.9 (via `@modelcontextprotocol/node`) | mcp-server | 4.12.25 / 1.19.10 | serveStatic file access and CORS origin reflection. Low unless serveStatic or hono's CORS middleware is used; bump with the MCP packages anyway. |\n| joi 18.0.2 | backend | 18.3.1 | ReDoS in email / isoDate validation if user input goes through those rules. |\n| adm-zip 0.5.16 | backend | 0.6.1 | DoS / zip-bomb and permission bits on extract. Admin-only plugin upload; path traversal is already guarded. |\n\n## Risk: LOW — not reachable in practice, cleared by the same rebuild\n\n| Package | Fixed in | Why low |\n|---|---|---|\n| **proxy-addr 2.0.7** (critical, CVE-2026-90711) | 2.0.8 | Only matters with `trust proxy` set to subnets; neither app sets `trust proxy`. |\n| **OpenSSL 3.5.5** (critical, CVE-2026-31789) | 3.5.6+ | Heap overflow on 32-bit systems only; plus 6 high (DoS, one use-after-free in CMS/PKCS7). Cleared by a newer `node:24-alpine` base. |\n| **tar 7.5.1** (critical, CVE-2026-59873) + pacote, sigstore, glob, minimatch, brace-expansion | — | Inside npm's own bundled copy in the base image; npm is not run at runtime. |\n| mysql2, hono, effect, defu, deepmerge-ts, lodash | — | Pulled in by prisma / build tooling; not used at runtime with PostgreSQL. |\n| path-to-regexp 8.2.0 | 8.4.0 | ReDoS only with crafted *route definitions*, which are ours. |\n\n## Fix",
-      "updated": "2026-11-23T19:50:00Z",
-      "retrieved": "2026-11-23T22:40:32.805Z",
-      "evidenceHash": "5f0f6fee58a75c593205cad9a7aef8c1d505b30b42bef0e34eb5944dda30e8de",
-      "query": "\"MCP\" \"security\"",
-      "repository": "trololol91/finance-tracker",
-      "number": 2,
-      "id": "opp-45b13e63a2b626af",
-      "matched": [
-        "mcp",
-        "permission",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
