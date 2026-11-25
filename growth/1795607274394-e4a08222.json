@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795607274394-e4a08222",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute a new regression test in the next turn to verify the baseline failure, then propose the minimal edit to fix the signal mapping condition.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
