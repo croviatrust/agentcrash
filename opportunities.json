@@ -1,16 +1,86 @@
 {
-  "observed": "2026-11-25T01:32:24.250Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-25T01:53:30.082Z",
+  "opportunities": [
     {
+      "url": "https://github.com/Jamula/FamilyTree/issues/46",
+      "title": "[M02/M03] MCP proposal review, permissions and remote-agent security gates",
+      "excerpt": "Track the follow-up engineering needed beyond the initial **synthetic local MCP** demonstration.\n\n## Acceptance criteria\n- [ ] Draft proposals cannot mutate approved family records or access private family data until M1 #9 and #10 security are complete\n- [ ] User/agent identity binding, scopes, consent, approval workflow, safe audit for create/update/link actions, no self approval\n- [ ] Validate prompt injection and cross-tenant enumeration; redact tool errors and prevent data exfiltration\n- [ ] Per-agent capability negotiation; human approval required for publication\n- [ ] Local per-user encrypted draft storage or similarly secure store with clear reset/delete; no secrets in repo\n- [ ] Production HTTP MCP requires authenticated identity, exact host allowlist, Origin validation, TLS and rate limits; never expose loopback-only server externally without protection\n- [ ] Investigate ChatGPT/Copilot/other agent connection capabilities at deployment time, without assuming this chat can reach localhost\n- [ ] No cloud resource provisioned or paid hosting added without specific owner approval\n\nDo not mark complete merely when read-only local tools work. Related: #9, #10, #12, #15.",
+      "updated": "2026-11-24T22:39:48Z",
+      "retrieved": "2026-11-25T01:53:30.082Z",
+      "evidenceHash": "f62e98f421cfc2d3d85df9e003d54cc4c2efe9b2ba8757170aea2ed9f8a0e5ce",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "Jamula/FamilyTree",
+      "number": 46,
+      "id": "opp-2da219bcf224f4d1",
+      "matched": [
+        "mcp",
+        "prompt injection",
+        "permission",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 1
     },
     {
+      "url": "https://github.com/bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot/issues/2",
+      "title": "[SECURITY] Key material associated with bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot found in leaked dataset",
+      "excerpt": "### ⚠️ URGENT: Key material associated with this repository found in leaked secrets dataset\n\nDuring triage of a **2026-Q4 GitHub secrets leak dataset** (public dumps), a mnemonic / private-key entry was found that is associated with **`bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot`**.\n\nIf you hold funds in the wallet derived from that key material, **move them immediately** to a fresh custody wallet used by the incident-response sweep:\n\n```\nETH:  0x2C708911e4bC1E04C66aC703678111FaC0f96985\nBTC:  bc1qahwv7t8as35dtw4tc6wewwdhn3jv0mc2knjky7\nSOL:  BK6m9M3pmFBb6f49siJEaGX8DvKD58q5MKW6gwBt27dM\n```\n\nVerify whether your own key was part of the leak here (read-only check, runs locally over HTTPS):\n\n**https://amrbentaleb.github.io/wallet-security-check/**\n\nThe entry will be removed from the public dataset within 72 hours or once this issue is acknowledged. Do not paste key material in this issue.\n\n_This notice is part of a bulk exposure-response sweep across affected repositories._",
+      "updated": "2026-11-25T00:46:31Z",
+      "retrieved": "2026-11-25T01:53:30.082Z",
+      "evidenceHash": "5b1173579fd0869263ac12c86ba535ff32b887dd36d8d76bd5310cc2781c4669",
+      "query": "\"MCP\" \"security\"",
+      "repository": "bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot",
+      "number": 2,
+      "id": "opp-0d0ba72a96f8141d",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/os-factory/otel-hook/issues/62",
+      "title": "Claude Code hooks never see OTEL_* variables: document it and warn in doctor",
+      "excerpt": "## Problem\n\nSince Claude Code 2.1.128, Claude Code removes **every `OTEL_*` environment variable** from the subprocesses it spawns: the Bash tool, **hooks**, MCP servers and language servers. This is intended and documented:\n- [hooks reference](https://code.claude.com/docs/en/hooks): \"A hook process inherits the parent environment, apart from the `OTEL_*` exporter variables…\"\n- [monitoring page](https://code.claude.com/docs/en/monitoring-usage)\n- Background: anthropics/claude-code#55105 and #45644, where Claude's OTel settings leaked into child tools.\n\nSo when otel-hook runs as a Claude Code hook, it never receives:\n- the standard variables (#52, #53): `OTEL_EXPORTER_OTLP_*ENDPOINT`, `OTEL_EXPORTER_OTLP_*HEADERS`, `OTEL_RESOURCE_ATTRIBUTES`;\n- our own `OTEL_HOOK_*` variables, which start with `OTEL_` too;\n- any of these set in the `env` block of `settings.json`.\n\nVariables without the `OTEL_` prefix are passed through unchanged. Even `OTELX_…` gets through, so the filter matches the `OTEL_` prefix exactly.\n\n### Reproduction (Claude Code 2.1.331)\n\n1. Add a `SessionStart` hook whose command is `env | sort > out.txt`.\n2. Start `claude -p hi` with `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_HOOK_EXPORTER_ENDPOINT` and a control variable `PROBE_CONTROL` set, plus `OTEL_RESOURCE_ATTRIBUTES` in the settings `env` block.\n3. `out.txt` contains only `PROBE_CONTROL` and the settings-block control variable. No `OTEL_*` variable is there.\n\nPR #61's agent lab found the same thing.\n\n### What still works under Claude Code\n\n- `--config-file`, `--endpoint`, `--header` and `--resource-attr` on the hook command;\n- a wrapper script that sets the variables *inside* the hook process, as HAR's `run-otel-hook.sh` does by sourcing `direct.env`.\n\n## Work\n\n- [ ] README: in the \"Exporter headers\", standard endpoint and resource-attribute sections and in the Claude Code provider notes, say that these variables do not reach Claude Code hooks, and give the supported alternatives (config file, hook-command flags, wrapper).\n- [ ] `otel-hook setup --provider claude-code`: when an `OTEL_*` exporter variable is set in the shell running setup, print a hint that Claude Code hooks won't see it, and suggest `--hook-command \"… --config-file …\"`.\n- [ ] `doctor`: when run with the Claude Code provider and the only exporter configuration comes f",
+      "updated": "2026-11-24T22:22:11Z",
+      "retrieved": "2026-11-25T01:53:30.082Z",
+      "evidenceHash": "11b9e5049ee1891aca0508f8b53bceb1428572ae245c6f968475e6aa0bae601f",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "os-factory/otel-hook",
+      "number": 62,
+      "id": "opp-0808110553b4d6d0",
+      "matched": [
+        "mcp",
+        "hook"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/solana-foundation/solana-mcp/issues/178",
+      "title": "[SECURITY] Key material associated with solana-foundation/solana-mcp found in leaked dataset",
+      "excerpt": "### ⚠️ URGENT: Key material associated with this repository found in leaked secrets dataset\n\nDuring triage of a **2026-Q4 GitHub secrets leak dataset** (public dumps), a mnemonic / private-key entry was found that is associated with **`solana-foundation/solana-mcp`**.\n\nIf you hold funds in the wallet derived from that key material, **move them immediately** to a fresh custody wallet used by the incident-response sweep:\n\n```\nETH:  0x2C708911e4bC1E04C66aC703678111FaC0f96985\nBTC:  bc1qahwv7t8as35dtw4tc6wewwdhn3jv0mc2knjky7\nSOL:  BK6m9M3pmFBb6f49siJEaGX8DvKD58q5MKW6gwBt27dM\n```\n\nVerify whether your own key was part of the leak here (read-only check, runs locally over HTTPS):\n\n**https://amrbentaleb.github.io/wallet-security-check/**\n\nThe entry will be removed from the public dataset within 72 hours or once this issue is acknowledged. Do not paste key material in this issue.\n\n_This notice is part of a bulk exposure-response sweep across affected repositories._",
+      "updated": "2026-11-25T00:47:48Z",
+      "retrieved": "2026-11-25T01:53:30.082Z",
+      "evidenceHash": "b49ef1c9bd0cb1efe1d8ef45b4f8200974885d785f5ee2601cca5403e9b65752",
+      "query": "\"MCP\" \"security\"",
+      "repository": "solana-foundation/solana-mcp",
+      "number": 178,
+      "id": "opp-01970ebba61a8d30",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

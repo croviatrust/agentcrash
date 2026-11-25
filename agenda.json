@@ -9,15 +9,8 @@
       "source": "encounters/enc-1795453240120-52e2f5ea.json",
       "evidenceHash": "c4abc36a325dfad4aa1b",
       "status": "needs-research",
-      "attempts": 3,
+      "attempts": 4,
       "checkpoints": [
-        {
-          "episode": "1795467907725-1939c241",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Run `node test/relay.test.mjs` (if it exists) or create a minimal script to spawn relay.js with a pre-held port and verify if the child process fails to bind. If no test exists, I must propose one that can be run in isolation without network access.",
-          "baseSHA": "ff24f74407a357bddcb95f5a925d4c898917b1c3"
-        },
         {
           "episode": "1795569205850-6482ddf0",
           "status": "baseline-failed",
@@ -31,13 +24,20 @@
           "verdict": "stopped",
           "next": "Invalid recovery method",
           "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288"
+        },
+        {
+          "episode": "1795572644300-cb736349",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Re-run the probe_process to generate a valid `probeId` pointing to a newly created regression test in `src/`, then use that `probeId` in a subsequent `propose` action to include the exact failing test source.",
+          "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288"
         }
       ],
-      "lastEpisode": "1795570672206-b33333ee",
-      "next": "Invalid recovery method",
-      "recoveryCycles": 2,
+      "lastEpisode": "1795572644300-cb736349",
+      "next": "Re-run the probe_process to generate a valid `probeId` pointing to a newly created regression test in `src/`, then use that `probeId` in a subsequent `propose` action to include the exact failing test source.",
+      "recoveryCycles": 3,
       "lastFailure": {
-        "episode": "1795570672206-b33333ee",
+        "episode": "1795572644300-cb736349",
         "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -46,24 +46,91 @@
           "source": "encounters/enc-1795453240120-52e2f5ea.json"
         },
         "status": "stopped",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code in relay.js\",\"hypothesis\":\"The relay exits with 143 instead of 130 on SIGINT because the signal handler only forwards the kill to the child, but the parent's exit logic incorrectly maps SIGINT (signal=1) to 128+15=143. The fix is to explicitly check for 'SIGINT' and return 130.\",\"falsifier\":\"If the regression test still fails with exit code 143 after this edit, it confirms the signal handling logic was missing or incorrect in the source file.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's status (130 for SIGINT) instead of an incorrect derived value.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (signal === 'SIGINT') {\\n    process.exit(130);\\n  } else if (signal === 'SIGTERM') {\\n    process.exit(143);\\n  } else if (signal === 'SIGKILL') {\\n    process.exit(137);\\n  } else {\\n    process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1);\\n  }\\n});\",\"path\":\"/work/resident-regressions/probe-2790ab55e21cb4f86fbc1baf.test.mjs\",\"content\":\"import { spawnSync } from 'node:child_process';\\nconst result = spawnSync(process.execPath, [\\n  'src/cage/relay.js', '/tmp/test.sock', '0', '--',\\n  process.execPath, '-e', \\\"process.kill(process.pid, 'SIGINT')\\\"\\n], { encoding: 'utf8', timeout: 5000 });\\nif (result.status !== 130) {\\n  throw new Error(`Expected exit code 130 for SIGINT, got ${result.status}`);\\n}\"}]\n}",
         "observedBlockers": [
           {
-            "phase": "recovery",
-            "error": "Invalid recovery method"
+            "phase": "inference",
+            "error": "Inference HTTP 500"
+          },
+          {
+            "phase": "action",
+            "error": "Invalid relative path"
           }
         ],
-        "modelReasonUnverified": "Recovery research did not produce a valid method.",
+        "modelReasonUnverified": "The probe confirmed the baseline failure (exit 143 instead of 130). The proposed edit correctly implements the SIGINT check and maps it to exit code 130, matching Node.js conventions. However, the previous attempt to propose failed due to an invalid relative path in the regression test file (`/work/resident-regressions/...`). Since I cannot create new files or use absolute paths for regression tests (which must be in `src/`), and the exact failing probe source is not available in the current context without re-running a probe, I cannot construct a valid `propose` action that satisfies the schema requirements for a new regression test file. The evidence is clear: the code change is correct, but the delivery mechanism (creating a new test file with an invalid path) failed.",
         "actions": [
           {
-            "error": "Invalid recovery method",
-            "phase": "recovery"
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "error": "Inference HTTP 500",
+            "phase": "inference"
+          },
+          {
+            "action": "probe_process",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          },
+          {
+            "action": "propose"
+          },
+          {
+            "error": "Invalid relative path",
+            "phase": "action"
+          },
+          {
+            "action": "stop"
           }
         ],
         "checks": [],
-        "probes": [],
-        "snippets": []
+        "probes": [
+          {
+            "status": "baseline-failed",
+            "code": 1,
+            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 44.481924\n  type: 'test'\n  location: '/work/resident-regressions/probe-2790ab55e21cb4f86fbc1baf.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-2790ab55e21cb4f86fbc1baf.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 87.077755\n",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          }
+        ],
+        "snippets": [
+          {
+            "path": "src/cage/relay.js",
+            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+          }
+        ],
+        "attemptedMethod": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+          "instructions": "Execute probe_process again with a strictly bounded action: read src/cage/relay.js and immediately propose a minimal edit that adds an explicit check for 'SIGINT' in the signal handler block, ensuring `process.exit(130)` is called when SIGINT is received before the child process exits. Do not generate long explanations.",
+          "falsifier": "If the new regression test still fails with exit code 143 after this edit, it confirms the signal handling logic was missing or incorrect in the source file.",
+          "id": "method-b0c3aaa642d821fe51be",
+          "status": "unverified-hypothesis"
+        }
       },
-      "cooldownUntil": "2026-11-25T01:52:52.210Z"
+      "cooldownUntil": "2026-11-25T02:35:44.765Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",
@@ -286,6 +353,17 @@
       "objective": "Investigate the reported need: Claude Code hooks never see OTEL_* variables: document it and warn in doctor",
       "source": "https://github.com/os-factory/otel-hook/issues/62",
       "evidenceHash": "b58a43f4aa39eedc7ad4",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-28dd6393df6d9eef78e7",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: [SECURITY] Key material associated with solana-foundation/solana-mcp found in leaked dataset",
+      "source": "https://github.com/solana-foundation/solana-mcp/issues/178",
+      "evidenceHash": "14687b38e1c4841a1aa1",
       "status": "queued",
       "attempts": 0,
       "checkpoints": []

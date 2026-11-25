@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795572644300-cb736349",
+  "source": {
+    "id": "opp-0808110553b4d6d0",
+    "url": "https://github.com/os-factory/otel-hook/issues/62",
+    "title": "Claude Code hooks never see OTEL_* variables: document it and warn in doctor",
+    "evidenceHash": "11b9e5049ee1891aca0508f8b53bceb1428572ae245c6f968475e6aa0bae601f",
+    "updated": "2026-11-24T22:22:11Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Re-run the probe_process to generate a valid `probeId` pointing to a newly created regression test in `src/`, then use that `probeId` in a subsequent `propose` action to include the exact failing test source.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
