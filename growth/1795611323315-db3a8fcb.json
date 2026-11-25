@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795611323315-db3a8fcb",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Read src/cage/relay.js to understand current SIGINT handling logic, then propose the mapping change.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
