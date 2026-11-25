@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 23,
+  "generation": 24,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -713,6 +713,64 @@
           "log": "on_ms: 44.481924\n  type: 'test'\n  location: '/work/resident-regressions/probe-2790ab55e21cb4f86fbc1baf.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-2790ab55e21cb4f86fbc1baf.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 87.077755\n"
         }
       ]
+    },
+    {
+      "id": "1795574413898-0a38c78a",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Measure whether an agent can discover and use the product on a controlled task.",
+      "started": "2026-11-25T02:39:48.914Z",
+      "finished": "2026-11-25T02:40:13.898Z",
+      "status": "encounter-recorded",
+      "localEvidence": "stopped",
+      "reason": "Controlled encounter recorded; no code repair or organic adoption inferred.",
+      "error": "",
+      "findings": [],
+      "encounterSummary": {
+        "id": "enc-1795574388914-4a5ff74d",
+        "sourceSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
+        "variant": "benign",
+        "kind": "controlled-local-task",
+        "cohorts": [
+          {
+            "cohort": "files-only",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": true,
+              "missing": {
+                "commands": [],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          },
+          {
+            "cohort": "catalog-available",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": true,
+              "missing": {
+                "commands": [],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          }
+        ],
+        "limitation": "Controlled same-model task; not public discovery or adoption."
+      },
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -742,7 +800,7 @@
       "rejected": 0
     },
     "Measure whether an agent can discover and use the product on a controlled task.": {
-      "attempts": 2,
+      "attempts": 3,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -769,11 +827,7 @@
   "hypotheses": [
     "exp-e28d29f49bcc717efc7189a53e8360b1214ac0bf3297548e2bb03962dbfc9f52"
   ],
-  "pendingResearch": {
-    "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
-    "question": "Re-run the probe_process to generate a valid `probeId` pointing to a newly created regression test in `src/`, then use that `probeId` in a subsequent `propose` action to include the exact failing test source.",
-    "attempts": 2
-  },
+  "pendingResearch": null,
   "fleet": {
     "version": 1,
     "parent": "crovia",
@@ -873,13 +927,13 @@
   },
   "capabilities": [],
   "lastEncounter": {
-    "id": "enc-1795536609007-ee8982da",
-    "sourceSHA": "0a65822298e516c2cd4a40894d9ce00d0edcc9af",
+    "id": "enc-1795574388914-4a5ff74d",
+    "sourceSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
     "variant": "benign",
     "kind": "controlled-local-task",
     "cohorts": [
       {
-        "cohort": "catalog-available",
+        "cohort": "files-only",
         "discovered": false,
         "toolCalls": 0,
         "score": {
@@ -897,7 +951,7 @@
         "errors": []
       },
       {
-        "cohort": "files-only",
+        "cohort": "catalog-available",
         "discovered": false,
         "toolCalls": 0,
         "score": {
@@ -1288,115 +1342,26 @@
         "checkpoints": []
       },
       {
-        "id": "work-cd6a58b1132ae1d5fba5",
+        "id": "work-f2704ac9fcfc4c8a87ac",
         "repo": "croviatrust/agentcrash",
-        "goal": "maintain",
-        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-        "source": "https://github.com/croviatrust/agentcrash/issues/9",
-        "evidenceHash": "accc3b45ebbd85735f1c",
-        "status": "blocked",
-        "attempts": 8,
-        "checkpoints": [
-          {
-            "episode": "1795498344947-dfc75aed",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "The tool authority restricts re-reading files or repeating the exact same probe action. The evidence (exit 143 on SIGINT) is sufficient to construct a falsifiable regression test that will fail on current code and pass after the fix. Since I cannot create new files or run new probes due to the 'already observed' constraint, I must stop and request a new experimental slot rather than inventing a solution.",
-            "baseSHA": "0c929b7a48dfcb2d0acf98e56192668e9e94783e"
-          },
-          {
-            "episode": "1795503519949-96218942",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Request a new experimental slot to execute probe_process or create regression test with fresh tool authority.",
-            "baseSHA": "b099e631c97d818f49c54293273b55ebf1b21529"
-          },
-          {
-            "episode": "1795505637744-d14324b5",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Execute a new probe_process using the recorded failing probeId (b099e631c97d818f49c54293273b55ebf1b21529) to re-establish the Node.js runtime context and generate a fresh regression test that will fail on the current code, enabling a compliant propose action.",
-            "baseSHA": "b099e631c97d818f49c54293273b55ebf1b21529"
-          }
-        ],
-        "lastEpisode": "1795505637744-d14324b5",
-        "next": "Execute a new probe_process using the recorded failing probeId (b099e631c97d818f49c54293273b55ebf1b21529) to re-establish the Node.js runtime context and generate a fresh regression test that will fail on the current code, enabling a compliant propose action.",
-        "recoveryCycles": 6,
-        "lastFailure": {
-          "episode": "1795505637744-d14324b5",
-          "baseSHA": "b099e631c97d818f49c54293273b55ebf1b21529",
-          "snippetRevision": "Current checkout; prior findings require re-verification.",
-          "task": {
-            "id": "work-cd6a58b1132ae1d5fba5",
-            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-            "source": "https://github.com/croviatrust/agentcrash/issues/9"
-          },
-          "status": "stopped",
-          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status calculation in relay.js\",\"hypothesis\":\"The child.on('exit') handler incorrectly maps SIGINT to 143 (using signal code 15) instead of the conventional shell status 130 (128 + 2).\",\"falsifier\":\"Running the provided regression test will fail with exit code 143 before the fix and pass with 130 after.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's actual exit status, ensuring SIGINT returns 130 as expected by shell conventions.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  const sigCode = signal ? parseInt(signal, 10) : 0;\\n  // Conventional shell exit codes: SIGINT=130 (128+2), SIGTERM=143 (128+15), SIGKILL=137 (128+9)\\n  const exitCode = signal ? 128 + sigCode : code ?? 0;\\n  process.exit(exitCode);\\n});\"}]}",
-          "observedBlockers": [
-            {
-              "phase": "action",
-              "error": "Read the Node script before requesting a process experiment"
-            },
-            {
-              "phase": "action",
-              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
-            },
-            {
-              "phase": "action",
-              "error": "Code changes require a new regression test"
-            }
-          ],
-          "modelReasonUnverified": "The probe_process action requires the script source to be read first before execution; the previous attempt failed because src/command.js was not found in the expected path, and the available evidence (src/cage/relay.js) confirms the bug is in the signal code mapping logic within relay.js itself. The fix is a direct code edit based on observed evidence, but without a verified regression test that fails on the current code, I cannot propose the change per policy.",
-          "actions": [
-            {
-              "action": "probe_process"
-            },
-            {
-              "error": "Read the Node script before requesting a process experiment",
-              "phase": "action"
-            },
-            {
-              "action": "read",
-              "path": "src/command.js"
-            },
-            {
-              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
-              "phase": "action"
-            },
-            {
-              "action": "read",
-              "path": "src/cage/relay.js"
-            },
-            {
-              "action": "propose"
-            },
-            {
-              "error": "Code changes require a new regression test",
-              "phase": "action"
-            },
-            {
-              "action": "stop"
-            }
-          ],
-          "checks": [],
-          "probes": [],
-          "snippets": [
-            {
-              "path": "src/cage/relay.js",
-              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
-            }
-          ],
-          "attemptedMethod": {
-            "mode": "contract-first",
-            "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
-            "instructions": "Execute a new probe_process using the recorded failing probeId (b099e631c97d818f49c54293273b55ebf1b21529) to re-establish the Node.js runtime context. Once the process starts successfully, inspect src/cage/relay.js specifically around the child.on('exit') handler to identify why it outputs 143 instead of 130 for SIGINT (likely an incorrect signal code mapping or missing signal check). After confirming the bug via probe output, propose a minimal edit to fix the exit status calculation.",
-            "falsifier": "If this method fails again, it indicates either a persistent network isolation preventing image pulls or that the specific Node version required is unavailable in the current container registry context.",
-            "id": "method-e0588daeabcd05e579b7",
-            "status": "unverified-hypothesis"
-          }
-        },
-        "cooldownUntil": "2026-11-24T07:56:40.090Z"
+        "goal": "create",
+        "objective": "Investigate the reported need: Feature: Execute Claude Code PreToolUse/PostToolUse hooks from ~/.claude/settings.json",
+        "source": "https://github.com/can1357/oh-my-pi/issues/6446",
+        "evidenceHash": "71f908b46507c868481a",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-53d3fdd5c5ea1bcd16e4",
+        "repo": "croviatrust/agentcrash",
+        "goal": "create",
+        "objective": "Investigate the reported need: security(broker): MCP Tasks 승인 게이트 — approval_required를 tasks/update 자유 응답으로 통과 금지 + 부정 테스트 (#2591 자식 2)",
+        "source": "https://github.com/jinwon-int/a2a-nexus/issues/2593",
+        "evidenceHash": "21ab4fb33da09f673d71",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
       }
     ]
   },
