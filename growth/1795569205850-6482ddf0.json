@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "episode": "1795569205850-6482ddf0",
+  "source": {
+    "id": "opp-2da219bcf224f4d1",
+    "url": "https://github.com/Jamula/FamilyTree/issues/46",
+    "title": "[M02/M03] MCP proposal review, permissions and remote-agent security gates",
+    "evidenceHash": "f62e98f421cfc2d3d85df9e003d54cc4c2efe9b2ba8757170aea2ed9f8a0e5ce",
+    "updated": "2026-11-24T22:39:48Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": {
+    "title": "Fix SIGINT exit code calculation in relay.js",
+    "hypothesis": "The relay script incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional 130 (128+2). The signal handling logic assumes SIGTERM=15, but SIGINT should map to 2.",
+    "falsifier": "Running the probe with the original code must return 143; after the edit, it must return 130.",
+    "intendedBenefit": "Preserves the contract that relay.js exits with the child's status (130 for SIGINT), enabling correct agent termination behavior."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
