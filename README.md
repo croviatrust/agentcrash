@@ -1,4 +1,9 @@
-# agentcrash
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="agentcrash" height="44">
+  </picture>
+</h1>
 
 [![ci](https://github.com/croviatrust/agentcrash/actions/workflows/ci.yml/badge.svg)](https://github.com/croviatrust/agentcrash/actions/workflows/ci.yml) [![agentcrash: nothing runs on open](https://img.shields.io/badge/agentcrash-nothing%20runs%20on%20open-brightgreen)](#a-badge-for-your-repository) [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 

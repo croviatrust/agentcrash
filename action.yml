@@ -2,7 +2,7 @@ name: agentcrash inspect
 description: Fail a pull request that adds a command a coding agent would run, code it would load, a model endpoint, or a widened permission. Reads config only; nothing in the pull request is executed.
 author: Crovia Trust
 branding:
-  icon: shield
+  icon: crosshair
   color: red
 inputs:
   path:
