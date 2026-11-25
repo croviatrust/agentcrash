@@ -2,6 +2,121 @@
   "version": 1,
   "tasks": [
     {
+      "id": "work-cd6a58b1132ae1d5fba5",
+      "repo": "croviatrust/agentcrash",
+      "goal": "maintain",
+      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "source": "https://github.com/croviatrust/agentcrash/issues/9",
+      "evidenceHash": "accc3b45ebbd85735f1c",
+      "status": "needs-research",
+      "attempts": 1,
+      "checkpoints": [
+        {
+          "episode": "1795601206658-58b02437",
+          "status": "baseline-failed",
+          "verdict": "baseline-failed",
+          "next": "",
+          "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7"
+        }
+      ],
+      "lastEpisode": "1795601206658-58b02437",
+      "next": "",
+      "recoveryCycles": 1,
+      "lastFailure": {
+        "episode": "1795601206658-58b02437",
+        "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+        "snippetRevision": "Current checkout; prior findings require re-verification.",
+        "task": {
+          "id": "work-cd6a58b1132ae1d5fba5",
+          "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+          "source": "https://github.com/croviatrust/agentcrash/issues/9"
+        },
+        "status": "proposed",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status calculation in relay.js\",\"hypothesis\":\"The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).\",\"falsifier\":\"Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.\",\"benefit\":\"Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => { const sigNum = signal ? parseInt(signal.replace('SIG',''), 10) : 0; process.exit(code !== null ? code : 128 + sigNum); }\"}]}",
+        "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+          }
+        ],
+        "actions": [
+          {
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+            "phase": "action"
+          },
+          {
+            "action": "probe_process",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          },
+          {
+            "action": "propose"
+          }
+        ],
+        "checks": [
+          {
+            "label": "baseline-suite",
+            "code": 1,
+            "log": "name only GitHub hosts\n  ---\n  duration_ms: 101.218944\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 175.243799\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.351869\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 2.079863\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.446422\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.160387\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.651525\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13194.027963\n"
+          }
+        ],
+        "probes": [
+          {
+            "status": "baseline-failed",
+            "code": 1,
+            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 49.337402\n  type: 'test'\n  location: '/work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 88.125452\n",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          }
+        ],
+        "snippets": [
+          {
+            "path": "src/cage/relay.js",
+            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+          }
+        ],
+        "attemptedMethod": {
+          "mode": "reference-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Run a failing baseline probe using the exact proposed regression test before proposing code\"}],\"checks\":[]}",
+          "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+          "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+          "id": "method-536e98fba983a4213453",
+          "status": "unverified-hypothesis"
+        }
+      },
+      "cooldownUntil": "2026-11-25T10:24:04.761Z"
+    },
+    {
       "id": "work-1ca99c4589115e6ecff5",
       "repo": "croviatrust/agentcrash",
       "goal": "adopt",
@@ -130,7 +245,7 @@
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-25T02:35:44.765Z"
+      "cooldownUntil": "1970-01-01T00:00:00.000Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",
@@ -375,17 +490,6 @@
       "objective": "Investigate the reported need: Feature: Execute Claude Code PreToolUse/PostToolUse hooks from ~/.claude/settings.json",
       "source": "https://github.com/can1357/oh-my-pi/issues/6446",
       "evidenceHash": "71f908b46507c868481a",
-      "status": "queued",
-      "attempts": 0,
-      "checkpoints": []
-    },
-    {
-      "id": "work-53d3fdd5c5ea1bcd16e4",
-      "repo": "croviatrust/agentcrash",
-      "goal": "create",
-      "objective": "Investigate the reported need: security(broker): MCP Tasks 승인 게이트 — approval_required를 tasks/update 자유 응답으로 통과 금지 + 부정 테스트 (#2591 자식 2)",
-      "source": "https://github.com/jinwon-int/a2a-nexus/issues/2593",
-      "evidenceHash": "21ab4fb33da09f673d71",
       "status": "queued",
       "attempts": 0,
       "checkpoints": []

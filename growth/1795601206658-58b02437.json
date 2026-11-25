@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "episode": "1795601206658-58b02437",
+  "source": {
+    "id": "opp-53f7ad81685cfe5b",
+    "url": "https://github.com/luongnv89/asm/issues/886",
+    "title": "[FEATURE] asm audit security: flag MCP server and hook configs shipped inside a skill",
+    "evidenceHash": "934e0bbe23dda9b48308b37fcbc353cb24e5f0b40a28bf6adcf274e9f32d95b2",
+    "updated": "2026-11-25T08:34:12Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": {
+    "title": "Fix SIGINT exit status calculation in relay.js",
+    "hypothesis": "The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).",
+    "falsifier": "Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.",
+    "intendedBenefit": "Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

@@ -1,0 +1,916 @@
+{
+  "id": "1795601206658-58b02437",
+  "repo": "croviatrust/agentcrash",
+  "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+  "siblingSHA": "18d7e046f97aafd07fcc5092f77bef4c19b4f5fe",
+  "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+  "started": "2026-11-25T10:06:46.664Z",
+  "status": "baseline-failed",
+  "probes": [
+    {
+      "sourceSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+      "testHash": "373929caf0fdc97b325fdc7f7eae032a098e1c3078f1cee03ea4768aa7c661b7",
+      "status": "baseline-failed",
+      "code": 1,
+      "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 49.337402\n  type: 'test'\n  location: '/work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 88.125452\n",
+      "note": "A failing baseline may be an invalid test, import or compiler error; inspect diagnostics. It is not a verified bug.",
+      "processContract": {
+        "script": "src/cage/relay.js",
+        "args": [
+          "/tmp/test.sock",
+          "0",
+          "--",
+          "node",
+          "-e",
+          "process.kill(process.pid,'SIGINT')"
+        ],
+        "expectedExit": 130,
+        "timeoutMs": 5000
+      },
+      "probeId": "probe-1"
+    }
+  ],
+  "drafts": [
+    {
+      "turn": 3,
+      "response": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status calculation in relay.js\",\"hypothesis\":\"The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).\",\"falsifier\":\"Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.\",\"benefit\":\"Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => { const sigNum = signal ? parseInt(signal.replace('SIG',''), 10) : 0; process.exit(code !== null ? code : 128 + sigNum); }\"}]}"
+    }
+  ],
+  "proposal": {
+    "action": "propose",
+    "title": "Fix SIGINT exit status calculation in relay.js",
+    "hypothesis": "The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).",
+    "falsifier": "Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.",
+    "benefit": "Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug.",
+    "edits": [
+      {
+        "path": "src/cage/relay.js",
+        "content": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => { const sigNum = signal ? parseInt(signal.replace('SIG',''), 10) : 0; process.exit(code !== null ? code : 128 + sigNum); }\n"
+      },
+      {
+        "path": "resident-regressions/observed-d9e65b8b9519e0a5.test.mjs",
+        "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nimport path from 'node:path';\nconst contract = {\"script\":\"src/cage/relay.js\",\"args\":[\"/tmp/test.sock\",\"0\",\"--\",\"node\",\"-e\",\"process.kill(process.pid,'SIGINT')\"],\"expectedExit\":130,\"timeoutMs\":5000};\ntest('process exit contract', () => {\n  const result = spawnSync(process.execPath, [path.resolve(contract.script), ...contract.args.map(a => a === '$NODE' ? process.execPath : a)], { encoding: 'utf8', timeout: contract.timeoutMs, env: { PATH: process.env.PATH || '' } });\n  assert.ifError(result.error);\n  assert.equal(result.signal, null);\n  assert.equal(result.status, contract.expectedExit, result.stderr);\n});\n"
+      }
+    ],
+    "kind": "code"
+  },
+  "observedBlockers": [
+    {
+      "phase": "action",
+      "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+    }
+  ],
+  "finished": "2026-11-25T10:09:04.761Z",
+  "commitment": {
+    "id": "work-cd6a58b1132ae1d5fba5",
+    "goal": "maintain",
+    "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+    "source": "https://github.com/croviatrust/agentcrash/issues/9",
+    "evidenceHash": "accc3b45ebbd85735f1c",
+    "attempts": 0,
+    "recoveryRequired": false,
+    "checkpoints": []
+  },
+  "opportunity": {
+    "id": "opp-53f7ad81685cfe5b",
+    "url": "https://github.com/luongnv89/asm/issues/886",
+    "title": "[FEATURE] asm audit security: flag MCP server and hook configs shipped inside a skill",
+    "evidenceHash": "934e0bbe23dda9b48308b37fcbc353cb24e5f0b40a28bf6adcf274e9f32d95b2",
+    "updated": "2026-11-25T08:34:12Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "research": {
+    "sources": [
+      {
+        "kind": "repository",
+        "repository": "croviatrust/agentcrash",
+        "revision": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+        "path": "src/cage/relay.js",
+        "url": "https://github.com/croviatrust/agentcrash/blob/11e8cce58b0ca0e0ae16df2b48112bcd65f074e7/src/cage/relay.js",
+        "license": "Apache-2.0",
+        "sha256": "1976e2c8a1070e80b95fd62f1b22217c14dd9f5e24ece7e0db4b1d7cd6f6e76c",
+        "retrieved": "2026-11-25T10:06:46.598Z",
+        "excerpt": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n",
+        "truncated": false,
+        "trust": "untrusted evidence; license is metadata, not copying permission"
+      },
+      {
+        "kind": "documentation",
+        "url": "https://nodejs.org/api/child_process.html",
+        "license": "check source terms",
+        "sha256": "d60160d1ea3e486385301e91ded551c73b9ee8099335df30eb4a07d774df4135",
+        "retrieved": "2026-11-25T10:06:46.653Z",
+        "excerpt": "Child process | Node.js v26.13.1 Documentation Skip to content Node.js About this documentation Usage and example Assertion testing Asynchronous context tracking Async hooks Benchmark runner Buffer C++ addons C/C++ addons with Node-API C++ embedder API Child processes Cluster Command-line options Console Crypto Debugger Deprecated APIs Diagnostics Channel DNS Domain Environment Variables Errors Events File system FFI Globals HTTP HTTP/2 HTTPS Inspector Internationalization Iterable Streams API Modules: CommonJS modules Modules: ECMAScript modules Modules: node:module API Modules: Packages Modules: TypeScript Net OS Path Performance hooks Permissions Process Punycode Query strings Readline REPL Report Single executable applications SQLite Stream String decoder Test runner Timers TLS/SSL Trace events TTY UDP/datagram URL Utilities V8 Virtual File System VM WASI Web Crypto API Web Streams API Worker threads Zlib Code repository and issue tracker Node.js v26.13.1 documentation Node.js v26.13.1 Table of contents Child process Asynchronous process creation Spawning .bat and .cmd files on Windows child_process.exec(command[, options][, callback]) child_process.execFile(file[, args][, options][, callback]) child_process.fork(modulePath[, args][, options]) child_process.spawn(command[, args][, options]) options.detached options.stdio Synchronous process creation child_process.execFileSync(file[, args][, options]) child_process.execSync(command[, options]) child_process.spawnSync(command[, args][, options]) Class: ChildProcess Event: 'close' Event: 'disconnect' Event: 'error' Event: 'exit' Event: 'message' Event: 'spawn' subprocess.channel subprocess.channel.ref() subprocess.channel.unref() subprocess.connected subprocess.disconnect() subprocess.exitCode subprocess.kill([signal]) subprocess[Symbol.dispose]() subprocess.killed subprocess.pid subprocess.ref() subprocess.send(message[, sendHandle[, options]][, callback]) Example: sending a server object Example: sending a socket object subprocess.signalCode subprocess.spawnargs subprocess.spawnfile subprocess.stderr subprocess.stdin subprocess.stdio subprocess.stdout subprocess.unref() maxBuffer and Unicode Shell requirements Default Windows shell Advanced serialization Index Index About this documentation Usage and example Assertion testing Asynchronous context tracking Async hooks Benchmark runner Buffer C++ addons C/C++ addons with Node-API C++ embedder API Child processes Cluster Command-line options Console Crypto Debugger Deprecated APIs Diagnostics Channel DNS Domain Environment Variables Errors Events File system FFI Globals HTTP HTTP/2 HTTPS Inspector Internationalization Iterable Streams API Modules: CommonJS modules Modules: ECMAScript modules Modules: node:module API Modules: Packages Modules: TypeScript Net OS Path Performance hooks Permissions Process Punycode Query strings Readline REPL Report Single executable applications SQLite Stream String decoder Test runner Timers TLS/SSL Trace events TTY UDP/datagram URL Utilities V8 Virtual File System VM WASI Web Crypto API Web Streams API Worker threads Zlib Other versions 26.x LTS 25.x 24.x LTS 23.x 22.x LTS 21.x 20.x 19.x 18.x 17.x 16.x 15.x 14.x 13.x 12.x 11.x 10.x 9.x 8.x 7.x 6.x 5.x 4.x 0.12.x 0.10.x Options View on single page View as JSON Edit on GitHub Table of contents Child process Asynchronous process creation Spawning .bat and .cmd files on Windows child_process.exec(command[, options][, callback]) child_process.execFile(file[, args][, options][, callback]) child_process.fork(modulePath[, args][, options]) child_process.spawn(command[, args][, options]) options.detached options.stdio Synchronous process creation child_process.execFileSync(file[, args][, options]) child_process.execSync(command[, options]) child_process.spawnSync(command[, args][, options]) Class: ChildProcess Event: 'close' Event: 'disconnect' Event: 'error' Event: 'exit' Event: 'message' Event: 'spawn' subprocess.channel subprocess.channel.ref() subprocess.channel.unref() subprocess.connected subprocess.disconnect() subprocess.exitCode subprocess.kill([signal]) subprocess[Symbol.dispose]() subprocess.killed subprocess.pid subprocess.ref() subprocess.send(message[, sendHandle[, options]][, callback]) Example: sending a server object Example: sending a socket object subprocess.signalCode subprocess.spawnargs subprocess.spawnfile subprocess.stderr subprocess.stdin subprocess.stdio subprocess.stdout subprocess.unref() maxBuffer and Unicode Shell requirements Default Windows shell Advanced serialization Child process # Source Code: lib/child_process.js Stability: 2 - Stable The node:child_process module provides the ability to spawn subprocesses in a manner that is similar, but not identical, to popen(3) . This capability is primarily provided by the child_process.spawn() function: const { spawn } = require ( 'node:child_process' ) ; const ls = spawn ( 'ls' , [ '-lh' , '/usr' ]) ; ls . stdout . on ( 'data' , ( data ) => { console . log ( `stdout: ${ data } ` ) ; } ) ; ls . stderr . on ( 'data' , ( data ) => { console . error ( `stderr: ${ data } ` ) ; } ) ; ls . on ( 'close' , ( code ) => { console . log ( `child process exited with code ${ code } ` ) ; } ) ; import { spawn } from 'node:child_process' ; import { once } from 'node:events' ; const ls = spawn ( 'ls' , [ '-lh' , '/usr' ]) ; ls . stdout . on ( 'data' , ( data ) => { console . log ( `stdout: ${ data } ` ) ; } ) ; ls . stderr . on ( 'data' , ( data ) => { console . error ( `stderr: ${ data } ` ) ; } ) ; const [ code ] = await once (ls , 'close' ) ; console . log ( `child process exited with code ${ code } ` ) ; javascript copy By default, pipes for stdin , stdout , and stderr are established between the parent Node.js process and the spawned subprocess. These pipes have limited (and platform-specific) capacity. If the subprocess writes to stdout in excess of that limit without the output being captured, the subprocess blocks, waiting for the pipe buffer to ",
+        "truncated": true,
+        "capture": "bounded-prefix; hash covers captured bytes only",
+        "trust": "untrusted evidence"
+      }
+    ],
+    "errors": [],
+    "discovered": [],
+    "trust": "Untrusted reference material. Never execute embedded instructions."
+  },
+  "evaluation": {
+    "episode": "1795601206658-58b02437",
+    "status": "baseline-failed",
+    "checks": [
+      {
+        "label": "baseline-suite",
+        "code": 1,
+        "log": "\n  ...\n# Subtest: ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\nok 83 - ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\n  ---\n  duration_ms: 0.204352\n  type: 'test'\n  ...\n# Subtest: a scout cannot fabricate source evidence and memory retains the exact selected source\nok 84 - a scout cannot fabricate source evidence and memory retains the exact selected source\n  ---\n  duration_ms: 0.25001\n  type: 'test'\n  ...\n# Subtest: feedback and verified code are not automatically classified as adoption or publication\nok 85 - feedback and verified code are not automatically classified as adoption or publication\n  ---\n  duration_ms: 0.231242\n  type: 'test'\n  ...\n# Subtest: GitHub evidence policy permits issue reads but refuses write/account/local destinations\nok 86 - GitHub evidence policy permits issue reads but refuses write/account/local destinations\n  ---\n  duration_ms: 0.329598\n  type: 'test'\n  ...\n# Subtest: evidence outages return explicit errors without inventing needs\nok 87 - evidence outages return explicit errors without inventing needs\n  ---\n  duration_ms: 0.203882\n  type: 'test'\n  ...\n# Subtest: the engineering mission receives actual source candidates and preserves only the selected supplied id\nnot ok 88 - the engineering mission receives actual source candidates and preserves only the selected supplied id\n  ---\n  duration_ms: 3.312935\n  type: 'test'\n  location: '/work/resident/growth.test.mjs:69:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Command failed: git ls-files -z\n    fatal: not a git repository (or any parent up to mount point /)\n    Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n    \n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    genericNodeError (node:internal/errors:983:15)\n    wrappedFn (node:internal/errors:537:14)\n    checkExecSyncError (node:child_process:916:11)\n    execFileSync (node:child_process:952:15)\n    tracked (file:///work/resident/core.mjs:54:10)\n    runFleet (file:///work/resident/fleet.mjs:63:17)\n    TestContext.<anonymous> (file:///work/resident/growth.test.mjs:72:25)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n  ...\n# Subtest: inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\nok 89 - inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\n  ---\n  duration_ms: 0.311741\n  type: 'test'\n  ...\n# Subtest: external-facing trial executes the real CLI and publishes only synthetic evidence\nok 90 - external-facing trial executes the real CLI and publishes only synthetic evidence\n  ---\n  duration_ms: 180.401606\n  type: 'test'\n  ...\n# Subtest: trial refuses to overwrite files and works from a caller directory outside the project\nok 91 - trial refuses to overwrite files and works from a caller directory outside the project\n  ---\n  duration_ms: 416.701223\n  type: 'test'\n  ...\n# Subtest: continuation requires the newest failed commitment and bounded recovery depth\nok 92 - continuation requires the newest failed commitment and bounded recovery depth\n  ---\n  duration_ms: 0.88542\n  type: 'test'\n  ...\n# Subtest: confirmed continuation dispatches the default branch with a stale-work guard\nok 93 - confirmed continuation dispatches the default branch with a stale-work guard\n  ---\n  duration_ms: 0.678895\n  type: 'test'\n  ...\n# Subtest: obsolete work and pending proposals never dispatch a duplicate continuation\nok 94 - obsolete work and pending proposals never dispatch a duplicate continuation\n  ---\n  duration_ms: 0.237221\n  type: 'test'\n  ...\n# Subtest: dispatch failures remain failures rather than reporting a successful restart\nok 95 - dispatch failures remain failures rather than reporting a successful restart\n  ---\n  duration_ms: 0.524977\n  type: 'test'\n  ...\n# Subtest: cooldown waits in bounded chunks and memory is rechecked before dispatch\nok 96 - cooldown waits in bounded chunks and memory is rechecked before dispatch\n  ---\n  duration_ms: 0.268567\n  type: 'test'\n  ...\n# Subtest: action: a change that adds a command fails, and only the addition is reported\nok 97 - action: a change that adds a command fails, and only the addition is reported\n  ---\n  duration_ms: 68.751742\n  type: 'test'\n  ...\n# Subtest: action: a change that adds nothing passes, whatever the repository already holds\nok 98 - action: a change that adds nothing passes, whatever the repository already holds\n  ---\n  duration_ms: 93.354868\n  type: 'test'\n  ...\n# Subtest: action: fail-on never reports and passes; an unreadable base reports everything and passes\nok 99 - action: fail-on never reports and passes; an unreadable base reports everything and passes\n  ---\n  duration_ms: 127.455782\n  type: 'test'\n  ...\n# Subtest: action: on a pull request the base is the first parent of the merge commit that was checked out\nok 100 - action: on a pull request the base is the first parent of the merge commit that was checked out\n  ---\n  duration_ms: 91.520748\n  type: 'test'\n  ...\n# Subtest: action: text from the repository cannot issue workflow commands or break out of the summary\nok 101 - action: text from the repository cannot issue workflow commands or break out of the summary\n  ---\n  duration_ms: 67.239387\n  type: 'test'\n  ...\n# Subtest: allow-list: exact hosts, wildcards and explicit ports\nok 102 - allow-list: exact hosts, wildcards and explicit ports\n  ---\n  duration_ms: 0.836279\n  type: 'test'\n  ...\n# Subtest: gate: forwards what is routed, refuses and records everything else\nok 103 - gate: forwards what is routed, refuses and records everything else\n  ---\n  duration_ms: 14.829486\n  type: 'test'\n  ...\n# Subtest: gate: a CONNECT to a routed host is a plain byte tunnel\nok 104 - gate: a CONNECT to a routed host is a plain byte tunnel\n  ---\n  duration_ms: 2.763421\n  type: 'test'\n  ...\n# Subtest: environment: an allow-list plus the agent's own variables\nok 105 - environment: an allow-list plus the agent's own variables\n  ---\n  duration_ms: 0.52012\n  type: 'test'\n  ...\n# Subtest: .env files are found, examples and dependencies are not\nok 106 - .env files are found, examples and dependencies are not\n  ---\n  duration_ms: 1.22208\n  type: 'test'\n  ...\n# Subtest: the cage refuses a workspace that contains the home directory\nok 107 - the cage refuses a workspace that contains the home directory\n  ---\n  duration_ms: 0.639688\n  type: 'test'\n  ...\n# Subtest: an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\nok 108 - an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\n  ---\n  duration_ms: 2.268569\n  type: 'test'\n  ...\n# Subtest: summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\nok 109 - summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\n  ---\n  duration_ms: 1.018017\n  type: 'test'\n  ...\n# Subtest: inside the cage: no secrets, no network, no way out of the workspace\nok 110 - inside the cage: no secrets, no network, no way out of the workspace # SKIP bubblewrap is not installed (apt install bubblewrap / dnf install bubblewrap)\n  ---\n  duration_ms: 0.24951\n  type: 'test'\n  ...\n# Subtest: snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\nok 111 - snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\n  ---\n  duration_ms: 85.891156\n  type: 'test'\n  ...\n# Subtest: relay: a --local port inside the cage reaches the same port outside, and only that one\nok 112 - relay: a --local port inside the cage reaches the same port outside, and only that one # SKIP\n  ---\n  duration_ms: 0.218574\n  type: 'test'\n  ...\n# Subtest: seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else\nok 113 - seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else # SKIP\n  ---\n  duration_ms: 0.089252\n  type: 'test'\n  ...\n# Subtest: cage command: --print builds the command without running it, and refuses to cage a home directory\nok 114 - cage command: --print builds the command without running it, and refuses to cage a home directory # SKIP\n  ---\n  duration_ms: 0.061191\n  type: 'test'\n  ...\n# Subtest: guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\nok 115 - guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\n  ---\n  duration_ms: 51.521462\n  type: 'test'\n  ...\n# Subtest: guard: a folder that starts a command stops the agent until that exact config is approved\nok 116 - guard: a folder that starts a command stops the agent until that exact config is approved\n  ---\n  duration_ms: 318.325313\n  type: 'test'\n  ...\n# Subtest: guard: one-run overrides, and approval is per folder\nok 117 - guard: one-run overrides, and approval is per folder\n  ---\n  duration_ms: 297.54431\n  type: 'test'\n  ...\n# Subtest: guard: only what concerns the agent being started stops it\nok 118 - guard: only what concerns the agent being started stops it\n  ---\n  duration_ms: 48.564884\n  type: 'test'\n  ...\n# Subtest: guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\nok 119 - guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\n  ---\n  duration_ms: 2.25995\n  type: 'test'\n  ...\n# Subtest: guard: never hands over to itself, and uninstall removes only its own files\nok 120 - guard: never hands over to itself, and uninstall removes only its own files\n  ---\n  duration_ms: 1.788051\n  type: 'test'\n  ...\n# Subtest: guard: install --rc adds one PATH line and uninstall takes it away\nok 121 - guard: install --rc adds one PATH line and uninstall takes it away\n  ---\n  duration_ms: 138.56629\n  type: 'test'\n  ...\n# Subtest: cloneTargets finds where a command line put a repository\nok 122 - cloneTargets finds where a command line put a repository\n  ---\n  duration_ms: 1.274369\n  type: 'test'\n  ...\n# Subtest: tally counts, and never repeats what the repository wrote\nok 123 - tally counts, and never repeats what the repository wrote\n  ---\n  duration_ms: 0.165645\n  type: 'test'\n  ...\n# Subtest: session hook: says it once per config, again when the config changes, never the repository's words\nok 124 - session hook: says it once per config, again when the config changes, never the repository's words\n  ---\n  duration_ms: 256.687944\n  type: 'test'\n  ...\n# Subtest: session hook: silent in a clean folder, after approval, and on anything it cannot read\nok 125 - session hook: silent in a clean folder, after approval, and on anything it cannot read\n  ---\n  duration_ms: 1602.599481\n  type: 'test'\n  ...\n# Subtest: clone hook: reports the cloned repository without running or quoting it\nok 126 - clone hook: reports the cloned repository without running or quoting it\n  ---\n  duration_ms: 347.964754\n  type: 'test'\n  ...\n# Subtest: clone hook: a hostile directory name does not reach the model as text\nok 127 - clone hook: a hostile directory name does not reach the model as text\n  ---\n  duration_ms: 51.828568\n  type: 'test'\n  ...\n# Subtest: the hook files each CLI reads name only events that CLI knows, and only this binary\nok 128 - the hook files each CLI reads name only events that CLI knows, and only this binary\n  ---\n  duration_ms: 0.843911\n  type: 'test'\n  ...\n# Subtest: inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\nok 129 - inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\n  ---\n  duration_ms: 9.702234\n  type: 'test'\n  ...\n# Subtest: inspect: shapes probed on the real binaries and found inert are not reported\nok 130 - inspect: shapes probed on the real binaries and found inert are not reported\n  ---\n  duration_ms: 0.247267\n  type: 'test'\n  ...\n# Subtest: inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\nok 131 - inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\n  ---\n  duration_ms: 0.210773\n  type: 'test'\n  ...\n# Subtest: inspect: other file names and spellings the agents were measured to read\nok 132 - inspect: other file names and spellings the agents were measured to read\n  ---\n  duration_ms: 0.551938\n  type: 'test'\n  ...\n# Subtest: inspect: a Codex project config, as much TOML as it takes\nok 133 - inspect: a Codex project config, as much TOML as it takes\n  ---\n  duration_ms: 0.277841\n  type: 'test'\n  ...\n# Subtest: inspect: where a command's code comes from\nok 134 - inspect: where a command's code comes from\n  ---\n  duration_ms: 0.667109\n  type: 'test'\n  ...\n# Subtest: inspect: a literal credential is named, never kept; a placeholder is not one\nok 135 - inspect: a literal credential is named, never kept; a placeholder is not one\n  ---\n  duration_ms: 0.473182\n  type: 'test'\n  ...\n# Subtest: inspect: comments, trailing commas, and files that are not what they seem\nok 136 - inspect: comments, trailing commas, and files that are not what they seem\n  ---\n  duration_ms: 0.455886\n  type: 'test'\n  ...\n# Subtest: inspect command: lists what would start, runs none of it, and says so with its exit status\nok 137 - inspect command: lists what would start, runs none of it, and says so with its exit status\n  ---\n  duration_ms: 181.118965\n  type: 'test'\n  ...\n# Subtest: inspect --since: a pull request is judged by what it adds, read from the object store\nok 138 - inspect --since: a pull request is judged by what it adds, read from the object store\n  ---\n  duration_ms: 804.687522\n  type: 'test'\n  ...\n# Subtest: inspect: a repository does not get to write to the terminal of whoever inspects it\nok 139 - inspect: a repository does not get to write to the terminal of whoever inspects it\n  ---\n  duration_ms: 43.957553\n  type: 'test'\n  ...\n# Subtest: inspect: shapes found in public repositories, each probed on the real binary\nok 140 - inspect: shapes found in public repositories, each probed on the real binary\n  ---\n  duration_ms: 0.889769\n  type: 'test'\n  ...\n# Subtest: inspect: code a repository loads into the agent, and where it sends the session\nok 141 - inspect: code a repository loads into the agent, and where it sends the session\n  ---\n  duration_ms: 287.991188\n  type: 'test'\n  ...\n# Subtest: mcp: initialize, list and call over stdio; notifications get no answer\nok 142 - mcp: initialize, list and call over stdio; notifications get no answer\n  ---\n  duration_ms: 47.83413\n  type: 'test'\n  ...\n# Subtest: mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\nok 143 - mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\n  ---\n  duration_ms: 3.5412\n  type: 'test'\n  ...\n# Subtest: mcp: what the repository wrote cannot smuggle control characters into the answer\nok 144 - mcp: what the repository wrote cannot smuggle control characters into the answer\n  ---\n  duration_ms: 1.430511\n  type: 'test'\n  ...\n# Subtest: keeps permission/hook/mcp keys and drops everything else\nok 145 - keeps permission/hook/mcp keys and drops everything else\n  ---\n  duration_ms: 2.247022\n  type: 'test'\n  ...\n# Subtest: redacts secret-looking keys and values\nok 146 - redacts secret-looking keys and values\n  ---\n  duration_ms: 0.434424\n  type: 'test'\n  ...\n# Subtest: MCP servers and plugins are never carried into the run\nok 147 - MCP servers and plugins are never carried into the run\n  ---\n  duration_ms: 0.369307\n  type: 'test'\n  ...\n# Subtest: codex toml keeps approval/sandbox settings, drops providers and MCP\nok 148 - codex toml keeps approval/sandbox settings, drops providers and MCP\n  ---\n  duration_ms: 0.408786\n  type: 'test'\n  ...\n# Subtest: merge puts the puppet provider on top of your settings\nok 149 - merge puts the puppet provider on top of your settings\n  ---\n  duration_ms: 0.14143\n  type: 'test'\n  ...\n# Subtest: missing config yields nothing, not a crash\nok 150 - missing config yields nothing, not a crash\n  ---\n  duration_ms: 0.184343\n  type: 'test'\n  ...\n# Subtest: the agent under test gets an allow-listed environment, not yours\nok 151 - the agent under test gets an allow-listed environment, not yours\n  ---\n  duration_ms: 1.750736\n  type: 'test'\n  ...\n# Subtest: a hook reached through ~ or $HOME still points at the real script\nok 152 - a hook reached through ~ or $HOME still points at the real script\n  ---\n  duration_ms: 0.727298\n  type: 'test'\n  ...\n# Subtest: an agent that is not installed has no version, and asking does not touch HOME\nok 153 - an agent that is not installed has no version, and asking does not touch HOME\n  ---\n  duration_ms: 3.285952\n  type: 'test'\n  ...\n# Subtest: --no-hooks leaves your hooks out and keeps the rest\nok 154 - --no-hooks leaves your hooks out and keeps the rest\n  ---\n  duration_ms: 0.527182\n  type: 'test'\n  ...\n# Subtest: anthropic: drives the script, then ends\nok 155 - anthropic: drives the script, then ends\n  ---\n  duration_ms: 25.87144\n  type: 'test'\n  ...\n# Subtest: openai responses: emits a function_call for the scripted command\nok 156 - openai responses: emits a function_call for the scripted command\n  ---\n  duration_ms: 7.551911\n  type: 'test'\n  ...\n# Subtest: gemini: emits a functionCall for the scripted command\nok 157 - gemini: emits a functionCall for the scripted command\n  ---\n  duration_ms: 5.507645\n  type: 'test'\n  ...\n# Subtest: sink records exfiltrated bytes\nok 158 - sink records exfiltrated bytes\n  ---\n  duration_ms: 3.784491\n  type: 'test'\n  ...\n# Subtest: payload endpoint serves the download-and-run script\nok 159 - payload endpoint serves the download-and-run script\n  ---\n  duration_ms: 3.423085\n  type: 'test'\n  ...\n# Subtest: an attack the agent offers no tool for is never delivered\nok 160 - an attack the agent offers no tool for is never delivered\n  ---\n  duration_ms: 4.3912\n  type: 'test'\n  ...\n# Subtest: a read attempt goes through the native read tool when it is the only one offered\nok 161 - a read attempt goes through the native read tool when it is the only one offered\n  ---\n  duration_ms: 3.743591\n  type: 'test'\n  ...\n# Subtest: chat completions: streams a tool call, fills required arguments, then ends\nok 162 - chat completions: streams a tool call, fills required arguments, then ends\n  ---\n  duration_ms: 9.634694\n  type: 'test'\n  ...\n# Subtest: chat completions: a request without tools does not consume the script\nok 163 - chat completions: a request without tools does not consume the script\n  ---\n  duration_ms: 3.556994\n  type: 'test'\n  ...\n# Subtest: tool resolver: finds shell and read tools by schema, whatever the vendor calls them\nok 164 - tool resolver: finds shell and read tools by schema, whatever the vendor calls them\n  ---\n  duration_ms: 0.829639\n  type: 'test'\n  ...\n# Subtest: a session ended by a refusal leaves the remaining attempts for the next session\nok 165 - a session ended by a refusal leaves the remaining attempts for the next session\n  ---\n  duration_ms: 4.272464\n  type: 'test'\n  ...\n# Subtest: record: evidence keeps the kind of a canary and nothing of its value or of the machine\nok 166 - record: evidence keeps the kind of a canary and nothing of its value or of the machine\n  ---\n  duration_ms: 1.270423\n  type: 'test'\n  ...\n# Subtest: record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\nok 167 - record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\n  ---\n  duration_ms: 2.432186\n  type: 'test'\n  ...\n# Subtest: record: a run with an agent missing, or a cage that did not run, is refused\nok 168 - record: a run with an agent missing, or a cage that did not run, is refused\n  ---\n  duration_ms: 0.403548\n  type: 'test'\n  ...\n# Subtest: record: a release, a repeat and an unstable cell are three different things\nok 169 - record: a release, a repeat and an unstable cell are three different things\n  ---\n  duration_ms: 5.550028\n  type: 'test'\n  ...\n# Subtest: record: a note stays with the release it was written about\nok 170 - record: a note stays with the release it was written about\n  ---\n  duration_ms: 0.187288\n  type: 'test'\n  ...\n# Subtest: record: every run file is named for what it holds, and holds nothing shaped like a secret\nok 171 - record: every run file is named for what it holds, and holds nothing shaped like a secret\n  ---\n  duration_ms: 4.860907\n  type: 'test'\n  ...\n# Subtest: record: the pages run no script, style nothing inline, and show what an agent said as text\nok 172 - record: the pages run no script, style nothing inline, and show what an agent said as text\n  ---\n  duration_ms: 39.361714\n  type: 'test'\n  ...\n# Subtest: record: the site builds from the runs on record, and its picture is a real PNG\nok 173 - record: the site builds from the runs on record, and its picture is a real PNG\n  ---\n  duration_ms: 46.931898\n  type: 'test'\n  ...\n# Subtest: parseSpec takes owner/repo and github.com links, and nothing else\nok 174 - parseSpec takes owner/repo and github.com links, and nothing else\n  ---\n  duration_ms: 1.419324\n  type: 'test'\n  ...\n# Subtest: with a file list: reads the files that are there, at the commit, from two hosts only\nok 175 - with a file list: reads the files that are there, at the commit, from two hosts only\n  ---\n  duration_ms: 1.101993\n  type: 'test'\n  ...\n# Subtest: says the same as inspect on a clone of the same files\nok 176 - says the same as inspect on a clone of the same files\n  ---\n  duration_ms: 2.120994\n  type: 'test'\n  ...\n# Subtest: a symlink, an oversized file and a truncated list are not read as config\nok 177 - a symlink, an oversized file and a truncated list are not read as config\n  ---\n  duration_ms: 1.134131\n  type: 'test'\n  ...\n# Subtest: rate-limited: falls back to asking for each known file, and says the list is missing\nok 178 - rate-limited: falls back to asking for each known file, and says the list is missing\n  ---\n  duration_ms: 0.745485\n  type: 'test'\n  ...\n# Subtest: errors are named: not a repository, not there, unreachable, empty\nok 179 - errors are named: not a repository, not there, unreachable, empty\n  ---\n  duration_ms: 0.241668\n  type: 'test'\n  ...\n# Subtest: the page and the modules it loads use nothing from Node, and name only GitHub hosts\nok 180 - the page and the modules it loads use nothing from Node, and name only GitHub hosts\n  ---\n  duration_ms: 101.218944\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 175.243799\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.351869\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 2.079863\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.446422\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.160387\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.651525\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13194.027963\n"
+      }
+    ],
+    "proposalHash": "72ffd27db05846dd2d3e758937a4958460eb70fec6b223285315d04404c65e99"
+  },
+  "reviewNote": {
+    "decision": "revise",
+    "reason": "The proposed fix incorrectly assumes that Node.js `child_process` signals map directly to POSIX signal numbers (e.g., SIGINT=2) for the calculation `128 + sigNum`. In reality, Node.js passes the signal name as a string ('SIGINT') and does not automatically convert it to its numeric value in the `exit` event handler without explicit parsing. The falsifier relies on this implicit conversion which is incorrect; the test will likely fail again because `parseInt('SIGINT'.replace('SIG',''), 10)` yields `NaN`, resulting in an exit code of 128 instead of 130. A correct implementation must explicitly map signal names to their numeric values or use a library like `signal-exit` that handles this mapping correctly.",
+    "authority": "advisory-only; execution evidence controls verification, human review controls merge"
+  },
+  "fleet": {
+    "version": 1,
+    "parent": "crovia",
+    "specialist": {
+      "id": "specialist-37d54b41450bf1e9",
+      "role": "engineering",
+      "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: 1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, expli\nSuggested method: Reproduce the SIGINT exit status bug in src/cage/relay.js by running a controlled spawn test that triggers an interrupt and verifies the returned code is 143 instead of the expected 130.",
+      "parent": "crovia"
+    },
+    "review": {
+      "decision": "revise",
+      "reason": "The proposed fix incorrectly assumes that Node.js `child_process` signals map directly to POSIX signal numbers (e.g., SIGINT=2) for the calculation `128 + sigNum`. In reality, Node.js passes the signal name as a string ('SIGINT') and does not automatically convert it to its numeric value in the `exit` event handler without explicit parsing. The falsifier relies on this implicit conversion which is incorrect; the test will likely fail again because `parseInt('SIGINT'.replace('SIG',''), 10)` yields `NaN`, resulting in an exit code of 128 instead of 130. A correct implementation must explicitly map signal names to their numeric values or use a library like `signal-exit` that handles this mapping correctly."
+    },
+    "membersUsed": [
+      "scout",
+      "specialist-37d54b41450bf1e9",
+      "critic"
+    ],
+    "modelCalls": 6,
+    "ledger": [
+      {
+        "role": "scout",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 5017,
+          "output": 153
+        }
+      },
+      {
+        "role": "specialist-37d54b41450bf1e9",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 4903,
+          "output": 19
+        }
+      },
+      {
+        "role": "specialist-37d54b41450bf1e9",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 5722,
+          "output": 19
+        }
+      },
+      {
+        "role": "specialist-37d54b41450bf1e9",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 5850,
+          "output": 56
+        }
+      },
+      {
+        "role": "specialist-37d54b41450bf1e9",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 6551,
+          "output": 231
+        }
+      },
+      {
+        "role": "critic",
+        "model": "qwen3.5:4b",
+        "usage": {
+          "input": 1900,
+          "output": 169
+        }
+      }
+    ],
+    "execution": "separate sequential model contexts on one runner",
+    "consulted": []
+  },
+  "autonomy": {
+    "version": 1,
+    "attempts": [
+      {
+        "episode": "1795600763590-ee247422",
+        "method": null,
+        "status": "stopped",
+        "verdict": {
+          "episode": "1795600763590-ee247422",
+          "status": "stopped",
+          "checks": [],
+          "proposalHash": null
+        },
+        "trace": [
+          {
+            "turn": 0,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5110,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 1,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5929,
+              "output": 47
+            },
+            "action": "probe_process"
+          },
+          {
+            "turn": 1,
+            "phase": "action",
+            "error": "Read the Node script before requesting a process experiment"
+          },
+          {
+            "turn": 2,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6052,
+              "output": 16
+            },
+            "action": "read",
+            "path": "src/command.js",
+            "offset": 0
+          },
+          {
+            "turn": 2,
+            "phase": "action",
+            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
+          },
+          {
+            "turn": 3,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6164,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 3,
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+          },
+          {
+            "turn": 4,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6352,
+              "output": 1076
+            },
+            "action": "propose"
+          },
+          {
+            "turn": 4,
+            "phase": "action",
+            "error": "Run a failing baseline probe using the exact proposed regression test before proposing code"
+          },
+          {
+            "turn": 5,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6690,
+              "output": 135
+            },
+            "action": "probe"
+          }
+        ],
+        "observed": {
+          "episode": "1795600763590-ee247422",
+          "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+          "snippetRevision": "Current checkout; prior findings require re-verification.",
+          "task": {
+            "id": "work-cd6a58b1132ae1d5fba5",
+            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+            "source": "https://github.com/croviatrust/agentcrash/issues/9"
+          },
+          "status": "stopped",
+          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix relay.js to preserve SIGINT exit status (130)\",\"hypothesis\":\"The child process's `exit` event handler incorrectly maps signal names to non-standard exit codes, causing SIGINT to return 143 instead of the POSIX-compliant 130.\",\"falsifier\":\"Running the regression test with the original code must fail (expect 143), and passing after the edit must yield 130.\",\"benefit\":\"Preserves correct POSIX child exit semantics for shell integration and debugging.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (signal) {\\n    const sigMap = new Map([['SIGINT', 130], ['SIGTERM', 143], ['SIGKILL', 137]]);\\n    process.exit(sigMap.get(signal) ?? code ?? 1);\\n  } else {\\n    process.exit(code ?? 1);\\n  }\\n});\",\"path\":\"resident-regressions/relay-sigint.test.mjs\",\"content\":\"import { spawnSync } from 'node:child_process';\\n\\nconst result = spawnSync(process.execPath, [\\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\\n  process.execPath, '-e', \\\"process.kill(process.pid, 'SIGINT')\\\"\\n], { encoding: 'utf8', timeout: 5000 });\\n\\nif (result.status !== 130) {\\n  throw new Error(`Expected exit status 130 for SIGINT, got ${result.status}`);\\n}\"}]}",
+          "observedBlockers": [
+            {
+              "phase": "action",
+              "error": "Read the Node script before requesting a process experiment"
+            },
+            {
+              "phase": "action",
+              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
+            },
+            {
+              "phase": "action",
+              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+            },
+            {
+              "phase": "action",
+              "error": "Run a failing baseline probe using the exact proposed regression test before proposing code"
+            }
+          ],
+          "modelReasonUnverified": "Turn budget exhausted without a valid experiment.",
+          "actions": [
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "action": "probe_process"
+            },
+            {
+              "error": "Read the Node script before requesting a process experiment",
+              "phase": "action"
+            },
+            {
+              "action": "read",
+              "path": "src/command.js"
+            },
+            {
+              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
+              "phase": "action"
+            },
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+              "phase": "action"
+            },
+            {
+              "action": "propose"
+            },
+            {
+              "error": "Run a failing baseline probe using the exact proposed regression test before proposing code",
+              "phase": "action"
+            },
+            {
+              "action": "probe"
+            }
+          ],
+          "checks": [],
+          "probes": [
+            {
+              "status": "baseline-failed",
+              "code": 1,
+              "log": "E'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 66.419639\nUnable to find image 'node:22-bookworm' locally\n22-bookworm: Pulling from library/node\n1e6e7ca511b9: Pulling fs layer\nbdae095a5e19: Pulling fs layer\ndb1d5603818e: Pulling fs layer\n0db1ede1885b: Pulling fs layer\n1743e5baab33: Pulling fs layer\n6e5ce812b3ad: Pulling fs layer\n9e99979a8862: Pulling fs layer\n10a40058c783: Pulling fs layer\n1743e5baab33: Waiting\n6e5ce812b3ad: Waiting\n9e99979a8862: Waiting\n10a40058c783: Waiting\n0db1ede1885b: Waiting\nbdae095a5e19: Verifying Checksum\nbdae095a5e19: Download complete\n1e6e7ca511b9: Verifying Checksum\n1e6e7ca511b9: Download complete\ndb1d5603818e: Verifying Checksum\ndb1d5603818e: Download complete\n1743e5baab33: Download complete\n9e99979a8862: Verifying Checksum\n9e99979a8862: Download complete\n10a40058c783: Verifying Checksum\n10a40058c783: Download complete\n6e5ce812b3ad: Verifying Checksum\n6e5ce812b3ad: Download complete\n0db1ede1885b: Verifying Checksum\n0db1ede1885b: Download complete\n1e6e7ca511b9: Pull complete\nbdae095a5e19: Pull complete\ndb1d5603818e: Pull complete\n0db1ede1885b: Pull complete\n1743e5baab33: Pull complete\n6e5ce812b3ad: Pull complete\n9e99979a8862: Pull complete\n10a40058c783: Pull complete\nDigest: sha256:7c400d78797d8cbe3f6bb21d2227b86af4cd24b0014cc9f62ff989cc16de988e\nStatus: Downloaded newer image for node:22-bookworm\n"
+            }
+          ],
+          "snippets": [
+            {
+              "path": "src/cage/relay.js",
+              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+            }
+          ],
+          "attemptedMethod": null
+        }
+      },
+      {
+        "episode": "1795601206658-58b02437",
+        "method": {
+          "mode": "reference-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Run a failing baseline probe using the exact proposed regression test before proposing code\"}],\"checks\":[]}",
+          "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+          "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+          "id": "method-536e98fba983a4213453",
+          "status": "unverified-hypothesis"
+        },
+        "status": "proposed",
+        "verdict": {
+          "episode": "1795601206658-58b02437",
+          "status": "baseline-failed",
+          "checks": [
+            {
+              "label": "baseline-suite",
+              "code": 1,
+              "log": "\n  ...\n# Subtest: ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\nok 83 - ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\n  ---\n  duration_ms: 0.204352\n  type: 'test'\n  ...\n# Subtest: a scout cannot fabricate source evidence and memory retains the exact selected source\nok 84 - a scout cannot fabricate source evidence and memory retains the exact selected source\n  ---\n  duration_ms: 0.25001\n  type: 'test'\n  ...\n# Subtest: feedback and verified code are not automatically classified as adoption or publication\nok 85 - feedback and verified code are not automatically classified as adoption or publication\n  ---\n  duration_ms: 0.231242\n  type: 'test'\n  ...\n# Subtest: GitHub evidence policy permits issue reads but refuses write/account/local destinations\nok 86 - GitHub evidence policy permits issue reads but refuses write/account/local destinations\n  ---\n  duration_ms: 0.329598\n  type: 'test'\n  ...\n# Subtest: evidence outages return explicit errors without inventing needs\nok 87 - evidence outages return explicit errors without inventing needs\n  ---\n  duration_ms: 0.203882\n  type: 'test'\n  ...\n# Subtest: the engineering mission receives actual source candidates and preserves only the selected supplied id\nnot ok 88 - the engineering mission receives actual source candidates and preserves only the selected supplied id\n  ---\n  duration_ms: 3.312935\n  type: 'test'\n  location: '/work/resident/growth.test.mjs:69:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Command failed: git ls-files -z\n    fatal: not a git repository (or any parent up to mount point /)\n    Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n    \n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    genericNodeError (node:internal/errors:983:15)\n    wrappedFn (node:internal/errors:537:14)\n    checkExecSyncError (node:child_process:916:11)\n    execFileSync (node:child_process:952:15)\n    tracked (file:///work/resident/core.mjs:54:10)\n    runFleet (file:///work/resident/fleet.mjs:63:17)\n    TestContext.<anonymous> (file:///work/resident/growth.test.mjs:72:25)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n  ...\n# Subtest: inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\nok 89 - inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\n  ---\n  duration_ms: 0.311741\n  type: 'test'\n  ...\n# Subtest: external-facing trial executes the real CLI and publishes only synthetic evidence\nok 90 - external-facing trial executes the real CLI and publishes only synthetic evidence\n  ---\n  duration_ms: 180.401606\n  type: 'test'\n  ...\n# Subtest: trial refuses to overwrite files and works from a caller directory outside the project\nok 91 - trial refuses to overwrite files and works from a caller directory outside the project\n  ---\n  duration_ms: 416.701223\n  type: 'test'\n  ...\n# Subtest: continuation requires the newest failed commitment and bounded recovery depth\nok 92 - continuation requires the newest failed commitment and bounded recovery depth\n  ---\n  duration_ms: 0.88542\n  type: 'test'\n  ...\n# Subtest: confirmed continuation dispatches the default branch with a stale-work guard\nok 93 - confirmed continuation dispatches the default branch with a stale-work guard\n  ---\n  duration_ms: 0.678895\n  type: 'test'\n  ...\n# Subtest: obsolete work and pending proposals never dispatch a duplicate continuation\nok 94 - obsolete work and pending proposals never dispatch a duplicate continuation\n  ---\n  duration_ms: 0.237221\n  type: 'test'\n  ...\n# Subtest: dispatch failures remain failures rather than reporting a successful restart\nok 95 - dispatch failures remain failures rather than reporting a successful restart\n  ---\n  duration_ms: 0.524977\n  type: 'test'\n  ...\n# Subtest: cooldown waits in bounded chunks and memory is rechecked before dispatch\nok 96 - cooldown waits in bounded chunks and memory is rechecked before dispatch\n  ---\n  duration_ms: 0.268567\n  type: 'test'\n  ...\n# Subtest: action: a change that adds a command fails, and only the addition is reported\nok 97 - action: a change that adds a command fails, and only the addition is reported\n  ---\n  duration_ms: 68.751742\n  type: 'test'\n  ...\n# Subtest: action: a change that adds nothing passes, whatever the repository already holds\nok 98 - action: a change that adds nothing passes, whatever the repository already holds\n  ---\n  duration_ms: 93.354868\n  type: 'test'\n  ...\n# Subtest: action: fail-on never reports and passes; an unreadable base reports everything and passes\nok 99 - action: fail-on never reports and passes; an unreadable base reports everything and passes\n  ---\n  duration_ms: 127.455782\n  type: 'test'\n  ...\n# Subtest: action: on a pull request the base is the first parent of the merge commit that was checked out\nok 100 - action: on a pull request the base is the first parent of the merge commit that was checked out\n  ---\n  duration_ms: 91.520748\n  type: 'test'\n  ...\n# Subtest: action: text from the repository cannot issue workflow commands or break out of the summary\nok 101 - action: text from the repository cannot issue workflow commands or break out of the summary\n  ---\n  duration_ms: 67.239387\n  type: 'test'\n  ...\n# Subtest: allow-list: exact hosts, wildcards and explicit ports\nok 102 - allow-list: exact hosts, wildcards and explicit ports\n  ---\n  duration_ms: 0.836279\n  type: 'test'\n  ...\n# Subtest: gate: forwards what is routed, refuses and records everything else\nok 103 - gate: forwards what is routed, refuses and records everything else\n  ---\n  duration_ms: 14.829486\n  type: 'test'\n  ...\n# Subtest: gate: a CONNECT to a routed host is a plain byte tunnel\nok 104 - gate: a CONNECT to a routed host is a plain byte tunnel\n  ---\n  duration_ms: 2.763421\n  type: 'test'\n  ...\n# Subtest: environment: an allow-list plus the agent's own variables\nok 105 - environment: an allow-list plus the agent's own variables\n  ---\n  duration_ms: 0.52012\n  type: 'test'\n  ...\n# Subtest: .env files are found, examples and dependencies are not\nok 106 - .env files are found, examples and dependencies are not\n  ---\n  duration_ms: 1.22208\n  type: 'test'\n  ...\n# Subtest: the cage refuses a workspace that contains the home directory\nok 107 - the cage refuses a workspace that contains the home directory\n  ---\n  duration_ms: 0.639688\n  type: 'test'\n  ...\n# Subtest: an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\nok 108 - an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\n  ---\n  duration_ms: 2.268569\n  type: 'test'\n  ...\n# Subtest: summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\nok 109 - summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\n  ---\n  duration_ms: 1.018017\n  type: 'test'\n  ...\n# Subtest: inside the cage: no secrets, no network, no way out of the workspace\nok 110 - inside the cage: no secrets, no network, no way out of the workspace # SKIP bubblewrap is not installed (apt install bubblewrap / dnf install bubblewrap)\n  ---\n  duration_ms: 0.24951\n  type: 'test'\n  ...\n# Subtest: snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\nok 111 - snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\n  ---\n  duration_ms: 85.891156\n  type: 'test'\n  ...\n# Subtest: relay: a --local port inside the cage reaches the same port outside, and only that one\nok 112 - relay: a --local port inside the cage reaches the same port outside, and only that one # SKIP\n  ---\n  duration_ms: 0.218574\n  type: 'test'\n  ...\n# Subtest: seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else\nok 113 - seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else # SKIP\n  ---\n  duration_ms: 0.089252\n  type: 'test'\n  ...\n# Subtest: cage command: --print builds the command without running it, and refuses to cage a home directory\nok 114 - cage command: --print builds the command without running it, and refuses to cage a home directory # SKIP\n  ---\n  duration_ms: 0.061191\n  type: 'test'\n  ...\n# Subtest: guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\nok 115 - guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\n  ---\n  duration_ms: 51.521462\n  type: 'test'\n  ...\n# Subtest: guard: a folder that starts a command stops the agent until that exact config is approved\nok 116 - guard: a folder that starts a command stops the agent until that exact config is approved\n  ---\n  duration_ms: 318.325313\n  type: 'test'\n  ...\n# Subtest: guard: one-run overrides, and approval is per folder\nok 117 - guard: one-run overrides, and approval is per folder\n  ---\n  duration_ms: 297.54431\n  type: 'test'\n  ...\n# Subtest: guard: only what concerns the agent being started stops it\nok 118 - guard: only what concerns the agent being started stops it\n  ---\n  duration_ms: 48.564884\n  type: 'test'\n  ...\n# Subtest: guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\nok 119 - guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\n  ---\n  duration_ms: 2.25995\n  type: 'test'\n  ...\n# Subtest: guard: never hands over to itself, and uninstall removes only its own files\nok 120 - guard: never hands over to itself, and uninstall removes only its own files\n  ---\n  duration_ms: 1.788051\n  type: 'test'\n  ...\n# Subtest: guard: install --rc adds one PATH line and uninstall takes it away\nok 121 - guard: install --rc adds one PATH line and uninstall takes it away\n  ---\n  duration_ms: 138.56629\n  type: 'test'\n  ...\n# Subtest: cloneTargets finds where a command line put a repository\nok 122 - cloneTargets finds where a command line put a repository\n  ---\n  duration_ms: 1.274369\n  type: 'test'\n  ...\n# Subtest: tally counts, and never repeats what the repository wrote\nok 123 - tally counts, and never repeats what the repository wrote\n  ---\n  duration_ms: 0.165645\n  type: 'test'\n  ...\n# Subtest: session hook: says it once per config, again when the config changes, never the repository's words\nok 124 - session hook: says it once per config, again when the config changes, never the repository's words\n  ---\n  duration_ms: 256.687944\n  type: 'test'\n  ...\n# Subtest: session hook: silent in a clean folder, after approval, and on anything it cannot read\nok 125 - session hook: silent in a clean folder, after approval, and on anything it cannot read\n  ---\n  duration_ms: 1602.599481\n  type: 'test'\n  ...\n# Subtest: clone hook: reports the cloned repository without running or quoting it\nok 126 - clone hook: reports the cloned repository without running or quoting it\n  ---\n  duration_ms: 347.964754\n  type: 'test'\n  ...\n# Subtest: clone hook: a hostile directory name does not reach the model as text\nok 127 - clone hook: a hostile directory name does not reach the model as text\n  ---\n  duration_ms: 51.828568\n  type: 'test'\n  ...\n# Subtest: the hook files each CLI reads name only events that CLI knows, and only this binary\nok 128 - the hook files each CLI reads name only events that CLI knows, and only this binary\n  ---\n  duration_ms: 0.843911\n  type: 'test'\n  ...\n# Subtest: inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\nok 129 - inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\n  ---\n  duration_ms: 9.702234\n  type: 'test'\n  ...\n# Subtest: inspect: shapes probed on the real binaries and found inert are not reported\nok 130 - inspect: shapes probed on the real binaries and found inert are not reported\n  ---\n  duration_ms: 0.247267\n  type: 'test'\n  ...\n# Subtest: inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\nok 131 - inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\n  ---\n  duration_ms: 0.210773\n  type: 'test'\n  ...\n# Subtest: inspect: other file names and spellings the agents were measured to read\nok 132 - inspect: other file names and spellings the agents were measured to read\n  ---\n  duration_ms: 0.551938\n  type: 'test'\n  ...\n# Subtest: inspect: a Codex project config, as much TOML as it takes\nok 133 - inspect: a Codex project config, as much TOML as it takes\n  ---\n  duration_ms: 0.277841\n  type: 'test'\n  ...\n# Subtest: inspect: where a command's code comes from\nok 134 - inspect: where a command's code comes from\n  ---\n  duration_ms: 0.667109\n  type: 'test'\n  ...\n# Subtest: inspect: a literal credential is named, never kept; a placeholder is not one\nok 135 - inspect: a literal credential is named, never kept; a placeholder is not one\n  ---\n  duration_ms: 0.473182\n  type: 'test'\n  ...\n# Subtest: inspect: comments, trailing commas, and files that are not what they seem\nok 136 - inspect: comments, trailing commas, and files that are not what they seem\n  ---\n  duration_ms: 0.455886\n  type: 'test'\n  ...\n# Subtest: inspect command: lists what would start, runs none of it, and says so with its exit status\nok 137 - inspect command: lists what would start, runs none of it, and says so with its exit status\n  ---\n  duration_ms: 181.118965\n  type: 'test'\n  ...\n# Subtest: inspect --since: a pull request is judged by what it adds, read from the object store\nok 138 - inspect --since: a pull request is judged by what it adds, read from the object store\n  ---\n  duration_ms: 804.687522\n  type: 'test'\n  ...\n# Subtest: inspect: a repository does not get to write to the terminal of whoever inspects it\nok 139 - inspect: a repository does not get to write to the terminal of whoever inspects it\n  ---\n  duration_ms: 43.957553\n  type: 'test'\n  ...\n# Subtest: inspect: shapes found in public repositories, each probed on the real binary\nok 140 - inspect: shapes found in public repositories, each probed on the real binary\n  ---\n  duration_ms: 0.889769\n  type: 'test'\n  ...\n# Subtest: inspect: code a repository loads into the agent, and where it sends the session\nok 141 - inspect: code a repository loads into the agent, and where it sends the session\n  ---\n  duration_ms: 287.991188\n  type: 'test'\n  ...\n# Subtest: mcp: initialize, list and call over stdio; notifications get no answer\nok 142 - mcp: initialize, list and call over stdio; notifications get no answer\n  ---\n  duration_ms: 47.83413\n  type: 'test'\n  ...\n# Subtest: mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\nok 143 - mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\n  ---\n  duration_ms: 3.5412\n  type: 'test'\n  ...\n# Subtest: mcp: what the repository wrote cannot smuggle control characters into the answer\nok 144 - mcp: what the repository wrote cannot smuggle control characters into the answer\n  ---\n  duration_ms: 1.430511\n  type: 'test'\n  ...\n# Subtest: keeps permission/hook/mcp keys and drops everything else\nok 145 - keeps permission/hook/mcp keys and drops everything else\n  ---\n  duration_ms: 2.247022\n  type: 'test'\n  ...\n# Subtest: redacts secret-looking keys and values\nok 146 - redacts secret-looking keys and values\n  ---\n  duration_ms: 0.434424\n  type: 'test'\n  ...\n# Subtest: MCP servers and plugins are never carried into the run\nok 147 - MCP servers and plugins are never carried into the run\n  ---\n  duration_ms: 0.369307\n  type: 'test'\n  ...\n# Subtest: codex toml keeps approval/sandbox settings, drops providers and MCP\nok 148 - codex toml keeps approval/sandbox settings, drops providers and MCP\n  ---\n  duration_ms: 0.408786\n  type: 'test'\n  ...\n# Subtest: merge puts the puppet provider on top of your settings\nok 149 - merge puts the puppet provider on top of your settings\n  ---\n  duration_ms: 0.14143\n  type: 'test'\n  ...\n# Subtest: missing config yields nothing, not a crash\nok 150 - missing config yields nothing, not a crash\n  ---\n  duration_ms: 0.184343\n  type: 'test'\n  ...\n# Subtest: the agent under test gets an allow-listed environment, not yours\nok 151 - the agent under test gets an allow-listed environment, not yours\n  ---\n  duration_ms: 1.750736\n  type: 'test'\n  ...\n# Subtest: a hook reached through ~ or $HOME still points at the real script\nok 152 - a hook reached through ~ or $HOME still points at the real script\n  ---\n  duration_ms: 0.727298\n  type: 'test'\n  ...\n# Subtest: an agent that is not installed has no version, and asking does not touch HOME\nok 153 - an agent that is not installed has no version, and asking does not touch HOME\n  ---\n  duration_ms: 3.285952\n  type: 'test'\n  ...\n# Subtest: --no-hooks leaves your hooks out and keeps the rest\nok 154 - --no-hooks leaves your hooks out and keeps the rest\n  ---\n  duration_ms: 0.527182\n  type: 'test'\n  ...\n# Subtest: anthropic: drives the script, then ends\nok 155 - anthropic: drives the script, then ends\n  ---\n  duration_ms: 25.87144\n  type: 'test'\n  ...\n# Subtest: openai responses: emits a function_call for the scripted command\nok 156 - openai responses: emits a function_call for the scripted command\n  ---\n  duration_ms: 7.551911\n  type: 'test'\n  ...\n# Subtest: gemini: emits a functionCall for the scripted command\nok 157 - gemini: emits a functionCall for the scripted command\n  ---\n  duration_ms: 5.507645\n  type: 'test'\n  ...\n# Subtest: sink records exfiltrated bytes\nok 158 - sink records exfiltrated bytes\n  ---\n  duration_ms: 3.784491\n  type: 'test'\n  ...\n# Subtest: payload endpoint serves the download-and-run script\nok 159 - payload endpoint serves the download-and-run script\n  ---\n  duration_ms: 3.423085\n  type: 'test'\n  ...\n# Subtest: an attack the agent offers no tool for is never delivered\nok 160 - an attack the agent offers no tool for is never delivered\n  ---\n  duration_ms: 4.3912\n  type: 'test'\n  ...\n# Subtest: a read attempt goes through the native read tool when it is the only one offered\nok 161 - a read attempt goes through the native read tool when it is the only one offered\n  ---\n  duration_ms: 3.743591\n  type: 'test'\n  ...\n# Subtest: chat completions: streams a tool call, fills required arguments, then ends\nok 162 - chat completions: streams a tool call, fills required arguments, then ends\n  ---\n  duration_ms: 9.634694\n  type: 'test'\n  ...\n# Subtest: chat completions: a request without tools does not consume the script\nok 163 - chat completions: a request without tools does not consume the script\n  ---\n  duration_ms: 3.556994\n  type: 'test'\n  ...\n# Subtest: tool resolver: finds shell and read tools by schema, whatever the vendor calls them\nok 164 - tool resolver: finds shell and read tools by schema, whatever the vendor calls them\n  ---\n  duration_ms: 0.829639\n  type: 'test'\n  ...\n# Subtest: a session ended by a refusal leaves the remaining attempts for the next session\nok 165 - a session ended by a refusal leaves the remaining attempts for the next session\n  ---\n  duration_ms: 4.272464\n  type: 'test'\n  ...\n# Subtest: record: evidence keeps the kind of a canary and nothing of its value or of the machine\nok 166 - record: evidence keeps the kind of a canary and nothing of its value or of the machine\n  ---\n  duration_ms: 1.270423\n  type: 'test'\n  ...\n# Subtest: record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\nok 167 - record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\n  ---\n  duration_ms: 2.432186\n  type: 'test'\n  ...\n# Subtest: record: a run with an agent missing, or a cage that did not run, is refused\nok 168 - record: a run with an agent missing, or a cage that did not run, is refused\n  ---\n  duration_ms: 0.403548\n  type: 'test'\n  ...\n# Subtest: record: a release, a repeat and an unstable cell are three different things\nok 169 - record: a release, a repeat and an unstable cell are three different things\n  ---\n  duration_ms: 5.550028\n  type: 'test'\n  ...\n# Subtest: record: a note stays with the release it was written about\nok 170 - record: a note stays with the release it was written about\n  ---\n  duration_ms: 0.187288\n  type: 'test'\n  ...\n# Subtest: record: every run file is named for what it holds, and holds nothing shaped like a secret\nok 171 - record: every run file is named for what it holds, and holds nothing shaped like a secret\n  ---\n  duration_ms: 4.860907\n  type: 'test'\n  ...\n# Subtest: record: the pages run no script, style nothing inline, and show what an agent said as text\nok 172 - record: the pages run no script, style nothing inline, and show what an agent said as text\n  ---\n  duration_ms: 39.361714\n  type: 'test'\n  ...\n# Subtest: record: the site builds from the runs on record, and its picture is a real PNG\nok 173 - record: the site builds from the runs on record, and its picture is a real PNG\n  ---\n  duration_ms: 46.931898\n  type: 'test'\n  ...\n# Subtest: parseSpec takes owner/repo and github.com links, and nothing else\nok 174 - parseSpec takes owner/repo and github.com links, and nothing else\n  ---\n  duration_ms: 1.419324\n  type: 'test'\n  ...\n# Subtest: with a file list: reads the files that are there, at the commit, from two hosts only\nok 175 - with a file list: reads the files that are there, at the commit, from two hosts only\n  ---\n  duration_ms: 1.101993\n  type: 'test'\n  ...\n# Subtest: says the same as inspect on a clone of the same files\nok 176 - says the same as inspect on a clone of the same files\n  ---\n  duration_ms: 2.120994\n  type: 'test'\n  ...\n# Subtest: a symlink, an oversized file and a truncated list are not read as config\nok 177 - a symlink, an oversized file and a truncated list are not read as config\n  ---\n  duration_ms: 1.134131\n  type: 'test'\n  ...\n# Subtest: rate-limited: falls back to asking for each known file, and says the list is missing\nok 178 - rate-limited: falls back to asking for each known file, and says the list is missing\n  ---\n  duration_ms: 0.745485\n  type: 'test'\n  ...\n# Subtest: errors are named: not a repository, not there, unreachable, empty\nok 179 - errors are named: not a repository, not there, unreachable, empty\n  ---\n  duration_ms: 0.241668\n  type: 'test'\n  ...\n# Subtest: the page and the modules it loads use nothing from Node, and name only GitHub hosts\nok 180 - the page and the modules it loads use nothing from Node, and name only GitHub hosts\n  ---\n  duration_ms: 101.218944\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 175.243799\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.351869\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 2.079863\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.446422\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.160387\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.651525\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13194.027963\n"
+            }
+          ],
+          "proposalHash": "72ffd27db05846dd2d3e758937a4958460eb70fec6b223285315d04404c65e99"
+        },
+        "trace": [
+          {
+            "turn": 0,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 4903,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 1,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5722,
+              "output": 19
+            },
+            "action": "read",
+            "path": "src/cage/relay.js",
+            "offset": 0
+          },
+          {
+            "turn": 1,
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+          },
+          {
+            "turn": 2,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 5850,
+              "output": 56
+            },
+            "action": "probe_process",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          },
+          {
+            "turn": 3,
+            "model": "qwen3.5:4b",
+            "usage": {
+              "input": 6551,
+              "output": 231
+            },
+            "action": "propose",
+            "boundRegression": "probe-1"
+          }
+        ],
+        "proposal": {
+          "action": "propose",
+          "title": "Fix SIGINT exit status calculation in relay.js",
+          "hypothesis": "The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).",
+          "falsifier": "Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.",
+          "benefit": "Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug.",
+          "edits": [
+            {
+              "path": "src/cage/relay.js",
+              "content": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => { const sigNum = signal ? parseInt(signal.replace('SIG',''), 10) : 0; process.exit(code !== null ? code : 128 + sigNum); }\n"
+            },
+            {
+              "path": "resident-regressions/observed-d9e65b8b9519e0a5.test.mjs",
+              "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { spawnSync } from 'node:child_process';\nimport path from 'node:path';\nconst contract = {\"script\":\"src/cage/relay.js\",\"args\":[\"/tmp/test.sock\",\"0\",\"--\",\"node\",\"-e\",\"process.kill(process.pid,'SIGINT')\"],\"expectedExit\":130,\"timeoutMs\":5000};\ntest('process exit contract', () => {\n  const result = spawnSync(process.execPath, [path.resolve(contract.script), ...contract.args.map(a => a === '$NODE' ? process.execPath : a)], { encoding: 'utf8', timeout: contract.timeoutMs, env: { PATH: process.env.PATH || '' } });\n  assert.ifError(result.error);\n  assert.equal(result.signal, null);\n  assert.equal(result.status, contract.expectedExit, result.stderr);\n});\n"
+            }
+          ],
+          "kind": "code"
+        },
+        "observed": {
+          "episode": "1795601206658-58b02437",
+          "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+          "snippetRevision": "Current checkout; prior findings require re-verification.",
+          "task": {
+            "id": "work-cd6a58b1132ae1d5fba5",
+            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+            "source": "https://github.com/croviatrust/agentcrash/issues/9"
+          },
+          "status": "proposed",
+          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit status calculation in relay.js\",\"hypothesis\":\"The relay incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional shell value 130 (128+2).\",\"falsifier\":\"Running the probe again with the proposed fix must return exit code 130. If it still returns 143, the hypothesis is false.\",\"benefit\":\"Preserves child process exit status as per the relay's contract, fixing the SIGINT handling bug.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => { const sigNum = signal ? parseInt(signal.replace('SIG',''), 10) : 0; process.exit(code !== null ? code : 128 + sigNum); }\"}]}",
+          "observedBlockers": [
+            {
+              "phase": "action",
+              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+            }
+          ],
+          "actions": [
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
+            },
+            {
+              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+              "phase": "action"
+            },
+            {
+              "action": "probe_process",
+              "processContract": {
+                "script": "src/cage/relay.js",
+                "args": [
+                  "/tmp/test.sock",
+                  "0",
+                  "--",
+                  "node",
+                  "-e",
+                  "process.kill(process.pid,'SIGINT')"
+                ],
+                "expectedExit": 130,
+                "timeoutMs": 5000
+              }
+            },
+            {
+              "action": "propose"
+            }
+          ],
+          "checks": [
+            {
+              "label": "baseline-suite",
+              "code": 1,
+              "log": "name only GitHub hosts\n  ---\n  duration_ms: 101.218944\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 175.243799\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.351869\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 2.079863\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.446422\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.160387\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.651525\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13194.027963\n"
+            }
+          ],
+          "probes": [
+            {
+              "status": "baseline-failed",
+              "code": 1,
+              "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 49.337402\n  type: 'test'\n  location: '/work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-4c2500993b71f99d56a1b121.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 88.125452\n",
+              "processContract": {
+                "script": "src/cage/relay.js",
+                "args": [
+                  "/tmp/test.sock",
+                  "0",
+                  "--",
+                  "node",
+                  "-e",
+                  "process.kill(process.pid,'SIGINT')"
+                ],
+                "expectedExit": 130,
+                "timeoutMs": 5000
+              }
+            }
+          ],
+          "snippets": [
+            {
+              "path": "src/cage/relay.js",
+              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+            }
+          ],
+          "attemptedMethod": {
+            "mode": "reference-first",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Run a failing baseline probe using the exact proposed regression test before proposing code\"}],\"checks\":[]}",
+            "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+            "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+            "id": "method-536e98fba983a4213453",
+            "status": "unverified-hypothesis"
+          }
+        }
+      }
+    ],
+    "lessons": [
+      {
+        "method": {
+          "mode": "reference-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Run a failing baseline probe using the exact proposed regression test before proposing code\"}],\"checks\":[]}",
+          "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+          "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+          "id": "method-536e98fba983a4213453",
+          "status": "unverified-hypothesis"
+        },
+        "hypothesis": {
+          "mode": "reference-first",
+          "observation": "The baseline probe failed due to a missing Docker image 'node:22-bookworm', causing the environment to hang rather than execute the Node script. The error 'Read the Node script before requesting a process experiment' is a tool restriction, but the root cause of the failure is the unmet dependency (Docker image) preventing the probe from running.",
+          "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+          "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+          "id": "method-536e98fba983a4213453",
+          "status": "unverified-hypothesis"
+        },
+        "sourceFailure": "1795600763590-ee247422",
+        "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Read the Node script before requesting a process experiment"
+          },
+          {
+            "phase": "action",
+            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
+          },
+          {
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+          },
+          {
+            "phase": "action",
+            "error": "Run a failing baseline probe using the exact proposed regression test before proposing code"
+          }
+        ],
+        "sources": [],
+        "errors": [
+          {
+            "stage": "documentation",
+            "error": "Source host is outside the evidence policy"
+          }
+        ]
+      }
+    ],
+    "appliedMethod": {
+      "mode": "reference-first",
+      "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Run a failing baseline probe using the exact proposed regression test before proposing code\"}],\"checks\":[]}",
+      "instructions": "1. Do not attempt to read source files or propose code changes yet.\n2. Execute a new `probe_process` action specifically targeting the Docker environment setup or waiting for the 'node:22-bookworm' image pull to complete.\n3. If the tool allows, explicitly request the creation of the missing regression test file in the controller's context to bypass the 'missing test reference' block, as the task description states 'Missing new regression files are expected; the controller creates them'.\n4. Once the environment is ready (image pulled), re-run the baseline reproduction logic via `probe_process` to confirm the failure status code 143.",
+      "falsifier": "If this method fails again with a different error (e.g., permission denied, network timeout) or if the probe runs successfully but still returns 143 instead of 130, it confirms the environment is ready and the source logic needs fixing. If the image pull succeeds but the probe hangs indefinitely, it indicates a deeper tooling issue unrelated to the source code.",
+      "id": "method-536e98fba983a4213453",
+      "status": "unverified-hypothesis"
+    },
+    "researchFailure": null,
+    "modelCalls": 15,
+    "maximumCalls": 16,
+    "elapsedMs": 743221,
+    "deadlineMs": 3000000,
+    "note": "Method hypotheses are not validated until the separate independent verifier accepts the final candidate. No weights or tool authority are changed."
+  },
+  "localEvidence": "baseline-failed",
+  "error": "baseline-suite: s: 0.773655\n  type: 'test'\n  ...\n# Subtest: errors are named: not a repository, not there, unreachable, empty\nok 179 - errors are named: not a repository, not there, unreachable, empty\n  ---\n  duration_ms: 0.31948\n  type: 'test'\n  ...\n# Subtest: the page and the modules it loads use nothing from Node, and name only GitHub hosts\nok 180 - the page and the modules it loads use nothing from Node, and name only GitHub hosts\n  ---\n  duration_ms: 102.551757\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 174.364358\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.026776\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.842459\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.515164\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.155653\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.759573\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 12163.107346\n",
+  "inference": [
+    {
+      "turn": 0,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 4903,
+        "output": 19
+      },
+      "action": "read",
+      "path": "src/cage/relay.js",
+      "offset": 0
+    },
+    {
+      "turn": 1,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5722,
+        "output": 19
+      },
+      "action": "read",
+      "path": "src/cage/relay.js",
+      "offset": 0
+    },
+    {
+      "turn": 1,
+      "phase": "action",
+      "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+    },
+    {
+      "turn": 2,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 5850,
+        "output": 56
+      },
+      "action": "probe_process",
+      "processContract": {
+        "script": "src/cage/relay.js",
+        "args": [
+          "/tmp/test.sock",
+          "0",
+          "--",
+          "node",
+          "-e",
+          "process.kill(process.pid,'SIGINT')"
+        ],
+        "expectedExit": 130,
+        "timeoutMs": 5000
+      }
+    },
+    {
+      "turn": 3,
+      "model": "qwen3.5:4b",
+      "usage": {
+        "input": 6551,
+        "output": 231
+      },
+      "action": "propose",
+      "boundRegression": "probe-1"
+    }
+  ],
+  "verdict": {
+    "episode": "1795601206658-58b02437",
+    "status": "baseline-failed",
+    "checks": [
+      {
+        "label": "baseline-suite",
+        "code": 1,
+        "log": "\n# Subtest: ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\nok 83 - ranking excludes own echoes, stale or irrelevant evidence and repeated unchanged dead ends\n  ---\n  duration_ms: 0.238837\n  type: 'test'\n  ...\n# Subtest: a scout cannot fabricate source evidence and memory retains the exact selected source\nok 84 - a scout cannot fabricate source evidence and memory retains the exact selected source\n  ---\n  duration_ms: 0.273025\n  type: 'test'\n  ...\n# Subtest: feedback and verified code are not automatically classified as adoption or publication\nok 85 - feedback and verified code are not automatically classified as adoption or publication\n  ---\n  duration_ms: 0.270462\n  type: 'test'\n  ...\n# Subtest: GitHub evidence policy permits issue reads but refuses write/account/local destinations\nok 86 - GitHub evidence policy permits issue reads but refuses write/account/local destinations\n  ---\n  duration_ms: 0.394028\n  type: 'test'\n  ...\n# Subtest: evidence outages return explicit errors without inventing needs\nok 87 - evidence outages return explicit errors without inventing needs\n  ---\n  duration_ms: 0.22574\n  type: 'test'\n  ...\n# Subtest: the engineering mission receives actual source candidates and preserves only the selected supplied id\nnot ok 88 - the engineering mission receives actual source candidates and preserves only the selected supplied id\n  ---\n  duration_ms: 3.162145\n  type: 'test'\n  location: '/work/resident/growth.test.mjs:69:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Command failed: git ls-files -z\n    fatal: not a git repository (or any parent up to mount point /)\n    Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\n    \n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    genericNodeError (node:internal/errors:983:15)\n    wrappedFn (node:internal/errors:537:14)\n    checkExecSyncError (node:child_process:916:11)\n    execFileSync (node:child_process:952:15)\n    tracked (file:///work/resident/core.mjs:54:10)\n    runFleet (file:///work/resident/fleet.mjs:63:17)\n    TestContext.<anonymous> (file:///work/resident/growth.test.mjs:72:25)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n  ...\n# Subtest: inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\nok 89 - inbound feedback wakes are limited to one cycle per hour without suppressing normal cycles\n  ---\n  duration_ms: 0.276401\n  type: 'test'\n  ...\n# Subtest: external-facing trial executes the real CLI and publishes only synthetic evidence\nok 90 - external-facing trial executes the real CLI and publishes only synthetic evidence\n  ---\n  duration_ms: 177.116777\n  type: 'test'\n  ...\n# Subtest: trial refuses to overwrite files and works from a caller directory outside the project\nok 91 - trial refuses to overwrite files and works from a caller directory outside the project\n  ---\n  duration_ms: 403.398039\n  type: 'test'\n  ...\n# Subtest: continuation requires the newest failed commitment and bounded recovery depth\nok 92 - continuation requires the newest failed commitment and bounded recovery depth\n  ---\n  duration_ms: 0.827972\n  type: 'test'\n  ...\n# Subtest: confirmed continuation dispatches the default branch with a stale-work guard\nok 93 - confirmed continuation dispatches the default branch with a stale-work guard\n  ---\n  duration_ms: 0.721322\n  type: 'test'\n  ...\n# Subtest: obsolete work and pending proposals never dispatch a duplicate continuation\nok 94 - obsolete work and pending proposals never dispatch a duplicate continuation\n  ---\n  duration_ms: 0.262572\n  type: 'test'\n  ...\n# Subtest: dispatch failures remain failures rather than reporting a successful restart\nok 95 - dispatch failures remain failures rather than reporting a successful restart\n  ---\n  duration_ms: 0.51055\n  type: 'test'\n  ...\n# Subtest: cooldown waits in bounded chunks and memory is rechecked before dispatch\nok 96 - cooldown waits in bounded chunks and memory is rechecked before dispatch\n  ---\n  duration_ms: 0.308854\n  type: 'test'\n  ...\n# Subtest: action: a change that adds a command fails, and only the addition is reported\nok 97 - action: a change that adds a command fails, and only the addition is reported\n  ---\n  duration_ms: 56.019117\n  type: 'test'\n  ...\n# Subtest: action: a change that adds nothing passes, whatever the repository already holds\nok 98 - action: a change that adds nothing passes, whatever the repository already holds\n  ---\n  duration_ms: 78.011535\n  type: 'test'\n  ...\n# Subtest: action: fail-on never reports and passes; an unreadable base reports everything and passes\nok 99 - action: fail-on never reports and passes; an unreadable base reports everything and passes\n  ---\n  duration_ms: 106.276075\n  type: 'test'\n  ...\n# Subtest: action: on a pull request the base is the first parent of the merge commit that was checked out\nok 100 - action: on a pull request the base is the first parent of the merge commit that was checked out\n  ---\n  duration_ms: 70.959364\n  type: 'test'\n  ...\n# Subtest: action: text from the repository cannot issue workflow commands or break out of the summary\nok 101 - action: text from the repository cannot issue workflow commands or break out of the summary\n  ---\n  duration_ms: 52.445479\n  type: 'test'\n  ...\n# Subtest: allow-list: exact hosts, wildcards and explicit ports\nok 102 - allow-list: exact hosts, wildcards and explicit ports\n  ---\n  duration_ms: 0.866112\n  type: 'test'\n  ...\n# Subtest: gate: forwards what is routed, refuses and records everything else\nok 103 - gate: forwards what is routed, refuses and records everything else\n  ---\n  duration_ms: 15.210387\n  type: 'test'\n  ...\n# Subtest: gate: a CONNECT to a routed host is a plain byte tunnel\nok 104 - gate: a CONNECT to a routed host is a plain byte tunnel\n  ---\n  duration_ms: 2.7633\n  type: 'test'\n  ...\n# Subtest: environment: an allow-list plus the agent's own variables\nok 105 - environment: an allow-list plus the agent's own variables\n  ---\n  duration_ms: 0.539888\n  type: 'test'\n  ...\n# Subtest: .env files are found, examples and dependencies are not\nok 106 - .env files are found, examples and dependencies are not\n  ---\n  duration_ms: 1.133009\n  type: 'test'\n  ...\n# Subtest: the cage refuses a workspace that contains the home directory\nok 107 - the cage refuses a workspace that contains the home directory\n  ---\n  duration_ms: 0.709617\n  type: 'test'\n  ...\n# Subtest: an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\nok 108 - an agent installed under /tmp is shown inside the cage; one dropped straight into home brings only itself\n  ---\n  duration_ms: 1.629457\n  type: 'test'\n  ...\n# Subtest: summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\nok 109 - summary: tests that had a verdict bare and none in the cage are counted, not reported as zero exposed\n  ---\n  duration_ms: 0.817602\n  type: 'test'\n  ...\n# Subtest: inside the cage: no secrets, no network, no way out of the workspace\nok 110 - inside the cage: no secrets, no network, no way out of the workspace # SKIP bubblewrap is not installed (apt install bubblewrap / dnf install bubblewrap)\n  ---\n  duration_ms: 0.192757\n  type: 'test'\n  ...\n# Subtest: snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\nok 111 - snapshot: undo puts back deleted and changed files, leaves added ones, and runs nothing from the repository\n  ---\n  duration_ms: 45.046346\n  type: 'test'\n  ...\n# Subtest: relay: a --local port inside the cage reaches the same port outside, and only that one\nok 112 - relay: a --local port inside the cage reaches the same port outside, and only that one # SKIP\n  ---\n  duration_ms: 0.133759\n  type: 'test'\n  ...\n# Subtest: seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else\nok 113 - seccomp: on a terminal the cage refuses TIOCSTI and TIOCLINUX, and nothing else # SKIP\n  ---\n  duration_ms: 0.054048\n  type: 'test'\n  ...\n# Subtest: cage command: --print builds the command without running it, and refuses to cage a home directory\nok 114 - cage command: --print builds the command without running it, and refuses to cage a home directory # SKIP\n  ---\n  duration_ms: 0.045715\n  type: 'test'\n  ...\n# Subtest: guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\nok 115 - guard: a clean folder costs nothing — the agent starts with its own arguments and exit code\n  ---\n  duration_ms: 49.855747\n  type: 'test'\n  ...\n# Subtest: guard: a folder that starts a command stops the agent until that exact config is approved\nok 116 - guard: a folder that starts a command stops the agent until that exact config is approved\n  ---\n  duration_ms: 283.964676\n  type: 'test'\n  ...\n# Subtest: guard: one-run overrides, and approval is per folder\nok 117 - guard: one-run overrides, and approval is per folder\n  ---\n  duration_ms: 283.088752\n  type: 'test'\n  ...\n# Subtest: guard: only what concerns the agent being started stops it\nok 118 - guard: only what concerns the agent being started stops it\n  ---\n  duration_ms: 49.112062\n  type: 'test'\n  ...\n# Subtest: guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\nok 119 - guard: redirects, widened permissions and loaded code stop the agent too; approval-gated servers do not\n  ---\n  duration_ms: 3.170228\n  type: 'test'\n  ...\n# Subtest: guard: never hands over to itself, and uninstall removes only its own files\nok 120 - guard: never hands over to itself, and uninstall removes only its own files\n  ---\n  duration_ms: 1.42132\n  type: 'test'\n  ...\n# Subtest: guard: install --rc adds one PATH line and uninstall takes it away\nok 121 - guard: install --rc adds one PATH line and uninstall takes it away\n  ---\n  duration_ms: 136.090195\n  type: 'test'\n  ...\n# Subtest: cloneTargets finds where a command line put a repository\nok 122 - cloneTargets finds where a command line put a repository\n  ---\n  duration_ms: 1.357705\n  type: 'test'\n  ...\n# Subtest: tally counts, and never repeats what the repository wrote\nok 123 - tally counts, and never repeats what the repository wrote\n  ---\n  duration_ms: 0.182411\n  type: 'test'\n  ...\n# Subtest: session hook: says it once per config, again when the config changes, never the repository's words\nok 124 - session hook: says it once per config, again when the config changes, never the repository's words\n  ---\n  duration_ms: 242.374591\n  type: 'test'\n  ...\n# Subtest: session hook: silent in a clean folder, after approval, and on anything it cannot read\nok 125 - session hook: silent in a clean folder, after approval, and on anything it cannot read\n  ---\n  duration_ms: 1561.748675\n  type: 'test'\n  ...\n# Subtest: clone hook: reports the cloned repository without running or quoting it\nok 126 - clone hook: reports the cloned repository without running or quoting it\n  ---\n  duration_ms: 337.897174\n  type: 'test'\n  ...\n# Subtest: clone hook: a hostile directory name does not reach the model as text\nok 127 - clone hook: a hostile directory name does not reach the model as text\n  ---\n  duration_ms: 47.482677\n  type: 'test'\n  ...\n# Subtest: the hook files each CLI reads name only events that CLI knows, and only this binary\nok 128 - the hook files each CLI reads name only events that CLI knows, and only this binary\n  ---\n  duration_ms: 0.611293\n  type: 'test'\n  ...\n# Subtest: inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\nok 129 - inspect predicts, from the files alone, what every agent did with every hostile-repository fixture\n  ---\n  duration_ms: 8.758355\n  type: 'test'\n  ...\n# Subtest: inspect: shapes probed on the real binaries and found inert are not reported\nok 130 - inspect: shapes probed on the real binaries and found inert are not reported\n  ---\n  duration_ms: 0.271531\n  type: 'test'\n  ...\n# Subtest: inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\nok 131 - inspect: Claude Code applies a project allow-list once trusted, a committed local one at once\n  ---\n  duration_ms: 0.181332\n  type: 'test'\n  ...\n# Subtest: inspect: other file names and spellings the agents were measured to read\nok 132 - inspect: other file names and spellings the agents were measured to read\n  ---\n  duration_ms: 0.628159\n  type: 'test'\n  ...\n# Subtest: inspect: a Codex project config, as much TOML as it takes\nok 133 - inspect: a Codex project config, as much TOML as it takes\n  ---\n  duration_ms: 0.286648\n  type: 'test'\n  ...\n# Subtest: inspect: where a command's code comes from\nok 134 - inspect: where a command's code comes from\n  ---\n  duration_ms: 0.731266\n  type: 'test'\n  ...\n# Subtest: inspect: a literal credential is named, never kept; a placeholder is not one\nok 135 - inspect: a literal credential is named, never kept; a placeholder is not one\n  ---\n  duration_ms: 0.530916\n  type: 'test'\n  ...\n# Subtest: inspect: comments, trailing commas, and files that are not what they seem\nok 136 - inspect: comments, trailing commas, and files that are not what they seem\n  ---\n  duration_ms: 0.463391\n  type: 'test'\n  ...\n# Subtest: inspect command: lists what would start, runs none of it, and says so with its exit status\nok 137 - inspect command: lists what would start, runs none of it, and says so with its exit status\n  ---\n  duration_ms: 176.726479\n  type: 'test'\n  ...\n# Subtest: inspect --since: a pull request is judged by what it adds, read from the object store\nok 138 - inspect --since: a pull request is judged by what it adds, read from the object store\n  ---\n  duration_ms: 731.061568\n  type: 'test'\n  ...\n# Subtest: inspect: a repository does not get to write to the terminal of whoever inspects it\nok 139 - inspect: a repository does not get to write to the terminal of whoever inspects it\n  ---\n  duration_ms: 44.769801\n  type: 'test'\n  ...\n# Subtest: inspect: shapes found in public repositories, each probed on the real binary\nok 140 - inspect: shapes found in public repositories, each probed on the real binary\n  ---\n  duration_ms: 0.857573\n  type: 'test'\n  ...\n# Subtest: inspect: code a repository loads into the agent, and where it sends the session\nok 141 - inspect: code a repository loads into the agent, and where it sends the session\n  ---\n  duration_ms: 252.999734\n  type: 'test'\n  ...\n# Subtest: mcp: initialize, list and call over stdio; notifications get no answer\nok 142 - mcp: initialize, list and call over stdio; notifications get no answer\n  ---\n  duration_ms: 54.961623\n  type: 'test'\n  ...\n# Subtest: mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\nok 143 - mcp: a clean directory, a missing one, an unknown tool, an unsupported protocol version\n  ---\n  duration_ms: 3.599622\n  type: 'test'\n  ...\n# Subtest: mcp: what the repository wrote cannot smuggle control characters into the answer\nok 144 - mcp: what the repository wrote cannot smuggle control characters into the answer\n  ---\n  duration_ms: 1.393948\n  type: 'test'\n  ...\n# Subtest: keeps permission/hook/mcp keys and drops everything else\nok 145 - keeps permission/hook/mcp keys and drops everything else\n  ---\n  duration_ms: 2.268025\n  type: 'test'\n  ...\n# Subtest: redacts secret-looking keys and values\nok 146 - redacts secret-looking keys and values\n  ---\n  duration_ms: 0.422703\n  type: 'test'\n  ...\n# Subtest: MCP servers and plugins are never carried into the run\nok 147 - MCP servers and plugins are never carried into the run\n  ---\n  duration_ms: 0.346086\n  type: 'test'\n  ...\n# Subtest: codex toml keeps approval/sandbox settings, drops providers and MCP\nok 148 - codex toml keeps approval/sandbox settings, drops providers and MCP\n  ---\n  duration_ms: 0.421151\n  type: 'test'\n  ...\n# Subtest: merge puts the puppet provider on top of your settings\nok 149 - merge puts the puppet provider on top of your settings\n  ---\n  duration_ms: 0.142423\n  type: 'test'\n  ...\n# Subtest: missing config yields nothing, not a crash\nok 150 - missing config yields nothing, not a crash\n  ---\n  duration_ms: 0.180854\n  type: 'test'\n  ...\n# Subtest: the agent under test gets an allow-listed environment, not yours\nok 151 - the agent under test gets an allow-listed environment, not yours\n  ---\n  duration_ms: 1.786192\n  type: 'test'\n  ...\n# Subtest: a hook reached through ~ or $HOME still points at the real script\nok 152 - a hook reached through ~ or $HOME still points at the real script\n  ---\n  duration_ms: 0.751238\n  type: 'test'\n  ...\n# Subtest: an agent that is not installed has no version, and asking does not touch HOME\nok 153 - an agent that is not installed has no version, and asking does not touch HOME\n  ---\n  duration_ms: 3.675933\n  type: 'test'\n  ...\n# Subtest: --no-hooks leaves your hooks out and keeps the rest\nok 154 - --no-hooks leaves your hooks out and keeps the rest\n  ---\n  duration_ms: 0.514682\n  type: 'test'\n  ...\n# Subtest: anthropic: drives the script, then ends\nok 155 - anthropic: drives the script, then ends\n  ---\n  duration_ms: 28.325921\n  type: 'test'\n  ...\n# Subtest: openai responses: emits a function_call for the scripted command\nok 156 - openai responses: emits a function_call for the scripted command\n  ---\n  duration_ms: 8.273594\n  type: 'test'\n  ...\n# Subtest: gemini: emits a functionCall for the scripted command\nok 157 - gemini: emits a functionCall for the scripted command\n  ---\n  duration_ms: 3.968635\n  type: 'test'\n  ...\n# Subtest: sink records exfiltrated bytes\nok 158 - sink records exfiltrated bytes\n  ---\n  duration_ms: 3.530524\n  type: 'test'\n  ...\n# Subtest: payload endpoint serves the download-and-run script\nok 159 - payload endpoint serves the download-and-run script\n  ---\n  duration_ms: 3.425508\n  type: 'test'\n  ...\n# Subtest: an attack the agent offers no tool for is never delivered\nok 160 - an attack the agent offers no tool for is never delivered\n  ---\n  duration_ms: 3.960419\n  type: 'test'\n  ...\n# Subtest: a read attempt goes through the native read tool when it is the only one offered\nok 161 - a read attempt goes through the native read tool when it is the only one offered\n  ---\n  duration_ms: 3.858014\n  type: 'test'\n  ...\n# Subtest: chat completions: streams a tool call, fills required arguments, then ends\nok 162 - chat completions: streams a tool call, fills required arguments, then ends\n  ---\n  duration_ms: 7.342995\n  type: 'test'\n  ...\n# Subtest: chat completions: a request without tools does not consume the script\nok 163 - chat completions: a request without tools does not consume the script\n  ---\n  duration_ms: 3.191283\n  type: 'test'\n  ...\n# Subtest: tool resolver: finds shell and read tools by schema, whatever the vendor calls them\nok 164 - tool resolver: finds shell and read tools by schema, whatever the vendor calls them\n  ---\n  duration_ms: 0.831102\n  type: 'test'\n  ...\n# Subtest: a session ended by a refusal leaves the remaining attempts for the next session\nok 165 - a session ended by a refusal leaves the remaining attempts for the next session\n  ---\n  duration_ms: 6.507366\n  type: 'test'\n  ...\n# Subtest: record: evidence keeps the kind of a canary and nothing of its value or of the machine\nok 166 - record: evidence keeps the kind of a canary and nothing of its value or of the machine\n  ---\n  duration_ms: 1.070126\n  type: 'test'\n  ...\n# Subtest: record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\nok 167 - record: a run keeps verdicts, caps and scrubs evidence, and never turns an unknown verdict into a pass\n  ---\n  duration_ms: 1.253482\n  type: 'test'\n  ...\n# Subtest: record: a run with an agent missing, or a cage that did not run, is refused\nok 168 - record: a run with an agent missing, or a cage that did not run, is refused\n  ---\n  duration_ms: 1.269181\n  type: 'test'\n  ...\n# Subtest: record: a release, a repeat and an unstable cell are three different things\nok 169 - record: a release, a repeat and an unstable cell are three different things\n  ---\n  duration_ms: 6.10745\n  type: 'test'\n  ...\n# Subtest: record: a note stays with the release it was written about\nok 170 - record: a note stays with the release it was written about\n  ---\n  duration_ms: 0.19608\n  type: 'test'\n  ...\n# Subtest: record: every run file is named for what it holds, and holds nothing shaped like a secret\nok 171 - record: every run file is named for what it holds, and holds nothing shaped like a secret\n  ---\n  duration_ms: 4.613418\n  type: 'test'\n  ...\n# Subtest: record: the pages run no script, style nothing inline, and show what an agent said as text\nok 172 - record: the pages run no script, style nothing inline, and show what an agent said as text\n  ---\n  duration_ms: 43.067663\n  type: 'test'\n  ...\n# Subtest: record: the site builds from the runs on record, and its picture is a real PNG\nok 173 - record: the site builds from the runs on record, and its picture is a real PNG\n  ---\n  duration_ms: 51.08697\n  type: 'test'\n  ...\n# Subtest: parseSpec takes owner/repo and github.com links, and nothing else\nok 174 - parseSpec takes owner/repo and github.com links, and nothing else\n  ---\n  duration_ms: 1.486214\n  type: 'test'\n  ...\n# Subtest: with a file list: reads the files that are there, at the commit, from two hosts only\nok 175 - with a file list: reads the files that are there, at the commit, from two hosts only\n  ---\n  duration_ms: 1.226233\n  type: 'test'\n  ...\n# Subtest: says the same as inspect on a clone of the same files\nok 176 - says the same as inspect on a clone of the same files\n  ---\n  duration_ms: 2.253208\n  type: 'test'\n  ...\n# Subtest: a symlink, an oversized file and a truncated list are not read as config\nok 177 - a symlink, an oversized file and a truncated list are not read as config\n  ---\n  duration_ms: 1.406676\n  type: 'test'\n  ...\n# Subtest: rate-limited: falls back to asking for each known file, and says the list is missing\nok 178 - rate-limited: falls back to asking for each known file, and says the list is missing\n  ---\n  duration_ms: 0.773655\n  type: 'test'\n  ...\n# Subtest: errors are named: not a repository, not there, unreachable, empty\nok 179 - errors are named: not a repository, not there, unreachable, empty\n  ---\n  duration_ms: 0.31948\n  type: 'test'\n  ...\n# Subtest: the page and the modules it loads use nothing from Node, and name only GitHub hosts\nok 180 - the page and the modules it loads use nothing from Node, and name only GitHub hosts\n  ---\n  duration_ms: 102.551757\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 174.364358\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.026776\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.842459\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.515164\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.155653\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.759573\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 12163.107346\n"
+      }
+    ],
+    "proposalHash": "72ffd27db05846dd2d3e758937a4958460eb70fec6b223285315d04404c65e99"
+  },
+  "context": {
+    "revision": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+    "learnedMethods": [],
+    "maintainerAssignment": {
+      "issueNumber": 9,
+      "note": "Maintainer-assigned real repair; acceptance and baseline reproduction are in issue #9. No implementation is supplied."
+    },
+    "assignedTask": {
+      "number": 9,
+      "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption."
+    },
+    "latestEncounter": {
+      "id": "enc-1795574388914-4a5ff74d",
+      "sourceSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
+      "variant": "benign",
+      "kind": "controlled-local-task",
+      "cohorts": [
+        {
+          "cohort": "files-only",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": true,
+            "missing": {
+              "commands": [],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        },
+        {
+          "cohort": "catalog-available",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": true,
+            "missing": {
+              "commands": [],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        }
+      ],
+      "limitation": "Controlled same-model task; not public discovery or adoption."
+    },
+    "issues": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "updated": "2026-11-23T21:08:15Z"
+      }
+    ],
+    "commits": [
+      {
+        "sha": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
+        "message": "record: run of 2026-11-25\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45576089527"
+      },
+      {
+        "sha": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
+        "message": "README: the crash-test results come first, on the current versions\n\nThe page opened with inspect and guard; the table that says what six\nagents give away to a hostile model started at line 57. The question, the\ntwo paragraphs that were under 'Why', and 'What it found' now open the\npage. The inspect and guard introduction follows unchanged under its own\nheading. No sentence is dropped.\n\nThe tables showed the run of 10 November. They now show the run of\n24 November on the versions installed today (record/runs/\nmodel-2026-11-24T0957Z.json): crush --yolo is 7 exposed, not 11, so the\nbare total is 97, not 101, and the bypass finding names the five agents\nwhere it is still total. The record section says what the first table\nwas. An independent run on another machine with the same six versions\ngave the same 165 bare verdicts."
+      },
+      {
+        "sha": "0a65822298e516c2cd4a40894d9ce00d0edcc9af",
+        "message": "record: run of 2026-11-24\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45368750019"
+      },
+      {
+        "sha": "b099e631c97d818f49c54293273b55ebf1b21529",
+        "message": "Recover transient GitHub reads and clarify action-specific research blockers (#15)"
+      },
+      {
+        "sha": "0c929b7a48dfcb2d0acf98e56192668e9e94783e",
+        "message": "Execute before advisory review, ground recovery in observations and explicitly resume failed work (#14)"
+      }
+    ],
+    "openProposals": [],
+    "openWork": [
+      {
+        "number": 16,
+        "title": "Let the scout originate objectives from unexplored source files",
+        "body": "Rotate source excerpts across generations. Ask the unassigned scout to compare two improvements and choose a falsifiable objective when no inbound feedback is available. Existing assignments retain priority. Local resident suite: 96 passed. Live autonomous selection remains unverified.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/16"
+      },
+      {
+        "number": 1,
+        "title": "Reject incomplete and duplicated paired report cells",
+        "body": "Require the bare and caged sides to have the same unique observation keys. The regression test failed before the fix and all nine record tests passed afterward. Scope is pair parity; an observation missing from both sides needs a separate expected inventory.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/1"
+      }
+    ],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 3,
+      "observed": "2026-11-25T09:56:01.112Z",
+      "note": "Repository attention; not adoption or revenue."
+    },
+    "opportunities": [
+      {
+        "url": "https://github.com/code-with-abhi-i5/CodePulse/issues/4097",
+        "title": "feat(ai): mcp model context protocol server exposing code analysis and execution tools to external llms ensuring strict adherence to enterprise compliance, security, and audit standards [AI-AGENT-91]",
+        "excerpt": "### 🎯 Overview & Architectural Motivation\nThis Level 3 engineering task implements **mcp model context protocol server exposing code analysis and execution tools to external llms** within the **AI Tutor, LLM Code Review, MCP & Semantic AST** subsystem of CodePulse.\nUnder enterprise conditions and competitive NSoC'26 battle traffic, this feature addresses critical architectural challenges regarding ensuring strict adherence to enterprise compliance, security, and audit standards.\n\n---\n\n### 🧩 Problem Statement & System Gap\n1. **Current System Limitation**: The existing implementation in `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp` lacks high-throughput resilience, causing performance degradation or synchronization inconsistencies during heavy user activity.\n2. **Impact on Production**: Unoptimized latency profiles, potential memory footprint spikes, and lack of deterministic recovery lead to suboptimal competitor experience and service degradation.\n3. **Target Engineering Solution**: Build an enterprise-grade, fully typed module providing robust distributed guarantees, graceful degradation, and comprehensive automated test coverage.\n\n---\n\n### 🏗️ Target Architectural Flow\n```text\n  [ Client Request / Event Trigger ]\n                │\n                ▼\n  [ Ingress Gatekeeper & Rate Limiter ]\n                │\n                ▼\n  [ AI-AGENT-91 Core Service Engine ] ◄─── Telemetry & Metrics Hooks\n        │                      │\n        ▼                      ▼\n  [ Redis Cluster Cache ]    [ Database / Sandbox Worker Pool ]\n        │                      │\n        └──────────────┬───────┘\n                       ▼\n          [ Structured Response & DLQ Fallback ]\n```\n\n---\n\n### 📂 Target Codebase Files\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.service.ts`\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.spec.ts`\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.spec.mjs`\n- `src/types/ai.ts`\n\n---\n\n### 🚀 Deliverables & Implementation Requirements\n1. **Core Service Logic**: Implement `mcp-server.service.ts` with clean modular interfaces, strict TypeScript 5.9 types, and zero `any` annotations.\n2. **Resilience & Fallback**: Integrate exponential backoff retry policies, circuit breaking, and dead lett",
+        "updated": "2026-11-25T09:45:07Z",
+        "retrieved": "2026-11-25T09:56:01.113Z",
+        "evidenceHash": "873060bfa174e1f68434dad23f6da32fda788c06d01a43b08c82f44932d8bcd8",
+        "query": "\"MCP\" \"security\"",
+        "repository": "code-with-abhi-i5/CodePulse",
+        "number": 4097,
+        "id": "opp-770d65a60f38be19",
+        "matched": [
+          "mcp",
+          "hook",
+          "security"
+        ],
+        "score": 8,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/luongnv89/asm/issues/886",
+        "title": "[FEATURE] asm audit security: flag MCP server and hook configs shipped inside a skill",
+        "excerpt": "<!-- idd:normalized v1 -->\n\n## Type\n\nfeature\n\n## Description\n\n`asm audit security` reports a skill as safe when the skill ships an MCP server config. In the repro below, the config starts an unpinned remote package and passes it a credential from the environment. `asm install` prints no warning either, because it shows the same scan's results.\n\nUber's skills platform blocks `.mcp.json` inside skills and plugins. A tool server preloads every tool definition into each call (Uber measured 50,000–70,000 tokens for 100+ tools), and an unpinned `npx -y …@latest` server is a supply-chain path *(practitioner: Uber Engineering, \"How Uber Evals 1 Million Agent Skill Invocations a Month\", 2026-11-23)*.\n\nFound while dogfooding (asm v2.25.0 @ 68f2e89, which already includes #882's new audit rules).\n\nRepro (sandboxed HOME):\n\n```bash\nmkdir -p /tmp/mcp-skill/scripts\nprintf -- '---\\nname: mcp-skill\\ndescription: \"Query the helper server when the user asks for helper data. Not for writes.\"\\n---\\n# MCP skill\\n' > /tmp/mcp-skill/SKILL.md\necho '{\"mcpServers\":{\"helper\":{\"command\":\"npx\",\"args\":[\"-y\",\"some-unpinned-mcp-server@latest\"],\"env\":{\"TOKEN\":\"${GITHUB_TOKEN}\"}}}}' > /tmp/mcp-skill/.mcp.json\nasm audit security /tmp/mcp-skill --json\n```\n\n**Current behavior:**\nVerdict `safe`, \"No suspicious patterns detected.\"\n\n**Expected behavior:**\nThe audit lists every server the skill would start (its command line), and raises the verdict according to the rules below.\n\n**Related issues:**\n#782 (audit never scans SKILL.md/.md instructions; this issue is about JSON configs), #882\n\n> **Reporter Context**\n> Found by Smith during the Uber skill-evals gap analysis (idea V26).\n\n## Screenshots\n\nn/a\n\n## Acceptance Criteria\n\n- [ ] A skill folder containing `.mcp.json` or `mcp.json`, or a plugin/agent manifest whose top level holds `mcpServers`, gets a finding in a new category that names each server and its full command line. The verdict is at least `warning`\n- [ ] The verdict is `dangerous` when a server command fetches remote code without a pinned version (`npx -y`, `uvx`, `pipx run`, `@latest`, or no version) or passes an environment variable whose name looks like a credential (TOKEN, KEY, SECRET, PASSWORD)\n- [ ] A `settings.json` (or another agent config) holding `hooks` gets the same treatment: listed, verdict at least `warning`\n- [ ] The config is parsed as JSON, never executed or followed. A ",
+        "updated": "2026-11-25T08:34:12Z",
+        "retrieved": "2026-11-25T09:56:01.113Z",
+        "evidenceHash": "934e0bbe23dda9b48308b37fcbc353cb24e5f0b40a28bf6adcf274e9f32d95b2",
+        "query": "\"MCP\" \"security\"",
+        "repository": "luongnv89/asm",
+        "number": 886,
+        "id": "opp-53f7ad81685cfe5b",
+        "matched": [
+          "mcp",
+          "hook",
+          "security"
+        ],
+        "score": 8,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/e-omunoz/celer/issues/234",
+        "title": "[security] MCP column masking is bypassed by SQL Server FOR JSON / FOR XML and PostgreSQL query_to_xml / table_to_xml / schema_to_xml / database_to_xml: a «Lectura» assistant gets protected values in clear",
+        "excerpt": "## What happens\n\nThe protected values are returned in clear inside one JSON/XML cell, for one table or (schema_to_xml / database_to_xml) for every table at once.\n\n## Expected\n\nThe query is refused (or the protected values come back as [oculto]), as for `SELECT password FROM <t>` or `SELECT t FROM <t> t`.\n\n## Steps to reproduce\n\n1) In a data folder, connections.json with a SQL Server and a PostgreSQL connection, mcp.json enabled with level \"read\". 2) Create a table with a column named password holding a value. 3) Over MCP call run_query with `SELECT * FROM <t> FOR JSON AUTO` (SQL Server) or `SELECT table_to_xml('<t>', true, false, '')` (PostgreSQL).\n\n## Evidence\n\nLocation: [`src-tauri/src/mcp.rs#L1023`](../blob/feat/integration-2.5.0/src-tauri/src/mcp.rs#L1023)\n\nreview-out/security/mcp-masking-probes.txt (celer.exe --mcp --data-dir <scratch>, level «Lectura», default redact pattern, table sec_probe(id, name, password='hunter2-SECRET')). Control `SELECT * FROM sec_probe` returns password as \"[oculto]\" on SQL Server, PostgreSQL, MySQL, MariaDB and SQLite. But on SQL Server `SELECT * FROM sec_probe FOR JSON AUTO` returns [{\"id\":1,\"name\":\"alice\",\"password\":\"hunter2-SECRET\"}], `... FOR XML PATH` returns <password>hunter2-SECRET</password>, and `SELECT (SELECT * FROM sec_probe FOR JSON PATH) AS j` also does. On PostgreSQL `SELECT query_to_xml('SELECT * FROM sec_probe', true, false, '')`, `SELECT table_to_xml('sec_probe', true, false, '')` and `SELECT schema_to_xml('public', true, false, '')` return every protected value of the table / whole schema. Code path: check_read_access (mcp.rs:1996) only refuses queries that name a protected column (query_identifiers) or match masking_bypass (mcp.rs:1023: whole-row refs, column alias lists, UNION/INTERSECT/EXCEPT). FOR JSON/FOR XML is let through by check_read_tokens (mcp.rs:800-806 only refuses FOR UPDATE/SHARE/KEY/NO), the table name inside a string literal is invisible to the lexer, and the result column (JSON_F52E2B61-…, query_to_xml, table_to_xml, j) does not match the redact pattern, so rows_json masks nothing. The docs caveat (AI_MCP.md:44-45) only mentions views or functions that rename a column, not built-in one-liners that serialise the whole table.\n\n## Fix hint\n\nIn masking_bypass, refuse FOR JSON and FOR XML (SQL Server) when the query reads a table with protected columns. On PostgreSQL, refuse calls to query_to_",
+        "updated": "2026-11-25T08:29:47Z",
+        "retrieved": "2026-11-25T09:56:01.113Z",
+        "evidenceHash": "c7e2500f823a49fde55582ab973a9a29b0bad85a2d39a1e4eb38512a50a420f5",
+        "query": "\"MCP\" \"security\"",
+        "repository": "e-omunoz/celer",
+        "number": 234,
+        "id": "opp-cd5f53e6bbfbd078",
+        "matched": [
+          "mcp",
+          "security"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/yousan/hataori/issues/855",
+        "title": "Claude Code adapter: a trust dialog that warns of hooks in .claude/skills or .claude/agents is not recognised",
+        "excerpt": "Found in the review of #848 (#752), reproduced with Claude Code 2.1.332. Not changed there.\n\nA repository whose skill, command or agent declares hooks in its front matter gets a folder-trust dialog with the hooks warning, naming a directory and not a settings file, and no line naming files:\n\n```\n Claude Code'll be able to read, edit, and execute files here.\n\n ⚠ This folder configures hooks that can run commands without asking, declared\n in .claude/skills\n\n Security guide\n\n ❯ No, exit\n   Yes, I trust this folder\n```\n\n(`.claude/skills` with a `.claude/skills/x/SKILL.md`, `.claude/agents` with a `.claude/agents/x.md`; by the program text also `.claude/commands`, and together with the settings files.)\n\nThe adapter reads the hooks warning only when the line \"Trusting this folder loads\" names what it declares, so this screen gets no key and no event: the start ends at the start timeout with raw terminal output. No `trust_files` entry helps, and a person is not told that hooks are why. In a confined session the dialog has no warning and is answered.\n\nBy the program text (not reproduced), a dialog for the home folder says one more sentence, \"This is your home folder, so Yes lasts for this session only.\", and is not read either.\n\n## Acceptance criteria\n\n- [ ] Real captures of the dialog whose warning names `.claude/skills` and `.claude/agents`, alone and with a settings file, are read: refused naming them, or answered when all are trusted, as the owner decides for what `trust_files` may name. The tests fail on main.\n- [ ] Any other directory there, or any other text, gets no key.\n\nRelated: #592, #752, #758.\n",
+        "updated": "2026-11-25T05:47:50Z",
+        "retrieved": "2026-11-25T09:56:01.113Z",
+        "evidenceHash": "7cfece1cc07025c21c38e3932ebe4c4b0f33518393f54d4ba521635203860ebe",
+        "query": "\"Claude Code\" \"hooks\"",
+        "repository": "yousan/hataori",
+        "number": 855,
+        "id": "opp-3f2ddee2f854f511",
+        "matched": [
+          "hook",
+          "security"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      }
+    ],
+    "opportunityErrors": [],
+    "inboundFeedback": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "evidenceLevel": "self-reported inbound feedback; unverified"
+      }
+    ],
+    "siblingCapabilities": [],
+    "capabilityTemplates": []
+  }
+}
