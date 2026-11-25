@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795609477329-bfd5dbcf",
+  "source": {
+    "id": "opp-3cb01dfa27991c7a",
+    "url": "https://github.com/phil65/agentpool/issues/49",
+    "title": "MCP lifecycle, signal, concurrency & security bugs (cross-task cancel-scope cleanup, elicitation race, tool bridge ctx bypass, MCPDiscoveryToolset leak)",
+    "evidenceHash": "93f4d9c1a7adcf47c279e4d72c036f464844739ad55d0680f790582323d98e00",
+    "updated": "2026-11-25T11:11:53Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute a direct Node script using spawnSync to confirm the exit code is 143, then propose the fix mapping SIGINT to 130.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
