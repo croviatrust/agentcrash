@@ -1,20 +1,7 @@
 {
   "version": 1,
-  "generation": 31,
+  "generation": 32,
   "recent": [
-    {
-      "id": "1795436043117-9e32dccf",
-      "repo": "croviatrust/agentcrash",
-      "focus": "Remove a measurable obstacle to an agent adopting and using the product.",
-      "started": "2026-11-23T12:14:03.121Z",
-      "finished": "2026-11-23T12:21:31.416Z",
-      "status": "stopped",
-      "localEvidence": "stopped",
-      "reason": "Turn budget exhausted without a valid experiment.",
-      "error": "",
-      "findings": [],
-      "probes": []
-    },
     {
       "id": "1795436668228-cf5563b5",
       "repo": "croviatrust/agentcrash",
@@ -1033,6 +1020,64 @@
         "falsifier": "If the probe passes after this edit, it confirms the exit code was incorrectly calculated. If it fails, the tool environment cannot execute the proposed change.",
         "benefit": "Preserves the contract that relay.js exits with the child's actual status (130 for SIGINT), enabling correct error reporting in agent tasks."
       }
+    },
+    {
+      "id": "1795639118423-95c88e96",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Measure whether an agent can discover and use the product on a controlled task.",
+      "started": "2026-11-25T20:37:58.056Z",
+      "finished": "2026-11-25T20:38:38.421Z",
+      "status": "encounter-recorded",
+      "localEvidence": "stopped",
+      "reason": "Controlled encounter recorded; no code repair or organic adoption inferred.",
+      "error": "",
+      "findings": [],
+      "encounterSummary": {
+        "id": "enc-1795639078056-4421f9bc",
+        "sourceSHA": "f28e139a079f28b705a9b01ce6244b3bdb39a18f",
+        "variant": "benign",
+        "kind": "controlled-local-task",
+        "cohorts": [
+          {
+            "cohort": "files-only",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": true,
+              "missing": {
+                "commands": [],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          },
+          {
+            "cohort": "catalog-available",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": true,
+              "missing": {
+                "commands": [],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          }
+        ],
+        "limitation": "Controlled same-model task; not public discovery or adoption."
+      },
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -1062,7 +1107,7 @@
       "rejected": 0
     },
     "Measure whether an agent can discover and use the product on a controlled task.": {
-      "attempts": 3,
+      "attempts": 4,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -1191,8 +1236,8 @@
   },
   "capabilities": [],
   "lastEncounter": {
-    "id": "enc-1795574388914-4a5ff74d",
-    "sourceSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
+    "id": "enc-1795639078056-4421f9bc",
+    "sourceSHA": "f28e139a079f28b705a9b01ce6244b3bdb39a18f",
     "variant": "benign",
     "kind": "controlled-local-task",
     "cohorts": [
@@ -1603,97 +1648,15 @@
         "checkpoints": []
       },
       {
-        "id": "work-cd6a58b1132ae1d5fba5",
+        "id": "work-31cc89c71a8e75d26c02",
         "repo": "croviatrust/agentcrash",
-        "goal": "maintain",
-        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-        "source": "https://github.com/croviatrust/agentcrash/issues/9",
-        "evidenceHash": "accc3b45ebbd85735f1c",
-        "status": "blocked",
-        "attempts": 6,
-        "checkpoints": [
-          {
-            "episode": "1795607274394-e4a08222",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Execute a new regression test in the next turn to verify the baseline failure, then propose the minimal edit to fix the signal mapping condition.",
-            "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7"
-          },
-          {
-            "episode": "1795609477329-bfd5dbcf",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Execute a direct Node script using spawnSync to confirm the exit code is 143, then propose the fix mapping SIGINT to 130.",
-            "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7"
-          },
-          {
-            "episode": "1795611323315-db3a8fcb",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Read src/cage/relay.js to understand current SIGINT handling logic, then propose the mapping change.",
-            "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7"
-          }
-        ],
-        "lastEpisode": "1795611323315-db3a8fcb",
-        "next": "Read src/cage/relay.js to understand current SIGINT handling logic, then propose the mapping change.",
-        "recoveryCycles": 6,
-        "lastFailure": {
-          "episode": "1795611323315-db3a8fcb",
-          "baseSHA": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
-          "snippetRevision": "Current checkout; prior findings require re-verification.",
-          "task": {
-            "id": "work-cd6a58b1132ae1d5fba5",
-            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-            "source": "https://github.com/croviatrust/agentcrash/issues/9"
-          },
-          "status": "stopped",
-          "observedBlockers": [
-            {
-              "phase": "action",
-              "error": "Read the Node script before requesting a process experiment"
-            },
-            {
-              "phase": "action",
-              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
-            }
-          ],
-          "modelReasonUnverified": "No source file found to execute; cannot reproduce the SIGINT exit code discrepancy without reading the actual relay.js implementation first.",
-          "actions": [
-            {
-              "action": "probe_process"
-            },
-            {
-              "error": "Read the Node script before requesting a process experiment",
-              "phase": "action"
-            },
-            {
-              "action": "read",
-              "path": "src/command.js"
-            },
-            {
-              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
-              "phase": "action"
-            },
-            {
-              "action": "search"
-            },
-            {
-              "action": "stop"
-            }
-          ],
-          "checks": [],
-          "probes": [],
-          "snippets": [],
-          "attemptedMethod": {
-            "mode": "custom",
-            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[]}",
-            "instructions": "Execute a NEW, distinct probe process that bypasses the file system read restrictions by invoking Node directly via `probe_process` with a fully constructed command string. The command must explicitly use `spawnSync` logic within the probe script itself to simulate the task's reproduction case without relying on reading the source file again. Use a unique, non-repeating probe ID and ensure the argument list for the child process matches the task's expected input exactly.",
-            "falsifier": "If this method fails with a different error (e.g., permission denied or timeout) or returns no output, it confirms that `probe_process` is the correct channel to bypass file read blocks and execute arbitrary Node scripts without needing to parse or re-read existing source files.",
-            "id": "method-56c3516390e84629cbee",
-            "status": "unverified-hypothesis"
-          }
-        },
-        "cooldownUntil": "2026-11-25T13:12:48.452Z"
+        "goal": "create",
+        "objective": "Investigate the reported need: [SECURITY] Codex-transported MCP results skip the untrusted-tool-result fence: the projector builds the tool message itself and names it `mcp.<server>.<tool>`",
+        "source": "https://github.com/Da-Mikey/hermes-agent-evolution/issues/442",
+        "evidenceHash": "d4b89fe0d14866917e60",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
       }
     ]
   },

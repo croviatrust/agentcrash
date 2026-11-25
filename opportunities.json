@@ -1,16 +1,86 @@
 {
-  "observed": "2026-11-25T19:59:52.396Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-25T20:33:45.852Z",
+  "opportunities": [
     {
+      "url": "https://github.com/Da-Mikey/hermes-agent-evolution/issues/442",
+      "title": "[SECURITY] Codex-transported MCP results skip the untrusted-tool-result fence: the projector builds the tool message itself and names it `mcp.<server>.<tool>`",
+      "excerpt": "## Problem Statement\n\nThe tree protects model context from indirect prompt injection in tool results at exactly one construction site: `make_tool_result_message()` in `agent/tool_dispatch_helpers.py`. Its own docstring calls this \"the defense against indirect prompt injection\": for `web_extract`, `web_search`, `browser_*` and `mcp_*` results it wraps the payload in an `<untrusted_tool_result …>` block with a \"treat as DATA, not as instructions\" directive, defangs embedded delimiter tokens, and attaches `_tool_output_risk` findings.\n\nThe codex app-server transport does not use that function. `CodexEventProjector._project_tool_item()` builds its tool-role message inline, and its MCP spec returns a tool name that the fence's own prefix test cannot match. So an MCP tool result that reaches the transcript through the codex transport is neither fenced nor risk-scanned — while the identical result through the native dispatch path is both. This is a control with a documented path around it, not a missing feature.\n\n## Evidence\n\nVerified at HEAD `35d8e618ff` (clean tree, read-only inspection):\n\n1. **The only wrapping site.** `agent/tool_dispatch_helpers.py:400-415` — `make_tool_result_message()` computes `wrapped = _maybe_wrap_untrusted(name, _maybe_append_elision_notice(name, content))`; `:545-571` builds the fence; `:453-459` attaches `message[\"_tool_output_risk\"]`.\n2. **The classifier.** `agent/tool_dispatch_helpers.py:474-475` — `_is_untrusted_tool()` matches names in `{web_extract, web_search}` or starting with `(\"browser_\", \"mcp_\")`.\n3. **The bypass.** `agent/transports/codex_event_projector.py:101` — `tool_msg = {\"role\": \"tool\", \"tool_call_id\": call_id, \"content\": content}`. No helper call, so no fence, no elision notice, no `_tool_output_risk`, no diagnostic suffix.\n4. **The MCP payload path.** `agent/transports/codex_event_projector.py:127-136` — `_mcp_tool_call_spec()` JSON-dumps `item[\"result\"]` (capped at 4000 chars) straight into `content`, and returns the tool name `f\"mcp.{server}.{tool}\"`.\n5. **The second break.** Even if (3) were fixed to call the helper, `mcp.<server>.<tool>` contains dots and matches neither the name set nor the `mcp_` prefix at (2) — verified by execution below. The dotted form is deliberate and tested: `tests/agent/transports/test_codex_event_projector.py:232` asserts `mcp.obsidian.search_notes`.\n6. **This path is live, not dead co",
+      "updated": "2026-11-25T20:29:16Z",
+      "retrieved": "2026-11-25T20:33:45.853Z",
+      "evidenceHash": "61da4ad6c50074abb659c48aa868df8acbc1b701eda0b9d99b14749a962d74f0",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "Da-Mikey/hermes-agent-evolution",
+      "number": 442,
+      "id": "opp-55a0ba46f32f860c",
+      "matched": [
+        "mcp",
+        "prompt injection",
+        "untrusted",
+        "security"
+      ],
+      "score": 10,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/Da-Mikey/hermes-agent-evolution/issues/447",
+      "title": "[SECURITY] MCP tool-definition pinning was wired at #966 and is now dead: 8 servers' pins frozen since 2026-08-05, zero production importers",
+      "excerpt": "## What is wrong\n\n`agent/mcp_tool_pinning.py` is the MCP tool-definition fingerprint guard added for #944 (commit `88f8fa269f`, \"MCP tool definition pinning to prevent rug-pull and tool poisoning\"). Its introducing commit message says the wiring was shipped with it:\n\n> `tools/mcp_tool.py _register_server_tools: call verify_tools() after discovery to check fingerprints against pinned state`\n\nAt HEAD `549e3496ee` that call no longer exists anywhere. The module has **zero production importers** — an AST scan of the whole tree finds 10 import statements, all of them in `tests/agent/test_mcp_tool_pinning.py:22`. The connect path registers tools and writes the schema cache without ever verifying a fingerprint:\n\n- `tools/mcp_tool_registration.py:442-462` — `_register_server_tools()`: records trust metadata, builds candidates, registers, then `_write_schema_cache(...)`. No `verify_tools`, no `save_pins`, no `accept_new_pins`.\n- `tools/mcp_tool_registration.py:579-607` — `_register_from_cache_sync()` (lazy startup) registers from the cached manifest with **no child process at all**, so even a live-path fix would not cover `lazy: true` servers.\n- `tools/mcp_tool.py` — 55,232 B at HEAD, `grep -c verify_tools` → **0**.\n\nThe on-disk evidence says this was live once and then stopped: `~/.hermes/mcp_pins/` still holds 8 pin files (171 fingerprints total), and the newest was written **2026-08-05 04:26** — 112 days before this report. Nothing has verified or refreshed a pin since. `tools/mcp_tool.py` was split into `tools/mcp_tool_registration.py` in the 2026-09-30 sync; the pin check did not survive the split, and its absence is silent because the module still imports cleanly and its 23 tests still pass.\n\n## Why it matters (blast radius)\n\nApproval for MCP tools here is keyed on the **tool name**, not on the schema. A server can ship a \"compatible\" minor release that widens an argument (a new enum member, a new optional `path`/`url`/`recipient`) or rewrites a description, and the previously-approved name still matches. That is the rug-pull / tool-poisoning shape the module was written for, and SchemaCaps (arXiv 2611.30750) measured **412 of 580** compatible schema changes widening at least one coordinate while **0 of 8** surveyed clients re-approve.\n\nTwo of the enabled servers make drift a background event rather than a deliberate edit — they resolve `latest` on every gatewa",
+      "updated": "2026-11-25T20:29:48Z",
+      "retrieved": "2026-11-25T20:33:45.853Z",
+      "evidenceHash": "cd91961ec6671c0bbcb0bfe434d0646555840b7973b9ff41df8cfcea47a3eb46",
+      "query": "\"MCP\" \"security\"",
+      "repository": "Da-Mikey/hermes-agent-evolution",
+      "number": 447,
+      "id": "opp-52ee8e57173c5bef",
+      "matched": [
+        "mcp",
+        "startup",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/thanhtuyen662002/DubFlow/issues/489",
+      "title": "[SECURITY] Confine MCP documentary project creation outside source-media",
+      "excerpt": "DUBFLOW_TASK_V1\nHard-Dependencies: none\nSoft-Dependencies: #458,#464,#485,#487\nConflict-Domains: documentary-mcp-create,source-media-path-confinement,documentary-windows-lane\nExpected-Paths: .claims/issue-489-mcp-create-project-path-confinement.md,engine/dubflow/docu/intake.py,engine/dubflow/mcp/server.py,tests/docu/test_intake.py,.github/workflows/pr-documentary-windows.yml,docs/adr/ADR-0049-documentary.md\nRequired-CI: PR Fast + PR Integration (documentary selected) + documentary-windows\n\n## Outcome\nClose the new MCP create_project path-confinement gap so it cannot create documentary output inside DubFlow's reserved <data_root>/source-media store through a symlink, junction or other reparse-point alias. Preserve the existing Tauri guard and the completed MCP project-root guard; this is a follow-up to the new MCP intake flow, not a reopening of #458 or #464.\n\n## Original source finding — 2026-11-04\nFirst observed on Main f2811fd18029e517b29cbdf9daddde4b23d1e07e.\n\n## Current-Main revalidation — 2026-11-07 10:45 +07\nCurrent Main: `d4354fd9c24f087afaaaa0b5e996d943cb8c1abc`.\nFresh source blobs:\n- `engine/dubflow/docu/intake.py`: `9f14b0dbcfc3042128843c0b4b4dd6b1a21a5265`.\n- `engine/dubflow/mcp/server.py`: `bf3f37fcbcf8b66be9aea219285816759043e2f6`.\n- `.github/workflows/pr-documentary-windows.yml`: `26c597c80051b424154fdd72975908c6c965b2fb`.\n- `docs/adr/ADR-0049-documentary.md`: `61410119cef42b2e44d93988a3886f8c7037d802`.\n\nThe source finding remains unchanged: intake checks only a lexical parent component named `source-media` before creating `.dubflow-work`; it does not prove canonical nearest-existing-ancestor containment against the actual data-root source-media store. MCP `create_project` does not pass the actual data root. The Documentary Windows lane currently runs Rust host/junction tests only; it does not execute the Python MCP intake regression. This is a source-confirmed source-store integrity/eviction risk; no exploit or data-loss incident is claimed.\n\n## Acceptance\n1. MCP create_project must enforce the same reserved-source-store boundary as the Tauri host before the first filesystem write. Resolve the candidate through its nearest existing ancestor, compare canonical containment against the actual data-root source-media store, and fail closed on unresolved paths.\n2. Reject symlink/junction/reparse-point aliases in the output path ancestry, including a",
+      "updated": "2026-11-25T19:44:26Z",
+      "retrieved": "2026-11-25T20:33:45.853Z",
+      "evidenceHash": "90f0ba458201c2ccde683677caa1101c05cb7c81a223f9bb91a772407cbe3eb9",
+      "query": "\"MCP\" \"security\"",
+      "repository": "thanhtuyen662002/DubFlow",
+      "number": 489,
+      "id": "opp-148fd3ff312fcefb",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/asklokesh/loki-mode/issues/655",
+      "title": "Repo-defined Claude Code hooks run during Loki runs (advisory GHSA-wgxh-xgc7-68wr still open)",
+      "excerpt": "engine10 loads the target repo's project settings (settingSources: [\"project\"], loki-ts/src/runner/providers.ts:844). A repo's .claude/settings.json hooks therefore run in Loki sessions. Fix: load project settings without hooks (or disableAllHooks for project scope), add a cell with a planted hook, then publish the draft advisory with the fix version.",
+      "updated": "2026-11-25T20:20:37Z",
+      "retrieved": "2026-11-25T20:33:45.853Z",
+      "evidenceHash": "52a53e9347fcd58468169daf0bacf816486da210266349af826ae68645d5e84b",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "asklokesh/loki-mode",
+      "number": 655,
+      "id": "opp-321726f73adcf842",
+      "matched": [
+        "hook"
+      ],
+      "score": 4,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
