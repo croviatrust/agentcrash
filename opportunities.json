@@ -1,12 +1,34 @@
 {
-  "observed": "2026-11-25T09:56:01.112Z",
+  "observed": "2026-11-25T10:24:50.146Z",
   "opportunities": [
+    {
+      "url": "https://github.com/MMoMM-org/the-custom-startup/issues/301",
+      "title": "review-security: agent-configuration checklist (MCP, hooks, permissions, CLAUDE.md)",
+      "excerpt": "## Problem\n\n`tcs-team:the-architect:review-security` and the `security-assessment` skill cover application security (OWASP, secure coding, dependencies) but not risks specific to agent configuration that land in a diff.\n\n## Proposal\n\nAdd an \"Agent configuration\" section to `security-assessment/checklists/security-review-checklist.md` and the agent's focus list:\n- new or changed MCP server definitions (`.mcp.json`), hooks (`hooks.json`, `settings.json` hooks), plugin/marketplace sources\n- new `permissions.allow` entries, especially broad ones (`Bash(<interpreter>:*)`), removed `deny` rules, `bypassPermissions` defaults\n- CLAUDE.md / AGENTS.md / skill / agent changes that widen tool scope or tell the agent to skip confirmation\n- credentials or tokens in agent config, `.claude/settings.local.json` committed\n- CI workflows running Claude with write tokens on untrusted input (PR titles/bodies/comments)\n\n## Acceptance\n\n- Checklist section present; agent definition references it (agent-author audit passes).\n- Walkthrough on a fixture diff adding `Bash(python:*)` + a new MCP server → both flagged.\n\n## Source\n\nEnterprise guide to securing coding agents, ch. 2 risks 1–2 and ch. 4 (permission rules; extensions as dependencies).\n",
+      "updated": "2026-11-25T10:23:44Z",
+      "retrieved": "2026-11-25T10:24:50.146Z",
+      "evidenceHash": "6036836a8ef2844bedb38b738c5a06c284fe39b4ab8c3c121a5869ab93cc1f0a",
+      "query": "\"MCP\" \"security\"",
+      "repository": "MMoMM-org/the-custom-startup",
+      "number": 301,
+      "id": "opp-2e28c01d321d6225",
+      "matched": [
+        "mcp",
+        "hook",
+        "untrusted",
+        "permission",
+        "security"
+      ],
+      "score": 12,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
     {
       "url": "https://github.com/code-with-abhi-i5/CodePulse/issues/4097",
       "title": "feat(ai): mcp model context protocol server exposing code analysis and execution tools to external llms ensuring strict adherence to enterprise compliance, security, and audit standards [AI-AGENT-91]",
       "excerpt": "### 🎯 Overview & Architectural Motivation\nThis Level 3 engineering task implements **mcp model context protocol server exposing code analysis and execution tools to external llms** within the **AI Tutor, LLM Code Review, MCP & Semantic AST** subsystem of CodePulse.\nUnder enterprise conditions and competitive NSoC'26 battle traffic, this feature addresses critical architectural challenges regarding ensuring strict adherence to enterprise compliance, security, and audit standards.\n\n---\n\n### 🧩 Problem Statement & System Gap\n1. **Current System Limitation**: The existing implementation in `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp` lacks high-throughput resilience, causing performance degradation or synchronization inconsistencies during heavy user activity.\n2. **Impact on Production**: Unoptimized latency profiles, potential memory footprint spikes, and lack of deterministic recovery lead to suboptimal competitor experience and service degradation.\n3. **Target Engineering Solution**: Build an enterprise-grade, fully typed module providing robust distributed guarantees, graceful degradation, and comprehensive automated test coverage.\n\n---\n\n### 🏗️ Target Architectural Flow\n```text\n  [ Client Request / Event Trigger ]\n                │\n                ▼\n  [ Ingress Gatekeeper & Rate Limiter ]\n                │\n                ▼\n  [ AI-AGENT-91 Core Service Engine ] ◄─── Telemetry & Metrics Hooks\n        │                      │\n        ▼                      ▼\n  [ Redis Cluster Cache ]    [ Database / Sandbox Worker Pool ]\n        │                      │\n        └──────────────┬───────┘\n                       ▼\n          [ Structured Response & DLQ Fallback ]\n```\n\n---\n\n### 📂 Target Codebase Files\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.service.ts`\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.spec.ts`\n- `backend/src/modules/ai, backend/src/modules/ai-tutor, backend/src/modules/mcp/mcp-server.spec.mjs`\n- `src/types/ai.ts`\n\n---\n\n### 🚀 Deliverables & Implementation Requirements\n1. **Core Service Logic**: Implement `mcp-server.service.ts` with clean modular interfaces, strict TypeScript 5.9 types, and zero `any` annotations.\n2. **Resilience & Fallback**: Integrate exponential backoff retry policies, circuit breaking, and dead lett",
       "updated": "2026-11-25T09:45:07Z",
-      "retrieved": "2026-11-25T09:56:01.113Z",
+      "retrieved": "2026-11-25T10:24:50.146Z",
       "evidenceHash": "873060bfa174e1f68434dad23f6da32fda788c06d01a43b08c82f44932d8bcd8",
       "query": "\"MCP\" \"security\"",
       "repository": "code-with-abhi-i5/CodePulse",
@@ -25,9 +47,9 @@
       "url": "https://github.com/luongnv89/asm/issues/886",
       "title": "[FEATURE] asm audit security: flag MCP server and hook configs shipped inside a skill",
       "excerpt": "<!-- idd:normalized v1 -->\n\n## Type\n\nfeature\n\n## Description\n\n`asm audit security` reports a skill as safe when the skill ships an MCP server config. In the repro below, the config starts an unpinned remote package and passes it a credential from the environment. `asm install` prints no warning either, because it shows the same scan's results.\n\nUber's skills platform blocks `.mcp.json` inside skills and plugins. A tool server preloads every tool definition into each call (Uber measured 50,000–70,000 tokens for 100+ tools), and an unpinned `npx -y …@latest` server is a supply-chain path *(practitioner: Uber Engineering, \"How Uber Evals 1 Million Agent Skill Invocations a Month\", 2026-11-23)*.\n\nFound while dogfooding (asm v2.25.0 @ 68f2e89, which already includes #882's new audit rules).\n\nRepro (sandboxed HOME):\n\n```bash\nmkdir -p /tmp/mcp-skill/scripts\nprintf -- '---\\nname: mcp-skill\\ndescription: \"Query the helper server when the user asks for helper data. Not for writes.\"\\n---\\n# MCP skill\\n' > /tmp/mcp-skill/SKILL.md\necho '{\"mcpServers\":{\"helper\":{\"command\":\"npx\",\"args\":[\"-y\",\"some-unpinned-mcp-server@latest\"],\"env\":{\"TOKEN\":\"${GITHUB_TOKEN}\"}}}}' > /tmp/mcp-skill/.mcp.json\nasm audit security /tmp/mcp-skill --json\n```\n\n**Current behavior:**\nVerdict `safe`, \"No suspicious patterns detected.\"\n\n**Expected behavior:**\nThe audit lists every server the skill would start (its command line), and raises the verdict according to the rules below.\n\n**Related issues:**\n#782 (audit never scans SKILL.md/.md instructions; this issue is about JSON configs), #882\n\n> **Reporter Context**\n> Found by Smith during the Uber skill-evals gap analysis (idea V26).\n\n## Screenshots\n\nn/a\n\n## Acceptance Criteria\n\n- [ ] A skill folder containing `.mcp.json` or `mcp.json`, or a plugin/agent manifest whose top level holds `mcpServers`, gets a finding in a new category that names each server and its full command line. The verdict is at least `warning`\n- [ ] The verdict is `dangerous` when a server command fetches remote code without a pinned version (`npx -y`, `uvx`, `pipx run`, `@latest`, or no version) or passes an environment variable whose name looks like a credential (TOKEN, KEY, SECRET, PASSWORD)\n- [ ] A `settings.json` (or another agent config) holding `hooks` gets the same treatment: listed, verdict at least `warning`\n- [ ] The config is parsed as JSON, never executed or followed. A ",
-      "updated": "2026-11-25T08:34:12Z",
-      "retrieved": "2026-11-25T09:56:01.113Z",
-      "evidenceHash": "934e0bbe23dda9b48308b37fcbc353cb24e5f0b40a28bf6adcf274e9f32d95b2",
+      "updated": "2026-11-25T10:05:11Z",
+      "retrieved": "2026-11-25T10:24:50.146Z",
+      "evidenceHash": "8eac9678c27ea99dae6bcb714ef741a27cd7965ce4c48f5a8c984b75c59789e7",
       "query": "\"MCP\" \"security\"",
       "repository": "luongnv89/asm",
       "number": 886,
@@ -42,40 +64,20 @@
       "attempts": 0
     },
     {
-      "url": "https://github.com/e-omunoz/celer/issues/234",
-      "title": "[security] MCP column masking is bypassed by SQL Server FOR JSON / FOR XML and PostgreSQL query_to_xml / table_to_xml / schema_to_xml / database_to_xml: a «Lectura» assistant gets protected values in clear",
-      "excerpt": "## What happens\n\nThe protected values are returned in clear inside one JSON/XML cell, for one table or (schema_to_xml / database_to_xml) for every table at once.\n\n## Expected\n\nThe query is refused (or the protected values come back as [oculto]), as for `SELECT password FROM <t>` or `SELECT t FROM <t> t`.\n\n## Steps to reproduce\n\n1) In a data folder, connections.json with a SQL Server and a PostgreSQL connection, mcp.json enabled with level \"read\". 2) Create a table with a column named password holding a value. 3) Over MCP call run_query with `SELECT * FROM <t> FOR JSON AUTO` (SQL Server) or `SELECT table_to_xml('<t>', true, false, '')` (PostgreSQL).\n\n## Evidence\n\nLocation: [`src-tauri/src/mcp.rs#L1023`](../blob/feat/integration-2.5.0/src-tauri/src/mcp.rs#L1023)\n\nreview-out/security/mcp-masking-probes.txt (celer.exe --mcp --data-dir <scratch>, level «Lectura», default redact pattern, table sec_probe(id, name, password='hunter2-SECRET')). Control `SELECT * FROM sec_probe` returns password as \"[oculto]\" on SQL Server, PostgreSQL, MySQL, MariaDB and SQLite. But on SQL Server `SELECT * FROM sec_probe FOR JSON AUTO` returns [{\"id\":1,\"name\":\"alice\",\"password\":\"hunter2-SECRET\"}], `... FOR XML PATH` returns <password>hunter2-SECRET</password>, and `SELECT (SELECT * FROM sec_probe FOR JSON PATH) AS j` also does. On PostgreSQL `SELECT query_to_xml('SELECT * FROM sec_probe', true, false, '')`, `SELECT table_to_xml('sec_probe', true, false, '')` and `SELECT schema_to_xml('public', true, false, '')` return every protected value of the table / whole schema. Code path: check_read_access (mcp.rs:1996) only refuses queries that name a protected column (query_identifiers) or match masking_bypass (mcp.rs:1023: whole-row refs, column alias lists, UNION/INTERSECT/EXCEPT). FOR JSON/FOR XML is let through by check_read_tokens (mcp.rs:800-806 only refuses FOR UPDATE/SHARE/KEY/NO), the table name inside a string literal is invisible to the lexer, and the result column (JSON_F52E2B61-…, query_to_xml, table_to_xml, j) does not match the redact pattern, so rows_json masks nothing. The docs caveat (AI_MCP.md:44-45) only mentions views or functions that rename a column, not built-in one-liners that serialise the whole table.\n\n## Fix hint\n\nIn masking_bypass, refuse FOR JSON and FOR XML (SQL Server) when the query reads a table with protected columns. On PostgreSQL, refuse calls to query_to_",
-      "updated": "2026-11-25T08:29:47Z",
-      "retrieved": "2026-11-25T09:56:01.113Z",
-      "evidenceHash": "c7e2500f823a49fde55582ab973a9a29b0bad85a2d39a1e4eb38512a50a420f5",
-      "query": "\"MCP\" \"security\"",
-      "repository": "e-omunoz/celer",
-      "number": 234,
-      "id": "opp-cd5f53e6bbfbd078",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/yousan/hataori/issues/855",
-      "title": "Claude Code adapter: a trust dialog that warns of hooks in .claude/skills or .claude/agents is not recognised",
-      "excerpt": "Found in the review of #848 (#752), reproduced with Claude Code 2.1.332. Not changed there.\n\nA repository whose skill, command or agent declares hooks in its front matter gets a folder-trust dialog with the hooks warning, naming a directory and not a settings file, and no line naming files:\n\n```\n Claude Code'll be able to read, edit, and execute files here.\n\n ⚠ This folder configures hooks that can run commands without asking, declared\n in .claude/skills\n\n Security guide\n\n ❯ No, exit\n   Yes, I trust this folder\n```\n\n(`.claude/skills` with a `.claude/skills/x/SKILL.md`, `.claude/agents` with a `.claude/agents/x.md`; by the program text also `.claude/commands`, and together with the settings files.)\n\nThe adapter reads the hooks warning only when the line \"Trusting this folder loads\" names what it declares, so this screen gets no key and no event: the start ends at the start timeout with raw terminal output. No `trust_files` entry helps, and a person is not told that hooks are why. In a confined session the dialog has no warning and is answered.\n\nBy the program text (not reproduced), a dialog for the home folder says one more sentence, \"This is your home folder, so Yes lasts for this session only.\", and is not read either.\n\n## Acceptance criteria\n\n- [ ] Real captures of the dialog whose warning names `.claude/skills` and `.claude/agents`, alone and with a settings file, are read: refused naming them, or answered when all are trusted, as the owner decides for what `trust_files` may name. The tests fail on main.\n- [ ] Any other directory there, or any other text, gets no key.\n\nRelated: #592, #752, #758.\n",
-      "updated": "2026-11-25T05:47:50Z",
-      "retrieved": "2026-11-25T09:56:01.113Z",
-      "evidenceHash": "7cfece1cc07025c21c38e3932ebe4c4b0f33518393f54d4ba521635203860ebe",
+      "url": "https://github.com/enhulsman/kudde/issues/103",
+      "title": "Desk hooks for Claude Code, as a plugin",
+      "excerpt": "Ship the Claude Code hooks as one plugin in this repository, so anyone can read every script before installing it, and install and remove it with Claude Code's own `claude plugin` commands. First hooks: the question hook (#51) and the session label (#42).\n\nDone when the plugin installs and uninstalls cleanly, Kudde can tell its version, and the question card and session label work with it and fall back without it.\n",
+      "updated": "2026-11-25T09:34:50Z",
+      "retrieved": "2026-11-25T10:24:50.146Z",
+      "evidenceHash": "e52f3e8bd7ddbe0975cb7f3673d0bd18ad04dff004c3b3f26fe843d8a5eb097a",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "yousan/hataori",
-      "number": 855,
-      "id": "opp-3f2ddee2f854f511",
+      "repository": "enhulsman/kudde",
+      "number": 103,
+      "id": "opp-9bf9c6bd200ee8f0",
       "matched": [
-        "hook",
-        "security"
+        "hook"
       ],
-      "score": 6,
+      "score": 4,
       "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
       "attempts": 0
     }
