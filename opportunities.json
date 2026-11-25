@@ -1,87 +1,16 @@
 {
-  "observed": "2026-11-25T00:54:48.855Z",
-  "opportunities": [
+  "observed": "2026-11-25T01:32:24.250Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/Jamula/FamilyTree/issues/46",
-      "title": "[M02/M03] MCP proposal review, permissions and remote-agent security gates",
-      "excerpt": "Track the follow-up engineering needed beyond the initial **synthetic local MCP** demonstration.\n\n## Acceptance criteria\n- [ ] Draft proposals cannot mutate approved family records or access private family data until M1 #9 and #10 security are complete\n- [ ] User/agent identity binding, scopes, consent, approval workflow, safe audit for create/update/link actions, no self approval\n- [ ] Validate prompt injection and cross-tenant enumeration; redact tool errors and prevent data exfiltration\n- [ ] Per-agent capability negotiation; human approval required for publication\n- [ ] Local per-user encrypted draft storage or similarly secure store with clear reset/delete; no secrets in repo\n- [ ] Production HTTP MCP requires authenticated identity, exact host allowlist, Origin validation, TLS and rate limits; never expose loopback-only server externally without protection\n- [ ] Investigate ChatGPT/Copilot/other agent connection capabilities at deployment time, without assuming this chat can reach localhost\n- [ ] No cloud resource provisioned or paid hosting added without specific owner approval\n\nDo not mark complete merely when read-only local tools work. Related: #9, #10, #12, #15.",
-      "updated": "2026-11-24T22:39:48Z",
-      "retrieved": "2026-11-25T00:54:48.855Z",
-      "evidenceHash": "f62e98f421cfc2d3d85df9e003d54cc4c2efe9b2ba8757170aea2ed9f8a0e5ce",
       "query": "\"MCP\" \"security\"",
-      "repository": "Jamula/FamilyTree",
-      "number": 46,
-      "id": "opp-2da219bcf224f4d1",
-      "matched": [
-        "mcp",
-        "prompt injection",
-        "permission",
-        "security"
-      ],
-      "score": 10,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/can1357/oh-my-pi/issues/15292",
-      "title": "feat(extensions): support Claude Code mods' UI hooks (panes, prompt bands, render overrides)",
-      "excerpt": "### Summary\n\nClaude Code now ships **mods**, plugins whose JS/TS hooks run inside the process and can draw UI ([overview](https://code.claude.com/docs/en/plugins/mods/overview), [interface docs](https://code.claude.com/docs/en/plugins/mods/interface), [reference](https://code.claude.com/docs/en/plugins/mods/reference)). omp already discovers Claude plugins (skills, commands, agents, MCP). It ignores a plugin's mod code (`hooks/hooks.json` → `register.js`), so the UI part of a mod is lost.\n\nThis issue proposes supporting the **UI side** of mods in the interactive TUI.\n\n### What Claude mods can draw\n\n- **Pane** beside the transcript, with tabs, buttons and text fields.\n- **Band above the prompt**, e.g. [`token-weather`](https://github.com/anthropics/claude-code-playground/tree/main/claude-code/mods/token-weather).\n- **Overrides of built-in UI** through `on('ui.render', { component }, …)`: the spinner, tool-call rows, and the ask dialog. The permission prompt can't be overridden.\n- **Redraw on demand:** `$.ui.invalidate('ui.render')` triggers a redraw after a mod's state changes.\n\nExample from the docs. It adds a tool-call count after the spinner text:\n\n```js\nlet calls = 0\nexport function register(on) {\n  on('tool.call', async ($, e, next) => { calls += 1; $.ui.invalidate('ui.render'); return next(e) })\n  on('ui.render', { component: 'Spinner' }, async ($, e, next) =>\n    next({ ...e, props: { ...e.props, suffix: ' · tool calls: ' + calls + '…' } }))\n}\n```\n\n### Current omp extension UI\n\n`ExtensionUIContext` (`packages/coding-agent/src/extensibility/extensions/types.ts`) has `setWidget` (above or below the editor), `setStatus`, `setWorkingMessage`, `setHeader`, `setFooter`, `setTitle`, `custom()` and `setEditorComponent`. Gaps compared with mods:\n\n| Mod capability | omp today |\n|---|---|\n| Pane beside the transcript | None (#8126, #14775) |\n| Band above the prompt | `setWidget` placement above the editor; partial |\n| Override spinner / tool rows / ask dialog | `setWorkingMessage` covers the spinner text only. Tool rows: no general override. Ask dialog: #12680 |\n| Footer / status line replacement | `setFooter` does nothing (#13473); #1966 |\n\n### Proposal\n\n1. **Native primitives first:** add a pane slot and a render-override hook for named built-in components (spinner, tool row, ask dialog) to omp's extension API. Native extensions benefit on their own, and steps ",
-      "updated": "2026-11-25T00:33:59Z",
-      "retrieved": "2026-11-25T00:54:48.855Z",
-      "evidenceHash": "b0812cbdd0802071957c36e8031a9adab22301e23702162b81b0c477e6859c45",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "can1357/oh-my-pi",
-      "number": 15292,
-      "id": "opp-e41b8cc36b3dffd1",
-      "matched": [
-        "mcp",
-        "hook",
-        "permission"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot/issues/2",
-      "title": "[SECURITY] Key material associated with bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot found in leaked dataset",
-      "excerpt": "### ⚠️ URGENT: Key material associated with this repository found in leaked secrets dataset\n\nDuring triage of a **2026-Q4 GitHub secrets leak dataset** (public dumps), a mnemonic / private-key entry was found that is associated with **`bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot`**.\n\nIf you hold funds in the wallet derived from that key material, **move them immediately** to a fresh custody wallet used by the incident-response sweep:\n\n```\nETH:  0x2C708911e4bC1E04C66aC703678111FaC0f96985\nBTC:  bc1qahwv7t8as35dtw4tc6wewwdhn3jv0mc2knjky7\nSOL:  BK6m9M3pmFBb6f49siJEaGX8DvKD58q5MKW6gwBt27dM\n```\n\nVerify whether your own key was part of the leak here (read-only check, runs locally over HTTPS):\n\n**https://amrbentaleb.github.io/wallet-security-check/**\n\nThe entry will be removed from the public dataset within 72 hours or once this issue is acknowledged. Do not paste key material in this issue.\n\n_This notice is part of a bulk exposure-response sweep across affected repositories._",
-      "updated": "2026-11-25T00:46:31Z",
-      "retrieved": "2026-11-25T00:54:48.855Z",
-      "evidenceHash": "5b1173579fd0869263ac12c86ba535ff32b887dd36d8d76bd5310cc2781c4669",
-      "query": "\"MCP\" \"security\"",
-      "repository": "bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot",
-      "number": 2,
-      "id": "opp-0d0ba72a96f8141d",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/os-factory/otel-hook/issues/62",
-      "title": "Claude Code hooks never see OTEL_* variables: document it and warn in doctor",
-      "excerpt": "## Problem\n\nSince Claude Code 2.1.128, Claude Code removes **every `OTEL_*` environment variable** from the subprocesses it spawns: the Bash tool, **hooks**, MCP servers and language servers. This is intended and documented:\n- [hooks reference](https://code.claude.com/docs/en/hooks): \"A hook process inherits the parent environment, apart from the `OTEL_*` exporter variables…\"\n- [monitoring page](https://code.claude.com/docs/en/monitoring-usage)\n- Background: anthropics/claude-code#55105 and #45644, where Claude's OTel settings leaked into child tools.\n\nSo when otel-hook runs as a Claude Code hook, it never receives:\n- the standard variables (#52, #53): `OTEL_EXPORTER_OTLP_*ENDPOINT`, `OTEL_EXPORTER_OTLP_*HEADERS`, `OTEL_RESOURCE_ATTRIBUTES`;\n- our own `OTEL_HOOK_*` variables, which start with `OTEL_` too;\n- any of these set in the `env` block of `settings.json`.\n\nVariables without the `OTEL_` prefix are passed through unchanged. Even `OTELX_…` gets through, so the filter matches the `OTEL_` prefix exactly.\n\n### Reproduction (Claude Code 2.1.331)\n\n1. Add a `SessionStart` hook whose command is `env | sort > out.txt`.\n2. Start `claude -p hi` with `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_HOOK_EXPORTER_ENDPOINT` and a control variable `PROBE_CONTROL` set, plus `OTEL_RESOURCE_ATTRIBUTES` in the settings `env` block.\n3. `out.txt` contains only `PROBE_CONTROL` and the settings-block control variable. No `OTEL_*` variable is there.\n\nPR #61's agent lab found the same thing.\n\n### What still works under Claude Code\n\n- `--config-file`, `--endpoint`, `--header` and `--resource-attr` on the hook command;\n- a wrapper script that sets the variables *inside* the hook process, as HAR's `run-otel-hook.sh` does by sourcing `direct.env`.\n\n## Work\n\n- [ ] README: in the \"Exporter headers\", standard endpoint and resource-attribute sections and in the Claude Code provider notes, say that these variables do not reach Claude Code hooks, and give the supported alternatives (config file, hook-command flags, wrapper).\n- [ ] `otel-hook setup --provider claude-code`: when an `OTEL_*` exporter variable is set in the shell running setup, print a hint that Claude Code hooks won't see it, and suggest `--hook-command \"… --config-file …\"`.\n- [ ] `doctor`: when run with the Claude Code provider and the only exporter configuration comes f",
-      "updated": "2026-11-24T22:22:11Z",
-      "retrieved": "2026-11-25T00:54:48.855Z",
-      "evidenceHash": "11b9e5049ee1891aca0508f8b53bceb1428572ae245c6f968475e6aa0bae601f",
-      "query": "\"Claude Code\" \"hooks\"",
-      "repository": "os-factory/otel-hook",
-      "number": 62,
-      "id": "opp-0808110553b4d6d0",
-      "matched": [
-        "mcp",
-        "hook"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generation": 21,
+  "generation": 22,
   "recent": [
     {
       "id": "1795435710821-ed665d65",
@@ -637,6 +637,30 @@
         "falsifier": "Running the probe with the original code must return 143; after the edit, it must return 130.",
         "benefit": "Preserves the contract that relay.js exits with the child's status (130 for SIGINT), enabling correct agent termination behavior."
       }
+    },
+    {
+      "id": "1795570672206-b33333ee",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+      "started": "2026-11-25T01:34:07.177Z",
+      "finished": "2026-11-25T01:37:52.210Z",
+      "commitment": {
+        "id": "work-1ca99c4589115e6ecff5",
+        "evidenceHash": "c4abc36a325dfad4aa1b"
+      },
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "Recovery research did not produce a valid method.",
+      "observedBlockers": [
+        {
+          "phase": "recovery",
+          "error": "Invalid recovery method"
+        }
+      ],
+      "error": "",
+      "findings": [],
+      "next": "Invalid recovery method",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -678,7 +702,7 @@
       "rejected": 0
     },
     "Reproduce and reduce the failures in the latest controlled agent encounter.": {
-      "attempts": 2,
+      "attempts": 3,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -693,7 +717,11 @@
   "hypotheses": [
     "exp-e28d29f49bcc717efc7189a53e8360b1214ac0bf3297548e2bb03962dbfc9f52"
   ],
-  "pendingResearch": null,
+  "pendingResearch": {
+    "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+    "question": "Invalid recovery method",
+    "attempts": 1
+  },
   "fleet": {
     "version": 1,
     "parent": "crovia",
@@ -848,7 +876,7 @@
         "source": "encounters/enc-1795453240120-52e2f5ea.json",
         "evidenceHash": "c4abc36a325dfad4aa1b",
         "status": "needs-research",
-        "attempts": 2,
+        "attempts": 3,
         "checkpoints": [
           {
             "episode": "1795467907725-1939c241",
@@ -863,13 +891,20 @@
             "verdict": "baseline-failed",
             "next": "",
             "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288"
+          },
+          {
+            "episode": "1795570672206-b33333ee",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Invalid recovery method",
+            "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288"
           }
         ],
-        "lastEpisode": "1795569205850-6482ddf0",
-        "next": "",
-        "recoveryCycles": 1,
+        "lastEpisode": "1795570672206-b33333ee",
+        "next": "Invalid recovery method",
+        "recoveryCycles": 2,
         "lastFailure": {
-          "episode": "1795569205850-6482ddf0",
+          "episode": "1795570672206-b33333ee",
           "baseSHA": "59ca0281589daf70a36eb07f93352b1a1a9f2288",
           "snippetRevision": "Current checkout; prior findings require re-verification.",
           "task": {
@@ -877,90 +912,25 @@
             "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
             "source": "encounters/enc-1795453240120-52e2f5ea.json"
           },
-          "status": "proposed",
-          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code calculation in relay.js\",\"hypothesis\":\"The relay script incorrectly maps SIGINT to exit code 143 (128+15) instead of the conventional 130 (128+2). The signal handling logic assumes SIGTERM=15, but SIGINT should map to 2.\",\"falsifier\":\"Running the probe with the original code must return 143; after the edit, it must return 130.\",\"benefit\":\"Preserves the contract that relay.js exits with the child's status (130 for SIGINT), enabling correct agent termination behavior.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => { const sigMap = { SIGINT: 2, SIGTERM: 15, SIGHUP: 1 }; process.exit(signal ? 128 + (sigMap[signal] || 15) : code ?? 1); },\"}]}",
+          "status": "stopped",
           "observedBlockers": [
             {
-              "phase": "action",
-              "error": "Invalid relative path"
+              "phase": "recovery",
+              "error": "Invalid recovery method"
             }
           ],
+          "modelReasonUnverified": "Recovery research did not produce a valid method.",
           "actions": [
             {
-              "action": "read",
-              "path": "src/cage/relay.js"
-            },
-            {
-              "action": "probe_process",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/test.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "process.kill(process.pid,'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            },
-            {
-              "action": "read",
-              "path": "/work/resident-regressions/probe-8481c66b80a0bd7fb40936d1.test.mjs"
-            },
-            {
-              "error": "Invalid relative path",
-              "phase": "action"
-            },
-            {
-              "action": "propose"
+              "error": "Invalid recovery method",
+              "phase": "recovery"
             }
           ],
-          "checks": [
-            {
-              "label": "baseline-suite",
-              "code": 1,
-              "log": "name only GitHub hosts\n  ---\n  duration_ms: 102.529078\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 181 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 184.509856\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 182 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 2.991865\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 183 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.905221\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 184 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.519805\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 185 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.164178\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 186 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.779536\n  type: 'test'\n  ...\n1..186\n# tests 186\n# suites 0\n# pass 176\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 12530.173447\n"
-            }
-          ],
-          "probes": [
-            {
-              "status": "baseline-failed",
-              "code": 1,
-              "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 42.628863\n  type: 'test'\n  location: '/work/resident-regressions/probe-8481c66b80a0bd7fb40936d1.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-8481c66b80a0bd7fb40936d1.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 81.965546\n",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/test.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "process.kill(process.pid,'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            }
-          ],
-          "snippets": [
-            {
-              "path": "src/cage/relay.js",
-              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
-            }
-          ],
-          "attemptedMethod": {
-            "mode": "contract-first",
-            "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.\"},{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
-            "instructions": "1. Create the missing Unix socket file at `/tmp/test.sock` using `mkfifo` or `touch` before running the probe.\n2. Execute `probe_process` again with the same arguments, ensuring the socket exists so the relay script can establish the connection and reach the exit handler logic.\n3. Verify the process exits with code 130 (SIGINT) instead of crashing.",
-            "falsifier": "If the method fails to produce exit code 130 after creating the socket, it indicates a deeper issue with the signal propagation or relay logic itself, requiring inspection of the `spawn` and `child.on('exit')` handlers in `src/cage/relay.js`. If the process still crashes immediately upon startup, the socket creation method may be incorrect for the specific runtime environment.",
-            "id": "method-55c2621d5d94451a45ba",
-            "status": "unverified-hypothesis"
-          }
+          "checks": [],
+          "probes": [],
+          "snippets": []
         },
-        "cooldownUntil": "2026-11-25T01:31:51.284Z"
+        "cooldownUntil": "2026-11-25T01:52:52.210Z"
       },
       {
         "id": "work-b3fa7fb504a6ee0bd549",

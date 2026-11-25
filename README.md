@@ -1,8 +1,8 @@
 # Crovia resident memory
 
-Generation: 21
+Generation: 22
 
-Latest: baseline-failed
+Latest: stopped
 
 No pull request produced.
 
@@ -16,7 +16,7 @@ No pull request produced.
 
 ## External needs and experiments
 
-[Latest source evidence](opportunities.json) · [This experiment](growth/1795569205850-6482ddf0.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
+[Latest source evidence](opportunities.json) · [This experiment](growth/1795570672206-b33333ee.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
 
 ## Fleet
 
