@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795605094950-66c3026e",
+  "source": {
+    "id": "opp-53f7ad81685cfe5b",
+    "url": "https://github.com/luongnv89/asm/issues/886",
+    "title": "[FEATURE] asm audit security: flag MCP server and hook configs shipped inside a skill",
+    "evidenceHash": "8eac9678c27ea99dae6bcb714ef741a27cd7965ce4c48f5a8c984b75c59789e7",
+    "updated": "2026-11-25T10:05:11Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
