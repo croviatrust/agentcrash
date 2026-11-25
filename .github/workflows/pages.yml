@@ -6,7 +6,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'record/**', 'src/inspect-core.js', 'src/remote.js', 'scripts/build-site.mjs', '.github/workflows/pages.yml']
+    paths: ['site/**', 'record/**', 'src/inspect-core.js', 'src/remote.js', 'src/mark.js', 'scripts/build-site.mjs', '.github/workflows/pages.yml']
   workflow_dispatch:
   # From the record workflow, after a check of the agents' versions.
   workflow_call:

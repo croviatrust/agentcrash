@@ -3,7 +3,10 @@
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
 a { color: inherit; }
-.brand { margin: 0 0 28px; font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.brand { display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; margin: 0 0 28px; font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.brand .home { display: inline-flex; align-items: center; border: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.brand .home .mark { flex: none; margin-right: 9px; }
+.brand .home .agent { font-weight: 400; color: #b9b6ae; }
 .brand a { text-decoration: none; border-bottom: 1px solid var(--line); }
 .brand a + .sep ~ a { font-weight: 400; color: var(--dim); }
 .brand .sep { color: var(--line); margin: 0 6px; }

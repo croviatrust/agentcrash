@@ -1,7 +1,8 @@
 // The record as static pages: no script, no server, nothing fetched.
 // render() returns { path: content }; scripts/build-site.mjs writes them.
 import { AGENTS, PACKAGES, agentLabel, agentsIn, bare, caged, count, history, lookup, modeLabel, modesOf, movedKey, releases, scenariosIn } from './core.js';
-import { card } from './card.js';
+import { card, icon } from './card.js';
+import { iconSvg, markSvg } from '../../src/mark.js';
 
 const REPO = 'https://github.com/croviatrust/agentcrash';
 const CSP = "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'";
@@ -33,12 +34,14 @@ function page({ root, title, description, url, body, home = false }) {
 <meta property="og:image" content="${esc(new URL('card.png', url.replace(/agents\/.*$/, '')).href)}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" type="application/atom+xml" title="agentcrash: what moved" href="${root}feed.xml">
+<link rel="icon" href="${root}favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="${root}favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="${root}apple-touch-icon.png">
 <link rel="stylesheet" href="${root}record.css">
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="${root}"${home ? ' aria-current="page"' : ''}>agentcrash</a>
+  <a class="brand" href="${root}"${home ? ' aria-current="page"' : ''}>${BRAND}</a>
   <nav aria-label="Site">
     <a href="${root}#moved">What moved</a>
     <a href="${root}#method">Method</a>
@@ -304,13 +307,14 @@ function feed(h, { siteUrl }) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 <id>${esc(siteUrl)}</id><title>agentcrash: what moved</title><subtitle>What each new release of a coding agent does when the model turns hostile.</subtitle>
-<updated>${esc(updated)}</updated><link href="${esc(siteUrl)}"/><link rel="self" href="${esc(siteUrl)}feed.xml"/><author><name>Crovia Trust</name></author>
+<updated>${esc(updated)}</updated><link href="${esc(siteUrl)}"/><link rel="self" href="${esc(siteUrl)}feed.xml"/><author><name>Crovia Trust</name></author><icon>${esc(siteUrl)}apple-touch-icon.png</icon>
 ${items}
 </feed>
 `;
 }
 
-const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#0c0d10"/><rect x="6" y="6" width="9" height="9" rx="2" fill="#ff6b5e"/><rect x="17" y="6" width="9" height="9" rx="2" fill="#ff6b5e"/><rect x="6" y="17" width="9" height="9" rx="2" fill="#ff6b5e"/><rect x="18.5" y="18.5" width="6" height="6" rx="1.5" fill="none" stroke="#5fd38d" stroke-width="3"/></svg>\n';
+// The mark and the name as they stand in the header: "agent" light, "crash" bold.
+const BRAND = `${markSvg({ ring: 5, attrs: ' class="mark" width="20" height="20" aria-hidden="true"' })}<span class="agent">agent</span><span class="crash">crash</span>`;
 
 // runs: every run file, parsed. checked: when the installed versions were last
 // compared with the record (ISO), or null. Returns { relative path: string | Buffer }.
@@ -321,7 +325,9 @@ export function render(runs, { checked = null, siteUrl = 'https://croviatrust.gi
   const out = {
     'index.html': home(h, { checked, siteUrl }),
     'feed.xml': feed(h, { siteUrl }),
-    'favicon.svg': FAVICON,
+    'favicon.svg': iconSvg(),
+    'favicon-32.png': icon(32),
+    'apple-touch-icon.png': icon(180),
     'record.css': css,
     'card.png': card(model.latest),
     'latest.json': `${JSON.stringify({ checked, repeat: h.repeat, moved: h.entries.map(({ steps, ...e }) => ({ ...e, cells: steps.flatMap((s) => s.moved.map(({ evidence, ...m }) => ({ suite: s.suite, ...m }))) })), model: model.latest, repo: repo.latest }, null, 1)}\n`,

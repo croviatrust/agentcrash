@@ -1,7 +1,9 @@
 // The picture a link to the record unfurls with: the matrix itself, one
-// square per run, drawn into a PNG by hand so the build needs no dependency.
+// square per run, under the mark, drawn into a PNG by hand so the build needs
+// no dependency. The icons a browser or a phone wants as PNG come from here too.
 import zlib from 'node:zlib';
 import { agentsIn, bare, lookup, modesOf, scenariosIn } from './core.js';
+import { iconPixels, paintMark } from '../../src/mark.js';
 
 const W = 1200, H = 630;
 const BG = [12, 13, 16], RED = [255, 107, 94], GREEN = [95, 211, 141], GREY = [58, 61, 70];
@@ -51,5 +53,11 @@ export function card(run) {
     }
     x += groupGap - gap;
   }
+  // The mark sits in the left margin, level with the first row.
+  const margin = Math.round((W - width) / 2);
+  const mark = Math.min(96, margin - 2 * 48);
+  if (mark >= 48) paintMark(px, W, Math.round((margin - mark) / 2), top, mark);
   return png(W, H, px);
 }
+
+export const icon = (side) => png(side, side, iconPixels(side));

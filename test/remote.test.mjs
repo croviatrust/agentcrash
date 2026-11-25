@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { parseSpec, inspectGitHub } from '../src/remote.js';
 import { inspectDir } from '../src/inspect.js';
+import { markSvg } from '../src/mark.js';
 
 const REPO = fileURLToPath(new URL('..', import.meta.url));
 const MCP = JSON.stringify({ mcpServers: { docs: { command: 'npx', args: ['-y', 'some-pkg'] } } });
@@ -107,12 +108,13 @@ test('the page and the modules it loads use nothing from Node, and name only Git
   assert.match(html, /connect-src https:\/\/api\.github\.com https:\/\/raw\.githubusercontent\.com;/);
   assert.match(html, /default-src 'none'; script-src 'self';/);
   assert.ok(!/<script(?![^>]*src=)/.test(html), 'no inline script');
+  assert.ok(html.includes(markSvg({ ring: 5, attrs: ' class="mark" width="20" height="20" aria-hidden="true"' })), 'the mark in the header is the one in src/mark.js');
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'ac-site-'));
   const b = spawnSync(process.execPath, [path.join(REPO, 'scripts/build-site.mjs'), out], { encoding: 'utf8' });
   assert.equal(b.status, 0, b.stderr);
   // The page lives under /inspect/, with exactly the files it runs; the record is the front page.
   assert.deepEqual(fs.readdirSync(path.join(out, 'inspect')).sort(), ['app.js', 'index.html', 'inspect-core.js', 'remote.js', 'style.css']);
-  assert.deepEqual(fs.readdirSync(out).sort(), ['.nojekyll', 'agents', 'card.png', 'favicon.svg', 'feed.xml', 'index.html', 'inspect', 'latest.json', 'record.css']);
+  assert.deepEqual(fs.readdirSync(out).sort(), ['.nojekyll', 'agents', 'apple-touch-icon.png', 'card.png', 'favicon-32.png', 'favicon.svg', 'feed.xml', 'index.html', 'inspect', 'latest.json', 'record.css']);
 });
 
 test('CLI: something that is neither a folder nor owner/repo is refused before any request', () => {

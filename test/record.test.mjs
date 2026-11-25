@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { compare, count, history, normalize, parseVersions, problems, releases, scrub } from '../record/lib/core.js';
 import { render } from '../record/lib/site.js';
 import { png } from '../record/lib/card.js';
+import { iconPixels, iconSvg, paintMark } from '../src/mark.js';
 
 // Assembled here so that no file in the repository holds one more thing shaped like a key.
 const block = (edge, type) => `-----${edge} ${type} PRIVATE KEY-----`;
@@ -130,4 +131,30 @@ test('record: the site builds from the runs on record, and its picture is a real
   const tiny = png(2, 1, Buffer.from([255, 0, 0, 0, 255, 0]));
   const idat = tiny.subarray(tiny.indexOf('IDAT') + 4, tiny.indexOf('IEND') - 8);
   assert.deepEqual([...zlib.inflateSync(idat)], [0, 255, 0, 0, 0, 255, 0], 'one filter byte, then the pixels');
+});
+
+test('record: the mark is the same drawing as SVG and as pixels, at every size the site serves', () => {
+  const files = render(onRecord.map(([, run]) => run), { css: '' });
+  assert.equal(files['favicon.svg'], iconSvg());
+  for (const [file, side] of [['favicon-32.png', 32], ['apple-touch-icon.png', 180]]) {
+    const icon = files[file];
+    assert.deepEqual([icon.readUInt32BE(16), icon.readUInt32BE(20), icon[24], icon[25]], [side, side, 8, 2], file);
+    assert.match(files['index.html'], new RegExp(`<link rel="[a-z-]+" href="${file.replace('.', '\\.')}"`), file);
+  }
+  // On the 64-unit canvas: red top right, light bottom left, a ring around two empty quarters.
+  const side = 64, px = Buffer.alloc(side * side * 3);
+  paintMark(px, side, 0, 0, side);
+  const at = (x, y) => [...px.subarray((y * side + x) * 3, (y * side + x) * 3 + 3)];
+  assert.deepEqual([at(44, 20), at(20, 44), at(20, 20), at(44, 44), at(13, 13), at(1, 1)],
+    [[255, 107, 94], [232, 230, 225], [0, 0, 0], [0, 0, 0], [232, 230, 225], [0, 0, 0]]);
+  // The tile keeps its corners dark and the mark inside its margin.
+  const tile = iconPixels(32);
+  assert.deepEqual([[...tile.subarray(0, 3)], [...tile.subarray((16 * 32 + 2) * 3, (16 * 32 + 2) * 3 + 3)]], [[12, 13, 16], [12, 13, 16]]);
+  // The card carries the mark in its left margin without touching the matrix.
+  const card = files['card.png'];
+  const rows = zlib.inflateSync(card.subarray(card.indexOf('IDAT') + 4, card.indexOf('IEND') - 8));
+  const cardAt = (x, y) => [...rows.subarray(y * (1200 * 3 + 1) + 1 + x * 3, y * (1200 * 3 + 1) + 4 + x * 3)];
+  const reds = [];
+  for (let y = 0; y < 630; y++) for (let x = 0; x < 150; x++) if (cardAt(x, y).join() === '255,107,94') reds.push(x);
+  assert.ok(reds.length > 500 && Math.min(...reds) >= 48, 'the red quarter stands clear of the edge');
 });
