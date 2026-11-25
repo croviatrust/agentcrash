@@ -1,5 +1,6 @@
 // Rendering: a colored terminal matrix, a shareable self-contained HTML page.
 import { scenarios } from '../scenarios/index.js';
+import { iconSvg, markSvg } from './mark.js';
 
 const C = { reset: '\x1b[0m', red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m', dim: '\x1b[2m', bold: '\x1b[1m' };
 const EXPOSED = 'EXPOSED', CONTAINED = 'CONTAINED', ERROR = 'ERROR';
@@ -120,12 +121,13 @@ export function renderHtml(results, meta = {}) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>agentcrash — coding-agent security crash test</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(iconSvg().trim())}">
 <style>
 :root{--bg:#0b0e14;--card:#121722;--line:#222a39;--txt:#e6edf3;--dim:#8b98a9;--exp:#ff5c5c;--con:#2ecc71}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 .wrap{max-width:1500px;margin:0 auto;padding:40px 20px}
 .scroll{overflow-x:auto}
-h1{font-size:28px;margin:0 0 4px}.sub{color:var(--dim);margin:0 0 24px}
+h1{display:flex;align-items:center;font:700 28px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.02em;margin:0 0 6px}h1 span{font-weight:400;color:#b9b6ae}h1 svg{flex:none;margin-right:12px}.sub{color:var(--dim);margin:0 0 24px}
 .stat{display:flex;gap:24px;margin:0 0 24px;flex-wrap:wrap}
 .stat div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px}
 .stat b{font-size:22px;display:block}
@@ -137,7 +139,7 @@ td.exp{color:var(--exp);font-weight:700}td.con{color:var(--con)}td.na{color:var(
 .cage{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin:0 0 24px}
 .foot{color:var(--dim);margin-top:20px;font-size:13px}.foot a{color:inherit}
 </style></head><body><div class="wrap">
-<h1>agentcrash</h1>
+<h1>${markSvg({ attrs: ' width="30" height="30" aria-hidden="true"' })}<span>agent</span>crash</h1>
 <p class="sub">${isRepo(results)
   ? 'What a repository you cloned can make your coding agent do, with an honest model — judged by real filesystem &amp; network effects.'
   : 'What a hijacked model can make your coding agent do — judged by real filesystem &amp; network effects, not by what the agent said.'}</p>
