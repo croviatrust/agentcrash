@@ -1,85 +1,16 @@
 {
-  "observed": "2026-11-25T12:43:22.758Z",
-  "opportunities": [
+  "observed": "2026-11-25T19:59:52.396Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/luongnv89/asm/issues/892",
-      "title": "[FEATURE] audit security MCP/hook configs: credential precision, JSONC, more fetch forms, unread content, more config names (follow-up to #886)",
-      "excerpt": "<!-- idd:normalized v1 -->\n\n## Type\n\nfeature\n\n## Description\n\nFollow-up to #886 / PR #889 (`asm audit security` flags MCP server and hook configs a skill ships). The independent review of PR #889 found these gaps. They are kept out of that PR so it can converge. Each one is a case where the new rule over-flags, under-flags, or doesn't see a config.\n\nFound while dogfooding (asm v2.25.0 @ 61aae77, PR #889 head 5f95711); review report and fixtures at Smith's `data/briefs/2026-11-25-asm-889-review.report.md`, nits 2, 5, 6, 7, 8.\n\n**Current behavior:**\n1. **Credential-name precision.**\n   - Missed: plurals and suffixes (`OPENAI_API_KEYS`, `CLIENT_SECRETS`, `GH_TOKEN2`), `GITHUB_PAT`, PowerShell `$env:GITHUB_TOKEN` references, and a literal token value (`ghp_…`, `sk-…`) under a benign key.\n   - Over-flagged: `SORT_KEY`, `MONKEY`.\n2. **JSONC configs.** A `settings.json` with comments or trailing commas (e.g. `.vscode/settings.json` holding only `editor.tabSize`) is reported as an unreadable config (`warning`), where a skill with no servers or hooks used to be `safe`.\n3. **Remote fetches outside the runner list stay at `warning`:** `sh -c \"pip install pkg && python -m pkg\"`, `uv run --with-requirements requirements.txt …`.\n4. **Unread content outside configs is still `safe`.** A FIFO named `notes.txt`, or a non-config file over 512 KiB, is not read, yet the verdict stays `safe`. This predates #889 (main gives the same verdict).\n5. **Only the exact file names are scanned.** `claude_desktop_config.json` and Codex `config.toml` (`[mcp_servers]`) are not.\n\n**Expected behavior:**\nEach of these is either detected with the #886 rules (warning, or dangerous for an unpinned remote fetch or a credential), or deliberately not detected, with the reason written in the PR.\n\n**Related issues:**\n#886, PR #889, #782\n\n> **Reporter Context**\n> Deferred by Smith from the PR #889 fix round (rule: blocking items in the PR, the rest in one follow-up).\n\n## Screenshots\n\nn/a\n\n## Acceptance Criteria\n\n- [ ] Credential detection covers the missed forms in item 1 (plural/suffix, `PAT`, `$env:NAME`, literal `ghp_`/`github_pat_`/`sk-` values under any key) and stops flagging `SORT_KEY`/`MONKEY`. A table-driven test lists each case\n- [ ] A comment- and trailing-comma-tolerant parse (no new dependency) reads JSONC `settings.json`. A JSONC file with no servers or hooks is no longer `warning`, and an ",
-      "updated": "2026-11-25T12:33:17Z",
-      "retrieved": "2026-11-25T12:43:22.759Z",
-      "evidenceHash": "95dd9390a6569a726a82ef9e42ce03d7e905476de3b75f34b5e419b614456e50",
       "query": "\"MCP\" \"security\"",
-      "repository": "luongnv89/asm",
-      "number": 892,
-      "id": "opp-89b76df3662eae59",
-      "matched": [
-        "mcp",
-        "hook",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot/issues/2",
-      "title": "[SECURITY] Key material associated with bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot found in leaked dataset",
-      "excerpt": "### ⚠️ URGENT: Key material associated with this repository found in leaked secrets dataset\n\nDuring triage of a **2026-Q4 GitHub secrets leak dataset** (public dumps), a mnemonic / private-key entry was found that is associated with **`bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot`**.\n\nIf you hold funds in the wallet derived from that key material, **move them immediately** to a fresh custody wallet used by the incident-response sweep:\n\n```\nETH:  0x2C708911e4bC1E04C66aC703678111FaC0f96985\nBTC:  bc1qahwv7t8as35dtw4tc6wewwdhn3jv0mc2knjky7\nSOL:  BK6m9M3pmFBb6f49siJEaGX8DvKD58q5MKW6gwBt27dM\n```\n\nVerify whether your own key was part of the leak here (read-only check, runs locally over HTTPS):\n\n**https://amrbentaleb.github.io/wallet-security-check/**\n\nThe entry will be removed from the public dataset within 72 hours or once this issue is acknowledged. Do not paste key material in this issue.\n\n_This notice is part of a bulk exposure-response sweep across affected repositories._",
-      "updated": "2026-11-25T11:49:52Z",
-      "retrieved": "2026-11-25T12:43:22.759Z",
-      "evidenceHash": "0baf1b241e03b26dba3256225355a68dca1591407b88575d1fdabd2bb814b6cf",
-      "query": "\"MCP\" \"security\"",
-      "repository": "bettysuzuki/okx-agent-trade-kit-mcp-grid-dca-bot",
-      "number": 2,
-      "id": "opp-0d0ba72a96f8141d",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/btxbtwn/anteroom/issues/2153",
-      "title": "Add security tests for hosted arm_ MCP token authentication",
-      "excerpt": "Hosted `arm_` personal access token authentication in `anteroom/server/anteroom/hosted.py` (`SellerSessionMiddleware`) and `anteroom_private.authenticate_mcp_token` (in `migrations/versions/9a4c6e1d2f83_mcp_tokens_and_home_dashboard.py`) lacks dedicated security test coverage:\n\n- Middleware scoping of `arm_` tokens to exact `/api/mcp` vs 401 refusal on other `/api/...` routes (parallel to OAuth connected-app tests in `test_seller_sessions.py`).\n- Postgres verification that `anteroom_private.authenticate_mcp_token` refuses revoked tokens, expired tokens, and tokens belonging to an account where `anteroom_private.account_write_allowed` is `false`.\n\n**Done when:**\n- Hosted tests verify a valid `arm_` token is accepted on `/api/mcp` (setting `hosted_token_id`) and refused with 401 on other `/api/...` routes (`/api/account`, `/api/listings`, `/api/settings/mcp-tokens`, `/api/settings/mcp-connections`, `/api/marketplace-listings/delist`, etc.).\n- Postgres-suite tests verify `anteroom_private.authenticate_mcp_token` (and `mcp_tokens.authenticate_token(..., hosted=True)`) accepts active tokens and refuses revoked, expired, and `account_write_allowed=false` tokens.",
-      "updated": "2026-11-25T12:18:30Z",
-      "retrieved": "2026-11-25T12:43:22.759Z",
-      "evidenceHash": "99492da3728f112a40cad2e2591a3d12858cd7821bebfac2e9b70d1ee48d3f99",
-      "query": "\"MCP\" \"security\"",
-      "repository": "btxbtwn/anteroom",
-      "number": 2153,
-      "id": "opp-226ec4344343b70f",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/element22llc/e22-plugins/issues/1023",
-      "title": "Hooks stopped running in a long-lived Claude Code 2.1.331 session: decide on a skill-side guard",
-      "excerpt": "Part of #1022.\n\nRevised 2026-11-25. The first version of this issue said `/clear` on 2.1.331 never injects the rules. Probes show that is wrong; see \"Not reproducible on demand\".\n\n## What happened\n\nIn one long-lived interactive session of a managed product repo on Claude Code 2.1.331, steer's hooks stopped running part-way through. Two later sessions started from it with `/new` and `/clear` got no rules, no session checks and no orientation. Skills still loaded, because the skill listing is not hook-driven, so skill-owned behavior held. Everything that lives only in `rules/` was absent: commit autonomy, issue-first, output discipline, the command-shape rule.\n\n## Evidence (TX)\n\n- One terminal process. Startup recorded every SessionStart hook. An idle auto compaction about two hours in recorded no `SessionStart:compact`. A `/new` three hours after that and a `/clear` four hours later recorded no `SessionStart:clear`. `/context` right after the `/clear` showed 130 tokens of messages, against the roughly 40k characters the rule blocks inject.\n- After the compaction the process recorded no hook of any kind across 4 prompts, although the issue-first Stop hook blocks the first turn of every fresh session in that repo.\n- Behavior followed the missing rules: 23 of 28 main-thread Bash calls carried a `cd` prefix, against 0-2% in sessions since 7.25.\n- `hooks/hooks.json` matches `startup|resume|clear|compact|fork`, so this is not a steer defect.\n\n## Not reproducible on demand\n\nProbes on 2026-11-25, driving the real TUI through a pty (launch, `/clear`, one prompt):\n\n| Version | Interactive runs with `SessionStart:clear` recorded | Headless |\n|---|---|---|\n| 2.1.330 | 1 of 1 | 1 of 1 |\n| 2.1.331 | 3 of 3 | 1 of 1 |\n| 2.1.332 | 3 of 3 | 1 of 1 |\n\nTwo repos, including `/clear` typed 3 seconds after launch. So this is not \"every `/clear` on 2.1.331\", and nothing shows that 2.1.332 changed it; its changelog lists no related fix. A second 2.1.331 session ran `SessionStart:compact` normally after an auto compaction.\n\nCause unknown. The earliest trace is the idle compaction. A plugin sync is ruled out: the plugin generation did not change until hours after the hooks went quiet.\n\n## Decision\n\nWhether steer should notice missing rules by itself.\n\n1. Do nothing and treat it as a rare harness fault. Workaround: restart the session, or run `/steer:standards`.\n2. Front-door skills ch",
-      "updated": "2026-11-25T11:52:12Z",
-      "retrieved": "2026-11-25T12:43:22.759Z",
-      "evidenceHash": "abafa3e4c49c2dc39b4f7444e8aee548db1a7eb54041635539f04af8e03621a8",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "element22llc/e22-plugins",
-      "number": 1023,
-      "id": "opp-ffb793ec8b8533e0",
-      "matched": [
-        "hook",
-        "startup"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

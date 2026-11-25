@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "episode": "1795637546908-a5736edb",
+  "source": null,
+  "experiment": {
+    "title": "Fix SIGINT exit code mapping in relay.js",
+    "hypothesis": "The relay exits with 143 because the signal logic uses a hardcoded offset (128+15=143) instead of the correct dynamic calculation (128+signalNumber).",
+    "falsifier": "If the probe passes after this edit, it confirms the exit code was incorrectly calculated. If it fails, the tool environment cannot execute the proposed change.",
+    "intendedBenefit": "Preserves the contract that relay.js exits with the child's actual status (130 for SIGINT), enabling correct error reporting in agent tasks."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
