@@ -1,40 +1,7 @@
 {
   "version": 1,
-  "generation": 42,
+  "generation": 43,
   "recent": [
-    {
-      "id": "1795469811686-11fee565",
-      "repo": "croviatrust/agentcrash",
-      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-      "started": "2026-11-23T21:36:51.692Z",
-      "finished": "2026-11-23T21:40:02.654Z",
-      "commitment": {
-        "id": "work-cd6a58b1132ae1d5fba5",
-        "evidenceHash": "accc3b45ebbd85735f1c"
-      },
-      "opportunity": null,
-      "status": "stopped",
-      "localEvidence": "stopped",
-      "reason": "The path 'resident-regressions' does not exist in the repository. The checkpoint instruction to write a test file at that location is based on an unsupported assumption about the directory structure.",
-      "observedBlockers": [
-        {
-          "phase": "action",
-          "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/resident-regressions'"
-        }
-      ],
-      "error": "",
-      "findings": [
-        {
-          "path": "src/cage/relay.js",
-          "repository": "self",
-          "sha": "19f704626d55b3c525dbb914932b693e58f38f90",
-          "note": "Source code confirms relay.js exits with 128 + (signal === 'SIGKILL' ? 9 : 15) when signal is present, which maps SIGINT to 143. This contradicts the expected 130.",
-          "confidence": "unverified observation"
-        }
-      ],
-      "next": "Search for existing regression test directories or patterns in resident/ to understand where new tests should be placed, then construct a falsifiable experiment based on actual repository structure.",
-      "probes": []
-    },
     {
       "id": "1795472850323-d9acab19",
       "repo": "croviatrust/agentcrash",
@@ -1218,6 +1185,39 @@
           "log": "TAP version 13\n# 143\n# Subtest: resident-regressions/probe-31668ba6fbaed762222a7ab0.test.mjs\nok 1 - resident-regressions/probe-31668ba6fbaed762222a7ab0.test.mjs\n  ---\n  duration_ms: 84.265815\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 90.219109\n"
         }
       ]
+    },
+    {
+      "id": "1795707588794-ed0dc6be",
+      "repo": "croviatrust/agentcrash",
+      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "started": "2026-11-26T15:39:48.807Z",
+      "finished": "2026-11-26T15:45:16.418Z",
+      "commitment": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "evidenceHash": "accc3b45ebbd85735f1c"
+      },
+      "opportunity": null,
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "Missing regression test prevents proposal; no local Node runtime to execute probe_process.",
+      "observedBlockers": [
+        {
+          "phase": "action",
+          "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+        }
+      ],
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5",
+          "note": "Line 47 contains the logic: `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` which maps SIGINT to 143 instead of 130.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller. The test must fail on the original code and pass after the fix.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -1265,7 +1265,7 @@
       "rejected": 0
     },
     "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay": {
-      "attempts": 23,
+      "attempts": 24,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -1278,8 +1278,8 @@
   ],
   "pendingResearch": {
     "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-    "question": "Read line 65 of src/cage/relay.js again to confirm the exact signal mapping logic before proposing the fix.",
-    "attempts": 2
+    "question": "Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller. The test must fail on the original code and pass after the fix.",
+    "attempts": 3
   },
   "fleet": {
     "version": 1,
@@ -1291,9 +1291,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 33,
+        "attempts": 34,
         "verified": 0,
-        "lastSeen": 42
+        "lastSeen": 43
       },
       {
         "id": "critic",
@@ -1301,9 +1301,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 33,
+        "attempts": 34,
         "verified": 0,
-        "lastSeen": 42
+        "lastSeen": 43
+      },
+      {
+        "id": "specialist-4a0639bc16963590",
+        "role": "engineering",
+        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Execute a minimal edit on src/cage/relay.js to correct the exit status calculation. Change line 47 from `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` to `process.exit(signal ? 128 + signal : code ?? 1)`. This maps SIGINT \nSuggested method: ",
+        "parent": "crovia",
+        "born": 43,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 43
       },
       {
         "id": "specialist-05669a56e24fa173",
@@ -1354,27 +1364,17 @@
         "attempts": 1,
         "verified": 0,
         "lastSeen": 38
-      },
-      {
-        "id": "specialist-d245c3d0e0653fdb",
-        "role": "engineering",
-        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: 1. Verify if 'src/command.js' exists in the current working directory or if it resides in a different location (e.g., root level or a specific subdirectory). 2. If the file is missing from the expected path, attempt to locate it using `find` or check\nSuggested method: [Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay - Verify signal-to-status mapping",
-        "parent": "crovia",
-        "born": 37,
-        "attempts": 1,
-        "verified": 0,
-        "lastSeen": 37
       }
     ],
     "last": {
-      "episode": "1795705111484-94605a3e",
+      "episode": "1795707588794-ed0dc6be",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-05669a56e24fa173",
+        "specialist-4a0639bc16963590",
         "critic"
       ],
-      "modelCalls": 6,
+      "modelCalls": 5,
       "note": "Verified means source-case execution; business value and transfer remain unmeasured."
     }
   },
@@ -1435,15 +1435,8 @@
         "source": "https://github.com/croviatrust/agentcrash/issues/9",
         "evidenceHash": "accc3b45ebbd85735f1c",
         "status": "needs-research",
-        "attempts": 3,
+        "attempts": 4,
         "checkpoints": [
-          {
-            "episode": "1795701052193-b6046495",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "No local Node runtime available to execute the regression test; cannot verify if `src/cage/relay.js` strips SIGINT before forwarding exit code.",
-            "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
-          },
           {
             "episode": "1795703041400-27ad9c3e",
             "status": "stopped",
@@ -1457,13 +1450,20 @@
             "verdict": "stopped",
             "next": "Read line 65 of src/cage/relay.js again to confirm the exact signal mapping logic before proposing the fix.",
             "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
+          },
+          {
+            "episode": "1795707588794-ed0dc6be",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller. The test must fail on the original code and pass after the fix.",
+            "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
           }
         ],
-        "lastEpisode": "1795705111484-94605a3e",
-        "next": "Read line 65 of src/cage/relay.js again to confirm the exact signal mapping logic before proposing the fix.",
-        "recoveryCycles": 3,
+        "lastEpisode": "1795707588794-ed0dc6be",
+        "next": "Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller. The test must fail on the original code and pass after the fix.",
+        "recoveryCycles": 4,
         "lastFailure": {
-          "episode": "1795705111484-94605a3e",
+          "episode": "1795707588794-ed0dc6be",
           "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5",
           "snippetRevision": "Current checkout; prior findings require re-verification.",
           "task": {
@@ -1478,7 +1478,7 @@
               "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
             }
           ],
-          "modelReasonUnverified": "The probe confirms the baseline behavior (exit 143) but does not provide the specific source code logic required to construct a falsifiable edit in this turn due to token limits and the instruction to stop for unresolved questions.",
+          "modelReasonUnverified": "Missing regression test prevents proposal; no local Node runtime to execute probe_process.",
           "actions": [
             {
               "action": "read",
@@ -1493,20 +1493,11 @@
               "phase": "action"
             },
             {
-              "action": "probe"
-            },
-            {
               "action": "stop"
             }
           ],
           "checks": [],
-          "probes": [
-            {
-              "status": "baseline-passed",
-              "code": 0,
-              "log": "TAP version 13\n# 143\n# Subtest: resident-regressions/probe-31668ba6fbaed762222a7ab0.test.mjs\nok 1 - resident-regressions/probe-31668ba6fbaed762222a7ab0.test.mjs\n  ---\n  duration_ms: 84.265815\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 90.219109\n"
-            }
-          ],
+          "probes": [],
           "snippets": [
             {
               "path": "src/cage/relay.js",
@@ -1514,15 +1505,15 @@
             }
           ],
           "attemptedMethod": {
-            "mode": "contract-first",
-            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required.\"}],\"checks\":[]}",
-            "instructions": "Execute a new probe_process with a corrected command structure: pass `node` (or `process.execPath`) as the first element of `cmd`, and ensure `$NODE` is passed correctly as the executable for the child process within the relay's spawn call. Specifically, set `cmd` to 'node' and include `-e \"process.kill(process.pid, 'SIGINT')\"` in the `args` array passed to the relay script, ensuring the relay spawns a valid Node process that can actually receive the signal.",
-            "falsifier": "If this method fails with exit code 143 again, it implies the relay script's internal logic for spawning children is broken (e.g., it ignores the first arg or mishandles array flattening). If it succeeds with exit code 130, the issue was purely in how the parent process experiment constructed the child invocation arguments.",
-            "id": "method-9ea981a7303b85c822e6",
+            "mode": "minimal-edit",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"inference\",\"error\":\"fetch failed\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Code changes require a new regression test\"}],\"checks\":[]}",
+            "instructions": "Execute a minimal edit on src/cage/relay.js to correct the exit status calculation. Change line 47 from `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` to `process.exit(signal ? 128 + signal : code ?? 1)`. This maps SIGINT (signal=2) to 130 and SIGTERM (signal=15) to 143, preserving the child's exit status as per the contract. Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller.",
+            "falsifier": "If this method does not help, the new regression test will still fail with exit code 143 (or higher) instead of 130, and the source file modification will be rejected by the controller due to missing test coverage or permission errors.",
+            "id": "method-603d33438738fff91002",
             "status": "unverified-hypothesis"
           }
         },
-        "cooldownUntil": "2026-11-26T15:17:17.179Z"
+        "cooldownUntil": "2026-11-26T16:00:16.418Z"
       },
       {
         "id": "work-1ca99c4589115e6ecff5",

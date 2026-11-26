@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795707588794-ed0dc6be",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Create a new regression test file 'test/relay-sigint.test.js' that reproduces the failure using `spawnSync` with a self-kill command, then run it via the controller. The test must fail on the original code and pass after the fix.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
