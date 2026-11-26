@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795666566829-2341f0e9",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Create src/command.js as a minimal stub that triggers a SIGINT in its child process, then run a probe_process experiment to verify the current relay behavior returns 143 instead of 130. This will establish the baseline failure before proposing the fix.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

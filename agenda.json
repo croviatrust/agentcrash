@@ -9,7 +9,7 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "needs-research",
-      "attempts": 2,
+      "attempts": 3,
       "checkpoints": [
         {
           "episode": "1795662639475-73014ef8",
@@ -24,13 +24,20 @@
           "verdict": "stopped",
           "next": "The task requires creating src/command.js to test the relay's exit status behavior. Since this file doesn't exist, I need to create it first as part of the solution rather than stopping. The probe_process approach was a recovery attempt for a different hypothesis; the actual fix is to modify relay.js to correctly capture and report child process exit codes.",
           "baseSHA": "1ad613aa913b03d0e534a6f91f9a0a84390131b6"
+        },
+        {
+          "episode": "1795666566829-2341f0e9",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Create src/command.js as a minimal stub that triggers a SIGINT in its child process, then run a probe_process experiment to verify the current relay behavior returns 143 instead of 130. This will establish the baseline failure before proposing the fix.",
+          "baseSHA": "1ad613aa913b03d0e534a6f91f9a0a84390131b6"
         }
       ],
-      "lastEpisode": "1795664763228-3151388b",
-      "next": "The task requires creating src/command.js to test the relay's exit status behavior. Since this file doesn't exist, I need to create it first as part of the solution rather than stopping. The probe_process approach was a recovery attempt for a different hypothesis; the actual fix is to modify relay.js to correctly capture and report child process exit codes.",
-      "recoveryCycles": 2,
+      "lastEpisode": "1795666566829-2341f0e9",
+      "next": "Create src/command.js as a minimal stub that triggers a SIGINT in its child process, then run a probe_process experiment to verify the current relay behavior returns 143 instead of 130. This will establish the baseline failure before proposing the fix.",
+      "recoveryCycles": 3,
       "lastFailure": {
-        "episode": "1795664763228-3151388b",
+        "episode": "1795666566829-2341f0e9",
         "baseSHA": "1ad613aa913b03d0e534a6f91f9a0a84390131b6",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -45,7 +52,7 @@
             "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
           }
         ],
-        "modelReasonUnverified": "The required source file src/command.js does not exist in the repository, making it impossible to create the stub script needed for the proposed experiment.",
+        "modelReasonUnverified": "The task requires creating src/command.js to test the relay's exit status behavior, but this file does not exist in the repository. The controller's pre-flight check expects it.",
         "actions": [
           {
             "action": "read",
@@ -73,14 +80,14 @@
         ],
         "attemptedMethod": {
           "mode": "contract-first",
-          "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
-          "instructions": "Execute a new probe_process with an explicit '--no-cache' flag and a longer timeout to force Docker to pull the 'node:22-bookworm' image fresh. Use the same payload logic (spawning a child process within relay.js via spawn) but ensure the container environment is provisioned first by adding cache invalidation flags.",
-          "falsifier": "If this method fails again, it indicates a persistent network/Docker registry connectivity issue or an unfixable local Docker daemon state, rather than a logic error in the relay script itself.",
-          "id": "method-d6397e7b4d3106d88cab",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"}],\"checks\":[]}",
+          "instructions": "Modify src/cage/relay.js to resolve the `cmd` argument to an absolute path using `path.resolve()` before passing it to `spawn`. This ensures that if `cmd` is relative (like `-e` or a script name), Node will search for it in the system PATH rather than treating it as a file relative to the current working directory. Update the spawn call to: `const child = spawn(path.resolve(cmd), args, { stdio: 'inherit' });`.",
+          "falsifier": "If this method fails, the error will likely be different (e.g., 'spawn ENOENT ... -e' or a syntax error if `-e` is treated as a file path) rather than the previous 'ENOENT: no such file or directory, lstat /path/to/command.js', indicating the path resolution logic was insufficient.",
+          "id": "method-0efce6d91e996e1e0a79",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-26T04:03:38.116Z"
+      "cooldownUntil": "2026-11-26T04:33:35.764Z"
     },
     {
       "id": "work-1ca99c4589115e6ecff5",

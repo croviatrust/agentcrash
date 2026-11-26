@@ -1,85 +1,16 @@
 {
-  "observed": "2026-11-26T03:30:45.259Z",
-  "opportunities": [
+  "observed": "2026-11-26T04:04:11.045Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/microsoft/mcp-for-beginners/issues/1224",
-      "title": "Broken link in MCP Security Best Practices documentation",
-      "excerpt": "**Describe the bug**\n\nTwo links in the `02-Security/mcp-best-practices.md` documentation page currently point to URLs that return a **404 Not Found** error.\n\nThe affected links are under the Advanced Security Resources section of the .md file:\n\n1) [Threat Modeling for AI Systems](https://learn.microsoft.com/security/adoption/approach/threats-ai) - AI threat modeling methodology\n2) [Privacy Engineering for AI](https://www.microsoft.com/security/blog/2021/07/13/microsofts-pet-project-privacy-enhancing-technologies-in-action/) - Privacy-preserving AI techniques\n\n**To Reproduce**\n\n1. Navigate to the [[MCP Security Best Practices](https://github.com/microsoft/mcp-for-beginners/blob/main/02-Security/mcp-best-practices.md)](https://github.com/microsoft/mcp-for-beginners/blob/main/02-Security/mcp-best-practices.md) documentation, and look under Advanced Security Resources subsection in Implementation Resources & Standards section\n2. Both URLs return a 404 Not Found error.\n\n\nBoth links should redirect to valid, accessible resources relevant to their original references. If the resources have been moved or removed, the links should be updated to their appropriate replacements.\n\nI just checked these two links and a few others. After the update, maintainers might want to check if all other resources linked in the repo are up-to-date. ",
-      "updated": "2026-11-26T02:31:08Z",
-      "retrieved": "2026-11-26T03:30:45.259Z",
-      "evidenceHash": "19b3067de8bd724d83edd2e8ae6d33c5655772d69da4155a510c98f3481224ae",
       "query": "\"MCP\" \"security\"",
-      "repository": "microsoft/mcp-for-beginners",
-      "number": 1224,
-      "id": "opp-d0f41d35105fd59e",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/thanhtuyen662002/DubFlow/issues/489",
-      "title": "[SECURITY] Confine MCP documentary project creation outside source-media",
-      "excerpt": "DUBFLOW_TASK_V1\nHard-Dependencies: none\nSoft-Dependencies: #458,#464,#485,#487\nConflict-Domains: documentary-mcp-create,source-media-path-confinement,documentary-windows-lane\nExpected-Paths: .claims/issue-489-mcp-create-project-path-confinement.md,engine/dubflow/docu/intake.py,engine/dubflow/mcp/server.py,tests/docu/test_intake.py,.github/workflows/pr-documentary-windows.yml,docs/adr/ADR-0049-documentary.md\nRequired-CI: PR Fast + PR Integration (documentary selected) + documentary-windows\n\n## Outcome\nClose the new MCP create_project path-confinement gap so it cannot create documentary output inside DubFlow's reserved <data_root>/source-media store through a symlink, junction or other reparse-point alias. Preserve the existing Tauri guard and the completed MCP project-root guard; this is a follow-up to the new MCP intake flow, not a reopening of #458 or #464.\n\n## Original source finding — 2026-11-04\nFirst observed on Main f2811fd18029e517b29cbdf9daddde4b23d1e07e.\n\n## Current-Main revalidation — 2026-11-07 10:45 +07\nCurrent Main: `d4354fd9c24f087afaaaa0b5e996d943cb8c1abc`.\nFresh source blobs:\n- `engine/dubflow/docu/intake.py`: `9f14b0dbcfc3042128843c0b4b4dd6b1a21a5265`.\n- `engine/dubflow/mcp/server.py`: `bf3f37fcbcf8b66be9aea219285816759043e2f6`.\n- `.github/workflows/pr-documentary-windows.yml`: `26c597c80051b424154fdd72975908c6c965b2fb`.\n- `docs/adr/ADR-0049-documentary.md`: `61410119cef42b2e44d93988a3886f8c7037d802`.\n\nThe source finding remains unchanged: intake checks only a lexical parent component named `source-media` before creating `.dubflow-work`; it does not prove canonical nearest-existing-ancestor containment against the actual data-root source-media store. MCP `create_project` does not pass the actual data root. The Documentary Windows lane currently runs Rust host/junction tests only; it does not execute the Python MCP intake regression. This is a source-confirmed source-store integrity/eviction risk; no exploit or data-loss incident is claimed.\n\n## Acceptance\n1. MCP create_project must enforce the same reserved-source-store boundary as the Tauri host before the first filesystem write. Resolve the candidate through its nearest existing ancestor, compare canonical containment against the actual data-root source-media store, and fail closed on unresolved paths.\n2. Reject symlink/junction/reparse-point aliases in the output path ancestry, including a",
-      "updated": "2026-11-26T02:50:40Z",
-      "retrieved": "2026-11-26T03:30:45.259Z",
-      "evidenceHash": "6d22984022ac9b8f400eeefefaaf6e3cb4ab476e67d6691232e4875b7dc4ab69",
-      "query": "\"MCP\" \"security\"",
-      "repository": "thanhtuyen662002/DubFlow",
-      "number": 489,
-      "id": "opp-148fd3ff312fcefb",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/travism26/harness-lab/issues/224",
-      "title": "Spec: Committed Claude Code hooks for a check marker and secret-shaped commits",
-      "excerpt": "## For you\n\n**What.** Commit two Claude Code command hooks, and a small wrapper that records a passing check, so a laptop session can refuse to stop until a check has passed, and so a `git commit` or `git push` of secret-shaped text is refused. This is a technical exploration of those scripts and of fixture tests. It does not run Claude Code, it does not call a model, and every secret-shaped string in it is obviously fake.\n\n**Why.** The lab's rule is that an agent saying \"done\" counts for nothing until a check passes, and today nothing in the session enforces that. [Goal #187](https://github.com/travism26/harness-lab/issues/187). [docs/skill-workflows.md](https://github.com/travism26/harness-lab/blob/ce892e8899a7f70529c9e2327c894eff593fe408/docs/skill-workflows.md) names Claude Code hooks as enforcement rung 5 and says the repo has no root `.claude/` folder yet. That is still true on [`ce892e8899a7f70529c9e2327c894eff593fe408`](https://github.com/travism26/harness-lab/commit/ce892e8899a7f70529c9e2327c894eff593fe408).\n\n**Done looks like.** `.claude/settings.json`, `.claude/hooks/`, and `.claude/README.md` exist. `uv run pytest tests/factory` passes, including a new file that feeds fixture JSON to the scripts and reads the settings file. The README says the hooks run with the user's permissions, how to turn them off for one session, and that a match is reported by kind and location only.\n\n## Problem Statement\n\nA session can end, and a commit can land, with no check and with a secret-shaped string in the commit. The factory's own Claude Code loads project settings ([factory/claude.py](https://github.com/travism26/harness-lab/blob/ce892e8899a7f70529c9e2327c894eff593fe408/factory/claude.py#L102-L112)), so a Stop hook that always blocks would hold an unattended Factory run open. The hooks reference's Stop schema is public. Whether the owner's installed Claude Code keeps a turn open for that JSON has not been measured, and [Goal #187](https://github.com/travism26/harness-lab/issues/187) says that measurement is [#193](https://github.com/travism26/harness-lab/issues/193).\n\nThe repo already contains a few fake `sk-ant-api03-` strings, in [projects/agent-identity/cmd/demo/evidence_test.go](https://github.com/travism26/harness-lab/blob/ce892e8899a7f70529c9e2327c894eff593fe408/projects/agent-identity/cmd/demo/evidence_test.go#L193), [tests/factory/test_run_record.py](ht",
-      "updated": "2026-11-26T02:48:58Z",
-      "retrieved": "2026-11-26T03:30:45.259Z",
-      "evidenceHash": "59242e612ef43fedcef1879783d674d573ef31776af5e21847d4138b774fdfe2",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "travism26/harness-lab",
-      "number": 224,
-      "id": "opp-756f2f4960929e53",
-      "matched": [
-        "hook",
-        "permission"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/Zyrabit-tech/zyrabit-SLM/issues/116",
-      "title": "feat(security): Process Sandboxing & Resource Confinement for MCP Child Processes (Linux Namespaces / cgroups)",
-      "excerpt": "### Summary\nWhen connecting external MCP servers or executing untrusted tool processes (e.g., Python runners, shell tools, third-party adapters), child processes must not inherit the host application's environment, memory space, or privileges. Running child processes without isolation poses high security and stability risks (e.g. secret extraction from environment variables, CPU exhaustion, unauthorized filesystem access).\n\n### Technical Scope\n1. **Environment & File Descriptor Hygiene**:\n   - Strip sensitive environment variables (`JWT_SECRET`, `API_TOKEN`, database credentials) when spawning child processes.\n   - Set `close_fds=True` to ensure internal sockets, database handles, and pipes are not leaked to subprocesses.\n2. **Resource Confinement**:\n   - Enforce hard limits on RAM usage (memory limits) and execution time (deadlock/runaway query prevention) via cgroups or `resource.setrlimit` on POSIX systems.\n3. **Filesystem Isolation**:\n   - Confine filesystem access strictly to the assigned workspace directory using Linux namespaces, container boundaries, or unprivileged isolation wrappers (e.g., `bubblewrap` / `nsjail` / restricted sub-shells).\n\n### Acceptance Criteria\n- [ ] Subprocess executor enforces explicit environment variable allowlists.\n- [ ] Hard resource limits (memory ceiling, process timeout) terminate runaway child processes.\n- [ ] Child processes cannot access secrets, `.env` files, or directories outside the designated workspace.\n- [ ] Regression security tests validating containment.",
-      "updated": "2026-11-26T02:36:36Z",
-      "retrieved": "2026-11-26T03:30:45.259Z",
-      "evidenceHash": "6b8c1afc29f33c07caa87c80ee11da5bf2bd453b3798c84a13657cc862dd6cef",
-      "query": "\"MCP\" \"security\"",
-      "repository": "Zyrabit-tech/zyrabit-SLM",
-      "number": 116,
-      "id": "opp-d437baaa8f511cce",
-      "matched": [
-        "mcp",
-        "untrusted",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 1
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
