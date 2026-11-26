@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795664763228-3151388b",
+  "source": {
+    "id": "opp-756f2f4960929e53",
+    "url": "https://github.com/travism26/harness-lab/issues/224",
+    "title": "Spec: Committed Claude Code hooks for a check marker and secret-shaped commits",
+    "evidenceHash": "59242e612ef43fedcef1879783d674d573ef31776af5e21847d4138b774fdfe2",
+    "updated": "2026-11-26T02:48:58Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "The task requires creating src/command.js to test the relay's exit status behavior. Since this file doesn't exist, I need to create it first as part of the solution rather than stopping. The probe_process approach was a recovery attempt for a different hypothesis; the actual fix is to modify relay.js to correctly capture and report child process exit codes.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
