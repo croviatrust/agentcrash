@@ -1,16 +1,88 @@
 {
-  "observed": "2026-11-26T16:38:12.919Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-26T22:27:10.088Z",
+  "opportunities": [
     {
-      "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "url": "https://github.com/affan80/REX/issues/35",
+      "title": "Claude Code setup: CLAUDE.md, permissions, hooks, MCP servers",
+      "excerpt": "Commit the project context as CLAUDE.md and configure agents safely for a malware-adjacent repo.\n\n### Acceptance criteria\n- [ ] `CLAUDE.md` at repo root with the REX project context (hard rules, stack, layout, phases, unresolved decisions, working rules)\n- [ ] `.claude/settings.json` (committed): deny reading/executing sample/quarantine dirs and real artifact fixtures; deny `curl|wget` to arbitrary hosts; allow common read-only commands\n- [ ] Hook that blocks executing any file under sample/quarantine paths (rule: never run unknown samples on host)\n- [ ] `.mcp.json` (committed, no secrets) listing project MCP servers; secrets via env only\n- [ ] MCP servers: **GitHub** (issues/PRs; currently failing auth - fix token), **Postgres** read-only against local dev DB only, **Playwright/browser** for apps/web E2E; optional docs MCP for library docs\n- [ ] No MCP server gets access to object storage, artifact samples, provider keys or worker credentials (rules 1, 9)\n- [ ] Plugins documented: superpowers (process skills), ponytail (see tool-ponytail)\n- [ ] `.claude/settings.local.json` git-ignored\n\n### Depends on\n- #37\n\n> Security-sensitive: post plan, files and tests for approval before coding (CLAUDE.md working rules). Include a regression test.\n\n### Blocks\n- #36\n- #44\n\n### Status\nBlocked until the issues above are done. Build-order wave **3**.\n\n_Full graph: #111._\n\n---\n_Source: REX project context (CLAUDE.md). Hard rules apply._",
+      "updated": "2026-11-26T22:22:16Z",
+      "retrieved": "2026-11-26T22:27:10.089Z",
+      "evidenceHash": "6ba045cad98af7e5e2fb73d8ca3315c39a7a29e33c03f20e5f05a0721bea48a7",
+      "query": "\"Claude Code\" \"hooks\"",
+      "repository": "affan80/REX",
+      "number": 35,
+      "id": "opp-f858ac2def785921",
+      "matched": [
+        "mcp",
+        "hook",
+        "permission",
+        "security"
+      ],
+      "score": 10,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/harshsinghmp/musememory/issues/512",
+      "title": "security(mcp): the `dir` argument can relocate the memory store anywhere on the host",
+      "excerpt": "**Severity:** medium · **Control:** CWE-22-adjacent, CWE-862 · Agentic ASI02\n\n## Evidence\n`src/mcp.ts` `resolveStoreForRequest` takes `a.dir || a.workspace || a.project_dir || a.cwd` and calls `findOrCreateProjectRoot(dir)` with no comparison against the configured workspace root; `src/root.ts` then `mkdirSync`/`writeFileSync` the store in place (no `mode`, so 0755/0644 under a default umask). Contrast the control that *is* implemented for sync pools: `src/sync/pool.ts` confines `pool_dir` with `resolveWithin` and creates it `0o700`.\n\n## Impact\nAny client — a remote token holder or a prompt-injected agent — can point the server at another project's or user's directory, read or poison that store, and create `.memory/` at an arbitrary path with world-readable permissions.\n\n## Fix\nResolve `dir` and reject anything outside the configured workspace root (reuse `resolveWithin`); require explicit operator opt-in for cross-root access. Create store directories `0o700` and files `0o600`.\n\nSource: audit 2026-11-26 (S7).",
+      "updated": "2026-11-26T21:54:56Z",
+      "retrieved": "2026-11-26T22:27:10.089Z",
+      "evidenceHash": "08253550a665d5a7373497f1c8d942cc2d447fce5d98e445b6c411b483e84b2c",
+      "query": "\"MCP\" \"security\"",
+      "repository": "harshsinghmp/musememory",
+      "number": 512,
+      "id": "opp-fa1f7d635e54fe79",
+      "matched": [
+        "mcp",
+        "permission",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/harshsinghmp/musememory/issues/514",
+      "title": "security(mcp): prompt and resource output is not marked as data (indirect prompt injection)",
+      "excerpt": "**Severity:** low-medium (architectural) · **Control:** OWASP LLM01 2026 (Prompt Injection, now explicitly including memory persistence), Agentic ASI01/ASI06\n\n## Evidence\n`src/prompts.ts` substitutes `{{current_constraints}}` with raw CURRENT.md text; `src/mcp/prompts.ts` returns it as a `role: \"user\"` text block with no data envelope. `src/mcp/resources.ts` returns raw CURRENT.md/entry JSON. The repo already has the control — `src/security/context_sanitizer.ts` `wrapAgentContext`/`sanitizeContextForAgent` — but it is applied at only one agent-facing call site.\n\n## Impact\nAny write path (`memory_import`, a sync packet, an agent note, a hand-edited YAML mirror) can place instruction-shaped text that later arrives as a first-class user prompt with no delimiter, so a downstream model cannot distinguish data from instructions. Prompt *arguments* cannot break the template (single-pass rendering), so this is content-channel injection.\n\n## Fix\nRun `wrapAgentContext` over `getMcpPrompt`/`readMcpResource` output, or fence memory-derived sections with an explicit data delimiter and strip the delimiter from content before rendering.\n\nSource: audit 2026-11-26 (S9); OWASP LLM Top 10 2026-08-03, LLM01.",
+      "updated": "2026-11-26T21:55:00Z",
+      "retrieved": "2026-11-26T22:27:10.089Z",
+      "evidenceHash": "da0937930da4b84834852264449094dcb0fb45d4c558e84c628764e25061d98b",
+      "query": "\"MCP\" \"security\"",
+      "repository": "harshsinghmp/musememory",
+      "number": 514,
+      "id": "opp-89cce24f2f416ff7",
+      "matched": [
+        "mcp",
+        "prompt injection",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/anthropics/claude-code/issues/103326",
+      "title": "[BUG] Claude Code does not detect, warn about, or protect against external programs overwriting behavior settings and user hooks in settings.json",
+      "excerpt": "# [BUG] Claude Code does not detect, warn about, or protect against external programs overwriting behavior settings and user hooks in settings.json\n\n## Environment\n- Product: Claude Code desktop app (Code tab), macOS\n- Model: Claude Opus 5.5 (1M context)\n- Date: 2026-10-19\n- Related: #103322 (memory rules added without a consistency check against existing rules). Same root cause: incoming configuration is never checked against the existing context.\n\n## Symptoms\n1. A session auto-compacted at 49% context. The user never changed the compaction threshold.\n2. The cause was `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = \"50\"` written into `~/.claude/settings.json` by a third-party npm package (DietCode 0.5.0). The default compaction point for a 1M model (about 967K tokens) silently became about 500K.\n3. The same package rewrites `hooks.UserPromptSubmit`, `hooks.PostToolUse`, `hooks.PreCompact`, and `statusLine` in settings.json wholesale once a day. Any hook the user registered on those events (this user relies on a UserPromptSubmit hook that injects their working rules) can be deleted without warning.\n4. Claude Code reads this file every session, yet it never told the user that the compaction threshold changed or that the hook list changed. The user only found the cause after compaction had already happened.\n5. The app's usage report showed the auto-compact point for this session as 97%. In reality the 50% override was in effect and compaction happened at 49%. The displayed value did not match actual behavior.\n\n## Why this is critical\n- settings.json controls Claude Code's behavior (compaction point, hooks, permissions, environment variables). Behavior changes without the user knowing who changed what.\n- When a hook that enforces the user's rules silently disappears, the user keeps working believing the rules are still applied.\n- Compaction irreversibly summarizes the earlier part of the conversation. Unintended early compaction means lost working context.\n\n## Expected behavior\n- At session start, if any behavior-affecting key in settings.json (env, hooks, permissions, statusLine, etc.) changed since the last session, show what changed and ask for confirmation.\n- Warn when a user-registered hook has disappeared.\n- The usage report should show the auto-compact point actually in effect, including `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`.\n\n## Steps to reproduce\n1. Register a user",
+      "updated": "2026-11-26T22:09:06Z",
+      "retrieved": "2026-11-26T22:27:10.089Z",
+      "evidenceHash": "c03f9600c014cf6baeb5f8fe8727b7a5638887d9e67df9b4ea1ec23d441d3396",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "anthropics/claude-code",
+      "number": 103326,
+      "id": "opp-b99d783167f2ae10",
+      "matched": [
+        "hook",
+        "permission"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
