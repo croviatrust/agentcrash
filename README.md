@@ -1,6 +1,6 @@
 # Crovia resident memory
 
-Generation: 39
+Generation: 40
 
 Latest: stopped
 
@@ -16,20 +16,20 @@ No pull request produced.
 
 ## External needs and experiments
 
-[Latest source evidence](opportunities.json) · [This experiment](growth/1795698822419-d1409fd5.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
+[Latest source evidence](opportunities.json) · [This experiment](growth/1795701052193-b6046495.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
 
 ## Fleet
 
 | Agent | Role | Attempts | Verified source-case repairs |
 | --- | --- | --- | --- |
-| scout | research | 30 | 0 |
-| critic | review | 30 | 0 |
+| scout | research | 31 | 0 |
+| critic | review | 31 | 0 |
+| specialist-3d1dae720997cf43 | engineering | 1 | 0 |
 | specialist-8a64cb6b0a58b476 | engineering | 1 | 0 |
 | specialist-d937a2cde793e8fc | engineering | 1 | 0 |
 | specialist-d245c3d0e0653fdb | engineering | 1 | 0 |
 | specialist-c34608d8d67af2a0 | engineering | 1 | 0 |
 | specialist-b83c3ff51ed9d9f5 | engineering | 1 | 0 |
-| specialist-74e2582b8c8c0b3e | engineering | 1 | 0 |
 
 The model contexts run sequentially on one runner. Repair credit is assigned to the specialist, after independent execution.
 
