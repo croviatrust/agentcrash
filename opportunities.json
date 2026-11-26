@@ -1,12 +1,50 @@
 {
-  "observed": "2026-11-26T04:34:07.795Z",
+  "observed": "2026-11-26T05:04:05.862Z",
   "opportunities": [
+    {
+      "url": "https://github.com/Gentleman-Programming/gentle-ai/issues/6316",
+      "title": "[Automated provider defect] fix(agenthooks): Claude Code hooks are written in shell-string form (Git Bash on Windows) and come back as duplicates next to exec-form hooks after install or global sync (5.0.0)",
+      "excerpt": "## Bug Description\n\n`InstallRetainedClaudeHooks` writes the four retained Claude Code hooks (`review stop-hook --agent claude-code` on `Stop` and `SessionStart`, `telemetry runtime claude --json` on `Stop` and `SubagentStop`) as shell strings: `\"command\": \"gentle-ai review stop-hook --agent claude-code\"`. Claude Code passes a string command to a shell: `sh -c` on macOS/Linux and Git Bash on Windows. On Windows, Git Bash (`bash.exe`) sometimes fails to start (`add_item (\"\\??\\<Git for Windows install dir>\", \"/\", ...) failed, errno 1`). When it does, the hook fails with it, even though the hook needs no shell feature at all.\n\nClaude Code supports an exec form for command hooks (`\"command\": \"gentle-ai\"`, `\"args\": [\"review\", \"stop-hook\", \"--agent\", \"claude-code\"]`), which spawns the executable directly with no shell on any platform (https://code.claude.com/docs/en/hooks, \"Exec form and shell form\").\n\nA user who converts the hooks to exec form by hand cannot keep them that way:\n\n1. `claudeHookListContains` recognizes a managed hook only by `h[\"command\"] == \"<full string>\"`, so an exec-form hook is not seen as installed. The next `gentle-ai install` (or a global `gentle-ai sync`) appends the string form again next to it: every `Stop`/`SessionStart` now runs the review hook twice, once through the shell.\n2. The uninstaller (`managedRetainedHookCommand` in `internal/components/uninstall/service.go`) also matches only the string, so it leaves exec-form hooks behind.\n\n## Steps to Reproduce\n\n1. In a scratch repository, create `.claude/settings.json` with the review hooks in exec form:\n   ```json\n   {\"hooks\":{\n     \"SessionStart\":[{\"matcher\":\"startup|resume|clear|compact\",\"hooks\":[{\"type\":\"command\",\"command\":\"gentle-ai\",\"args\":[\"review\",\"stop-hook\",\"--agent\",\"claude-code\"],\"timeout\":30}]}],\n     \"Stop\":[{\"matcher\":\"\",\"hooks\":[{\"type\":\"command\",\"command\":\"gentle-ai\",\"args\":[\"review\",\"stop-hook\",\"--agent\",\"claude-code\"],\"timeout\":60}]}]}}\n   ```\n2. Run, with an isolated `HOME`/`USERPROFILE` and `GENTLE_AI_HOME`: `gentle-ai install --scope workspace --agent claude-code --components skills --skills go-testing`\n3. Inspect `.claude/settings.json`.\n\n## Expected Behavior\n\nThe exec-form hooks are recognized as installed and left alone; the missing telemetry hooks are added in exec form; the file has exactly one review hook per event.\n\n## Actual Behavior\n\n`SessionStart` and `Stop`",
+      "updated": "2026-11-26T03:44:19Z",
+      "retrieved": "2026-11-26T05:04:05.863Z",
+      "evidenceHash": "8c2a690f742158e7490a3d85385d1df612a6f76d74edcffe7bd09c98c08ddba3",
+      "query": "\"Claude Code\" \"hooks\"",
+      "repository": "Gentleman-Programming/gentle-ai",
+      "number": 6316,
+      "id": "opp-54c522d5641ffd1f",
+      "matched": [
+        "hook",
+        "startup"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/microsoft/mcp-for-beginners/issues/1224",
+      "title": "Broken link in MCP Security Best Practices documentation",
+      "excerpt": "**Describe the bug**\n\nTwo links in the `02-Security/mcp-best-practices.md` documentation page currently point to URLs that return a **404 Not Found** error.\n\nThe affected links are under the Advanced Security Resources section of the .md file:\n\n1) [Threat Modeling for AI Systems](https://learn.microsoft.com/security/adoption/approach/threats-ai) - AI threat modeling methodology\n2) [Privacy Engineering for AI](https://www.microsoft.com/security/blog/2021/07/13/microsofts-pet-project-privacy-enhancing-technologies-in-action/) - Privacy-preserving AI techniques\n\n**To Reproduce**\n\n1. Navigate to the [[MCP Security Best Practices](https://github.com/microsoft/mcp-for-beginners/blob/main/02-Security/mcp-best-practices.md)](https://github.com/microsoft/mcp-for-beginners/blob/main/02-Security/mcp-best-practices.md) documentation, and look under Advanced Security Resources subsection in Implementation Resources & Standards section\n2. Both URLs return a 404 Not Found error.\n\n\nBoth links should redirect to valid, accessible resources relevant to their original references. If the resources have been moved or removed, the links should be updated to their appropriate replacements.\n\nI just checked these two links and a few others. After the update, maintainers might want to check if all other resources linked in the repo are up-to-date. ",
+      "updated": "2026-11-26T02:31:08Z",
+      "retrieved": "2026-11-26T05:04:05.863Z",
+      "evidenceHash": "19b3067de8bd724d83edd2e8ae6d33c5655772d69da4155a510c98f3481224ae",
+      "query": "\"MCP\" \"security\"",
+      "repository": "microsoft/mcp-for-beginners",
+      "number": 1224,
+      "id": "opp-d0f41d35105fd59e",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
     {
       "url": "https://github.com/thanhtuyen662002/DubFlow/issues/489",
       "title": "[SECURITY] Confine MCP documentary project creation outside source-media",
       "excerpt": "DUBFLOW_TASK_V1\nHard-Dependencies: none\nSoft-Dependencies: #458,#464,#485,#487\nConflict-Domains: documentary-mcp-create,source-media-path-confinement,documentary-windows-lane\nExpected-Paths: .claims/issue-489-mcp-create-project-path-confinement.md,engine/dubflow/docu/intake.py,engine/dubflow/mcp/server.py,tests/docu/test_intake.py,.github/workflows/pr-documentary-windows.yml,docs/adr/ADR-0049-documentary.md\nRequired-CI: PR Fast + PR Integration (documentary selected) + documentary-windows\n\n## Outcome\nClose the new MCP create_project path-confinement gap so it cannot create documentary output inside DubFlow's reserved <data_root>/source-media store through a symlink, junction or other reparse-point alias. Preserve the existing Tauri guard and the completed MCP project-root guard; this is a follow-up to the new MCP intake flow, not a reopening of #458 or #464.\n\n## Original source finding — 2026-11-04\nFirst observed on Main f2811fd18029e517b29cbdf9daddde4b23d1e07e.\n\n## Current-Main revalidation — 2026-11-07 10:45 +07\nCurrent Main: `d4354fd9c24f087afaaaa0b5e996d943cb8c1abc`.\nFresh source blobs:\n- `engine/dubflow/docu/intake.py`: `9f14b0dbcfc3042128843c0b4b4dd6b1a21a5265`.\n- `engine/dubflow/mcp/server.py`: `bf3f37fcbcf8b66be9aea219285816759043e2f6`.\n- `.github/workflows/pr-documentary-windows.yml`: `26c597c80051b424154fdd72975908c6c965b2fb`.\n- `docs/adr/ADR-0049-documentary.md`: `61410119cef42b2e44d93988a3886f8c7037d802`.\n\nThe source finding remains unchanged: intake checks only a lexical parent component named `source-media` before creating `.dubflow-work`; it does not prove canonical nearest-existing-ancestor containment against the actual data-root source-media store. MCP `create_project` does not pass the actual data root. The Documentary Windows lane currently runs Rust host/junction tests only; it does not execute the Python MCP intake regression. This is a source-confirmed source-store integrity/eviction risk; no exploit or data-loss incident is claimed.\n\n## Acceptance\n1. MCP create_project must enforce the same reserved-source-store boundary as the Tauri host before the first filesystem write. Resolve the candidate through its nearest existing ancestor, compare canonical containment against the actual data-root source-media store, and fail closed on unresolved paths.\n2. Reject symlink/junction/reparse-point aliases in the output path ancestry, including a",
       "updated": "2026-11-26T03:46:04Z",
-      "retrieved": "2026-11-26T04:34:07.795Z",
+      "retrieved": "2026-11-26T05:04:05.863Z",
       "evidenceHash": "419ef12755f8cb4269af982ea107ff36fad00f885c95de050aaf89205d1a05f5",
       "query": "\"MCP\" \"security\"",
       "repository": "thanhtuyen662002/DubFlow",
@@ -25,7 +63,7 @@
       "title": "feat(security): Process Sandboxing & Resource Confinement for MCP Child Processes (Linux Namespaces / cgroups)",
       "excerpt": "### Summary\nWhen connecting external MCP servers or executing untrusted tool processes (e.g., Python runners, shell tools, third-party adapters), child processes must not inherit the host application's environment, memory space, or privileges. Running child processes without isolation poses high security and stability risks (e.g. secret extraction from environment variables, CPU exhaustion, unauthorized filesystem access).\n\n### Technical Scope\n1. **Environment & File Descriptor Hygiene**:\n   - Strip sensitive environment variables (`JWT_SECRET`, `API_TOKEN`, database credentials) when spawning child processes.\n   - Set `close_fds=True` to ensure internal sockets, database handles, and pipes are not leaked to subprocesses.\n2. **Resource Confinement**:\n   - Enforce hard limits on RAM usage (memory limits) and execution time (deadlock/runaway query prevention) via cgroups or `resource.setrlimit` on POSIX systems.\n3. **Filesystem Isolation**:\n   - Confine filesystem access strictly to the assigned workspace directory using Linux namespaces, container boundaries, or unprivileged isolation wrappers (e.g., `bubblewrap` / `nsjail` / restricted sub-shells).\n\n### Acceptance Criteria\n- [ ] Subprocess executor enforces explicit environment variable allowlists.\n- [ ] Hard resource limits (memory ceiling, process timeout) terminate runaway child processes.\n- [ ] Child processes cannot access secrets, `.env` files, or directories outside the designated workspace.\n- [ ] Regression security tests validating containment.",
       "updated": "2026-11-26T02:36:36Z",
-      "retrieved": "2026-11-26T04:34:07.795Z",
+      "retrieved": "2026-11-26T05:04:05.863Z",
       "evidenceHash": "6b8c1afc29f33c07caa87c80ee11da5bf2bd453b3798c84a13657cc862dd6cef",
       "query": "\"MCP\" \"security\"",
       "repository": "Zyrabit-tech/zyrabit-SLM",
@@ -41,16 +79,7 @@
       "attempts": 1
     }
   ],
-  "errors": [
-    {
-      "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
-    },
-    {
-      "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
-    }
-  ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
