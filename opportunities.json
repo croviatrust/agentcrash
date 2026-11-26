@@ -1,16 +1,86 @@
 {
-  "observed": "2026-11-26T05:35:04.129Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-26T12:53:38.335Z",
+  "opportunities": [
     {
+      "url": "https://github.com/Fuzzy-Technologies/1337/issues/547",
+      "title": "Add MCP security scanning to 1337Scope",
+      "excerpt": "## Outcome\n\nAn engineer can review what an MCP server exposes before approving it, and CI can catch changes to that surface. The same server, tool, resource and prompt identities and their evidence are available to the human reviewer and the AI through the shared Workbench model.\n\n## Scope\n\nBuild on Native Web Scanner NG (#53), the API inventory and evidence pipeline (#143), and the existing findings and reporting contracts. Capture declared capabilities, tool schemas and annotations, resource and prompt metadata, and the provenance and completeness of each inventory. Support a local snapshot first and explicit read-only metadata collection from an operator-approved server. Imported descriptions and server instructions are untrusted data. Keep evidence local by default.\n\n## Acceptance\n\n- Importing a saved inventory and collecting equivalent metadata from a controlled server yield equivalent modeled objects with attributable evidence.\n- A reviewer can approve a baseline, rerun it in CI and see which declaration changed, the supporting evidence and the applicable policy. An incomplete collection remains visible.\n- An engineer, CI and an AI consumer can identify the same finding and affected object through existing Workbench interfaces. Publish an example in the Web Scanner NG quickstart.\n- Scope the first release to metadata inventory, declarative posture and drift. The integration that exposes 1337 itself over MCP is tracked independently in #78.\n\n## References\n\n[Scanner comparison and its methodology](https://dev.to/agentsecindex/mcp-security-scanners-compared-5-open-source-tools-eaa) · [MCP server primitives](https://modelcontextprotocol.io/specification/2025-11-25/server) · [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)",
+      "updated": "2026-11-26T12:38:22Z",
+      "retrieved": "2026-11-26T12:53:38.336Z",
+      "evidenceHash": "8999b1dc51e547ab5875b2f2b54e08f73c32f91d536600fe780852fe5b8de582",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "Fuzzy-Technologies/1337",
+      "number": 547,
+      "id": "opp-bbec389cf3c844b2",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/Fuzzy-Technologies/1337/issues/548",
+      "title": "Import MCP inventories into the shared security model",
+      "excerpt": "## Deliverable\n\nDefine and document a versioned offline inventory for an MCP server, its declared capabilities, tool schemas and annotations, resource and prompt descriptors, and optional server instructions. Reuse Workbench object IDs, relations, provenance and evidence. Keep untrusted text inert and redact credential values before retention.\n\n## Acceptance\n\n- Import a local benign sample twice. The second import reuses the same identities and records provenance.\n- Distinguish an empty inventory from missing or unsupported sections and flag malformed input with an actionable diagnostic.\n- Verify that snapshot import starts no process, makes no network request and stores no sample secret.",
+      "updated": "2026-11-26T12:38:24Z",
+      "retrieved": "2026-11-26T12:53:38.336Z",
+      "evidenceHash": "92844e05e6f2d866971dbab3c2d2e812144eae7b8d47783b4ab3ffdb326a3b90",
+      "query": "\"MCP\" \"security\"",
+      "repository": "Fuzzy-Technologies/1337",
+      "number": 548,
+      "id": "opp-564f5afe0b460037",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/chalkbadger/stay-safe/issues/239",
+      "title": "Report Claude Code hooks and hook scripts added or changed since my last run",
+      "excerpt": "## Now\nEach stay-safe run is a fresh snapshot. If a project gains a command hook between two runs, or the repository script a hook runs changes while `.claude/settings.json` stays the same, the second report looks the same as the first one would have. Nothing tells me what is new. GTIG's SOMBERMEME report (see #163) describes intruders changing this settings file in internal repositories so that starting Claude Code downloaded a backdoor. A person who has already accepted a project's hooks has no signal when they change.\n\n## Change\nBuilds on #238, which identifies the repository script a hook runs.\n\nAdd an opt-in local history for Claude Code discovery runs, for example `--remember`, and `--forget` to delete one project's history.\n\n- **What is recorded:** for each command-running setting found (command hooks, and the helper settings once #192–#197 land), its source file and location (event, matcher group and position for a hook), a fingerprint of its command and `args`, and, for a script identified by #238, a fingerprint of the script's bytes.\n- **Fingerprints, not values:** each fingerprint is an HMAC-SHA-256 keyed by a random secret created on first use and stored beside the history. A plain hash of a short command or token could be checked by guessing. Commands, arguments, script contents and URLs are never stored.\n- **Where:** a per-user state folder outside the project, such as `$XDG_STATE_HOME/stay-safe/` with `~/.local/state/stay-safe/` as the fallback, keyed by a fingerprint of the project's resolved path. Nothing is written to, moved within or deleted from the project. The history file is written with owner-only permissions and replaced atomically.\n- **Reading a script:** a script is opened only to compute its fingerprint, with the existing input protections: a regular file inside the project, no symlink that resolves outside it, and the 1 MiB limit. It is never executed. Anything else is reported instead of read.\n\nOn a later run with `--remember`, the finding and the JSON entry say what differs from the history:\n\n- **Added:** the hook or helper wasn't in the last run's history, named with the date of that run.\n- **Script changed:** the script's fingerprint differs while the settings entry is unchanged, naming the script and saying that `settings.json` did not change.\n- **Command changed:** the command fingerprint differs; the command stays withheld",
+      "updated": "2026-11-26T11:45:00Z",
+      "retrieved": "2026-11-26T12:53:38.336Z",
+      "evidenceHash": "605022d27239a3037175c3df8083ec32ed470cc5ee972f05269c3d9851303181",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "chalkbadger/stay-safe",
+      "number": 239,
+      "id": "opp-bffd80b241648716",
+      "matched": [
+        "hook",
+        "permission"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/gvarun17/fde-6-month-plan/issues/20",
+      "title": "Week 20 · 12 Apr – 18 Apr 2027 · MCP in depth: remote servers, enterprise integrations and agent security",
+      "excerpt": "**Phase:** Phase 4 — Advanced AI, agents and cloud AI (weeks 18–23)  \n**Dates:** Mon 12 Apr 2027 → Sun 18 Apr 2027  \n**Week guide:** [weeks/week-20/README.md](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/README.md)\n\n## 🎯 By the end of the week you can\n\n- Explain MCP primitives (tools, resources, prompts) and transports (stdio vs Streamable HTTP).\n- Build and call a remote MCP server over Streamable HTTP with the MCP Python SDK v2.\n- Protect a remote MCP server with bearer tokens and least-privilege scopes.\n- Connect one agent to several MCP servers and convert their tools for the model.\n- Recognize MCP-specific risks: tool poisoning, over-broad tokens, confused deputy, and data exfiltration.\n\n## 📚 Readings\n\n- [ ] Study content in the [week guide](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/README.md#study-content): MCP primitives, Transports, Authentication for remote servers, Many servers, one agent, MCP security risks\n- [ ] [MCP specification: Architecture overview](https://modelcontextprotocol.io/docs/learn/architecture)\n- [ ] [MCP specification: Transports](https://modelcontextprotocol.io/specification/latest/basic/transports)\n- [ ] [MCP specification: Authorization](https://modelcontextprotocol.io/specification/latest/basic/authorization)\n- [ ] [MCP Python SDK (v2 docs and migration guide)](https://py.sdk.modelcontextprotocol.io/)\n- [ ] [MCP: Security best practices](https://modelcontextprotocol.io/specification/latest/basic/security_best_practices)\n- [ ] [GitHub REST API: Issues](https://docs.github.com/en/rest/issues/issues)\n- [ ] [Tested reference: remote server + client (SDK v2)](https://github.com/gvarun17/fde-6-month-plan/blob/main/solutions/week-20-mcp)\n\n## ✅ Tasks\n\n- [ ] **Mon** — [Remote MCP server over Streamable HTTP](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/labs/day-1.md) 💲\n- [ ] **Tue** — [Protect the remote server](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/labs/day-2.md) 💲\n- [ ] **Wed** — [Wrap a SaaS API as an MCP server](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/labs/day-3.md) 💲\n- [ ] **Thu** — [One agent, several servers](https://github.com/gvarun17/fde-6-month-plan/blob/main/weeks/week-20/labs/day-4.md) 💲\n- [ ] **Fri** — [Attack your MCP setup](https://github.com/gvarun17/fde-6-month-plan/blob/main/we",
+      "updated": "2026-11-26T12:36:38Z",
+      "retrieved": "2026-11-26T12:53:38.336Z",
+      "evidenceHash": "a4ab4daf8df754708b57e26e49aacf65f794ab7dd6985c3e556fe1387514be0d",
+      "query": "\"MCP\" \"security\"",
+      "repository": "gvarun17/fde-6-month-plan",
+      "number": 20,
+      "id": "opp-d3cc10337910e11f",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795698822419-d1409fd5",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Propose a change to src/cage/relay.js to correct the SIGINT exit status calculation from 143 to 130, and update the regression test to expect 130 instead of 0.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
