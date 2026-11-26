@@ -6,7 +6,9 @@ name: release
 # One-time setup, done once by a maintainer, never in this file:
 #   npm:    the package has to exist before a trusted publisher can be attached,
 #           so the first version is published by hand: `npm login && npm publish --access public`.
-#           Then npmjs.com -> package agentcrash -> Settings -> Trusted publisher:
+#           The name is @crovia/agentcrash: the @crovia scope is the one crovia-seal
+#           already publishes (@crovia/seal). The unscoped name stays unused.
+#           Then npmjs.com -> package @crovia/agentcrash -> Settings -> Trusted publisher:
 #           GitHub Actions, organisation croviatrust, repository agentcrash, workflow release.yml, environment npm
 #   GitHub: Settings -> Environments -> create "npm" (optionally with required reviewers),
 #           then set the repository variable NPM_TRUSTED_PUBLISHER=configured

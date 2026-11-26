@@ -113,7 +113,7 @@ agentcrash guard: you have not approved this; claude has not started.
 
 For coding agents: [tool catalog and reproducible encounter task](agents/README.md) · [machine-readable catalog](agents/catalog.json).
 
-Not on npm yet: every command below is `node bin/agentcrash.js …` from the clone.
+The npm package is `@crovia/agentcrash`. The commands below are `node bin/agentcrash.js …` from the clone until that package is on the registry.
 
 ## The record
 
