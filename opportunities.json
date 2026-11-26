@@ -1,85 +1,16 @@
 {
-  "observed": "2026-11-26T15:17:43.657Z",
-  "opportunities": [
+  "observed": "2026-11-26T16:00:44.742Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/Fuzzy-Technologies/1337/issues/548",
-      "title": "Import MCP inventories into the shared security model",
-      "excerpt": "## Deliverable\n\nDefine and document a versioned offline inventory for an MCP server, its declared capabilities, tool schemas and annotations, resource and prompt descriptors, and optional server instructions. Reuse Workbench object IDs, relations, provenance and evidence. Keep untrusted text inert and redact credential values before retention.\n\n## Acceptance\n\n- Import a local benign sample twice. The second import reuses the same identities and records provenance.\n- Distinguish an empty inventory from missing or unsupported sections and flag malformed input with an actionable diagnostic.\n- Verify that snapshot import starts no process, makes no network request and stores no sample secret.",
-      "updated": "2026-11-26T14:47:04Z",
-      "retrieved": "2026-11-26T15:17:43.658Z",
-      "evidenceHash": "891f049f1419a58d8077abf8a56616148c8ca8a9d19cdb3c2d434fe9066c87e9",
       "query": "\"MCP\" \"security\"",
-      "repository": "Fuzzy-Technologies/1337",
-      "number": 548,
-      "id": "opp-564f5afe0b460037",
-      "matched": [
-        "mcp",
-        "untrusted",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/kirodotdev/KiroCrew/issues/43198",
-      "title": "MCP OAuth URL rejected as credential (fixed_credential_raw false positive on 144-char client_id) blocks Sweet Security MCP",
-      "excerpt": "Environment: Kiro Crew (Windows), kiro-cli 3.2.0\nMCP server: sweet, https://eapi.sweet.security/docs/mcp (OAuth)\n\n## Steps\n1. Add the sweet MCP server and start the connection (OAuth).\n2. The dashboard refuses to show the approval address because it \"contains credential-like data\".\n\n## gateway.log (2026-11-26 17:02:20)\n```\nWARNING kiro_crew.security.exfil: OAuth URL rejected rule=fixed_credential_raw component=query_parameter parameter=client_id length=144 upper=60 lower=57 digits=26 percent=0 symbols=1 other=0\nWARNING kiro_crew.dashboard.chat_runner: ACP: rejecting MCP OAuth URL with credential/exfil pattern for sweet\n```\n\n## Expected\nThe OAuth authorize URL opens. client_id is a public identifier, not a secret.\n\n## Actual\nThe URL is rejected, so the server stays in \"waiting for a person to sign in\" and cannot connect.\n\n## Notes\n- credential_redaction is not the cause. The block comes from the exfil gate (_contains_fixed_credential), which stays active when redaction is off.\n- oauth_endpoints.json already lists Sweet's /app/authorize. The error persisted after a gateway restart.\n\n## Request\nExempt OAuth client_id (and other public OAuth params such as state and code_challenge) from the fixed_credential_raw check, or add an owner-approved allowlist per MCP server/domain.\n",
-      "updated": "2026-11-26T15:11:38Z",
-      "retrieved": "2026-11-26T15:17:43.658Z",
-      "evidenceHash": "027f8fe289eee25d47836ad8284174defccd72343eb53e8235b9fea2a399b906",
-      "query": "\"MCP\" \"security\"",
-      "repository": "kirodotdev/KiroCrew",
-      "number": 43198,
-      "id": "opp-31888f901d955578",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/lgcorzo/rust_CACD_autonomous_factory/issues/868",
-      "title": "[T039] [008] [US6] Write contract tests for /mcp/skills-manifest and A2A PEP security matrix",
-      "excerpt": "## Metadata\n- **Feature**: `008-enable-swarm-mode`\n- **Task ID**: `T039`\n- **Phase**: Phase 8: User Story 6 — Peer Agent Discovery, Encrypted Delegation & Cost Attribution (Priority: P3)\n- **Wave**: Wave 3 (P3)\n- **User Story**: `US6`\n- **Parallelizable**: Yes (`[P]`)\n- **Target Repository**: `lgcorzo/rust_CACD_autonomous_factory`\n\n## Task Description\nWrite contract tests for `GET /mcp/skills-manifest` (`>= 15` skills, OpenAI Tools schema) and A2A PEP security matrix (`200` zero-token direct route, `400` hop `> 3`/cycle, `401` expired `> 300s`/invalid Ed25519, `403` unauthorized/self-referential, `429` frozen) in `rust_CACD_autonomous_factory/crates/factory-mcp-server/tests/a2a_manifest_tests.rs` and `gitops_internal_lgcorzo/tests/test_litellm_swarm_callbacks.py`\n\n## Cross-Repo Synchronization\n- **Secondary Repository (`lgcorzo/gitops_internal_lgcorzo`)**: Keep Python A2A PEP matrix tests in `tests/test_litellm_swarm_callbacks.py` aligned with `crates/factory-mcp-server/tests/a2a_manifest_tests.rs`.\n\n## Spec-Kit Design References (`lgcorzo/gitops_internal_lgcorzo`)\n- `specs/008-enable-swarm-mode/spec.md`\n- `specs/008-enable-swarm-mode/plan.md`\n- `specs/008-enable-swarm-mode/data-model.md`\n- `specs/008-enable-swarm-mode/tasks.md`\n- `specs/008-enable-swarm-mode/quickstart.md`\n- `specs/008-enable-swarm-mode/contracts/a2a-protocol.md`\n",
-      "updated": "2026-11-26T14:10:37Z",
-      "retrieved": "2026-11-26T15:17:43.658Z",
-      "evidenceHash": "63ff1bc266f0480b9f8ec3b2ca9d267d60884193a95da4f5a93c8b35c363eddb",
-      "query": "\"MCP\" \"security\"",
-      "repository": "lgcorzo/rust_CACD_autonomous_factory",
-      "number": 868,
-      "id": "opp-0d3ab6e06811f41f",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/yousan/hataori/issues/855",
-      "title": "Claude Code adapter: a trust dialog that warns of hooks in .claude/skills or .claude/agents is not recognised",
-      "excerpt": "Found in the review of #848 (#752), reproduced with Claude Code 2.1.332. Not changed there.\n\nA repository whose skill, command or agent declares hooks in its front matter gets a folder-trust dialog with the hooks warning, naming a directory and not a settings file, and no line naming files:\n\n```\n Claude Code'll be able to read, edit, and execute files here.\n\n ⚠ This folder configures hooks that can run commands without asking, declared\n in .claude/skills\n\n Security guide\n\n ❯ No, exit\n   Yes, I trust this folder\n```\n\n(`.claude/skills` with a `.claude/skills/x/SKILL.md`, `.claude/agents` with a `.claude/agents/x.md`; by the program text also `.claude/commands`, and together with the settings files.)\n\nThe adapter reads the hooks warning only when the line \"Trusting this folder loads\" names what it declares, so this screen gets no key and no event: the start ends at the start timeout with raw terminal output. No `trust_files` entry helps, and a person is not told that hooks are why. In a confined session the dialog has no warning and is answered.\n\nBy the program text (not reproduced), a dialog for the home folder says one more sentence, \"This is your home folder, so Yes lasts for this session only.\", and is not read either.\n\n## Acceptance criteria\n\n- [ ] Real captures of the dialog whose warning names `.claude/skills` and `.claude/agents`, alone and with a settings file, are read: refused naming them, or answered when all are trusted, as the owner decides for what `trust_files` may name. The tests fail on main.\n- [ ] Any other directory there, or any other text, gets no key.\n\nRelated: #592, #752, #758.\n",
-      "updated": "2026-11-26T15:17:38Z",
-      "retrieved": "2026-11-26T15:17:43.658Z",
-      "evidenceHash": "44bb6023c8501012de133572dafcf16823a6c9533ddae3e1731fc2189480c206",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "yousan/hataori",
-      "number": 855,
-      "id": "opp-3f2ddee2f854f511",
-      "matched": [
-        "hook",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
