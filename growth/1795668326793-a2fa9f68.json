@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795668326793-a2fa9f68",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Read src/command.js content first if it exists, otherwise verify the exact signal value received by relay.js in a controlled test before proposing an edit to the exit status calculation logic.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
