@@ -8,16 +8,9 @@
       "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
-      "status": "needs-research",
-      "attempts": 5,
+      "status": "blocked",
+      "attempts": 6,
       "checkpoints": [
-        {
-          "episode": "1795705111484-94605a3e",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Read line 65 of src/cage/relay.js again to confirm the exact signal mapping logic before proposing the fix.",
-          "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
-        },
         {
           "episode": "1795707588794-ed0dc6be",
           "status": "stopped",
@@ -31,13 +24,20 @@
           "verdict": "stopped",
           "next": "Read line 46 of src/cage/relay.js again to confirm the exact ternary expression and propose a minimal edit changing the fallback or condition to handle SIGINT correctly.",
           "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
+        },
+        {
+          "episode": "1795712074411-ecb453e0",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "How to correctly execute `src/cage/relay.js` in isolation to observe its exit code when receiving SIGINT? Is the current `probe_process` tool execution context running a test runner instead of the raw script, or is there an import/environment issue preventing the relay logic from running?",
+          "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
         }
       ],
-      "lastEpisode": "1795709631861-5a4f9743",
-      "next": "Read line 46 of src/cage/relay.js again to confirm the exact ternary expression and propose a minimal edit changing the fallback or condition to handle SIGINT correctly.",
-      "recoveryCycles": 5,
+      "lastEpisode": "1795712074411-ecb453e0",
+      "next": "How to correctly execute `src/cage/relay.js` in isolation to observe its exit code when receiving SIGINT? Is the current `probe_process` tool execution context running a test runner instead of the raw script, or is there an import/environment issue preventing the relay logic from running?",
+      "recoveryCycles": 6,
       "lastFailure": {
-        "episode": "1795709631861-5a4f9743",
+        "episode": "1795712074411-ecb453e0",
         "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -46,19 +46,33 @@
           "source": "https://github.com/croviatrust/agentcrash/issues/9"
         },
         "status": "stopped",
-        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code mapping in relay.js\",\"hypothesis\":\"The ternary expression `signal === 'SIGKILL' ? 9 : 15` incorrectly maps SIGINT to 15 (resulting in 128+15=143) instead of the conventional 2 (resulting in 128+2=130).\",\"falsifier\":\"Running the regression test on the unmodified code must fail with exit code 143; running it after the edit must pass with exit code 130.\",\"benefit\":\"Aligns relay.js behavior with standard Unix shell conventions for SIGINT, satisfying the maintainer's contract to preserve child exit status.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  const sigMap = { 'SIGINT': 2, 'SIGTERM': 15, 'SIGKILL': 9 };\\n  const exitCode = signal ? 128 + (sigMap[signal] ?? 0) : code ?? 1;\\n  process.exit(exitCode);\\n});\",\"path\":\"test/relay-sigint.test.js\",\"content\":\"import { test, assert } from 'node:test';\\nimport { spawnSync } from 'node:child_process';\\n\\nconst script = `#!/usr/bin/env node\\nimport { spawn } from 'node:child_process';\\nconst child = spawn('node', ['-e', 'process.kill(process.pid, \\\"SIGINT\\\")'], { stdio: 'inherit' });\\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 2) : code ?? 1));\\n`;\\n\\nconst result = spawnSync(process.execPath, ['src/cage/relay.js', '/tmp/test.sock', '0', '--', process.execPath, '-e', script]);\\ntest('process exit contract', () => {\\n  assert.strictEqual(result.status, 130, `Expected SIGINT exit code 130, got ${result.status}`);\\n});\",\"probeId\":\"probe-1\"}]}",
         "observedBlockers": [
           {
             "phase": "action",
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+            "error": "Read the Node script before requesting a process experiment"
           },
           {
             "phase": "action",
-            "error": "Unknown probe reference or non-regression destination"
+            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
           }
         ],
-        "modelReasonUnverified": "The proposed edit relies on a `sigMap` object that maps signals to arbitrary numbers (e.g., SIGINT -> 2), but the reproduction command explicitly tests the behavior of the relay when it receives a SIGINT signal from its child. The current code in `src/cage/relay.js` uses a ternary expression `signal === 'SIGKILL' ? 9 : 15`. When the child sends SIGINT, the signal is not 'SIGKILL', so the code falls through to return 15 (resulting in exit code 128+15=143). The fix requires changing this ternary logic to specifically handle SIGINT as an exception case, mapping it to 2 instead of falling through to 15. The proposed edit attempted to introduce a new `sigMap` object which is unnecessary complexity and not present in the original code structure; the direct fix is to modify the existing conditional logic.",
+        "modelReasonUnverified": "The probe_process executed relay.js directly (as the child process), but the test harness itself exited with code 0, indicating the relay script did not run or failed silently before reaching its exit handler. The log shows a TAP test failure from a regression file (`probe-a8aab5...`), which suggests the `probe_process` tool is executing a test runner that expects a specific output format or environment that isn't being met by running `relay.js` directly in this context. The actual behavior of `relay.js` when it *does* receive SIGINT is unknown because we cannot observe its exit code from the current execution trace (which reports 0). Without observing the actual exit code of `relay.js` under SIGINT, I cannot verify if the bug exists or if the test environment is broken. The previous attempts to read line 52 were blocked by evidence policy; I have now exhausted the allowed reads for this turn and lack a concrete observation of `relay.js`'s behavior to confirm the hypothesis before proposing an edit.",
         "actions": [
+          {
+            "action": "probe_process"
+          },
+          {
+            "error": "Read the Node script before requesting a process experiment",
+            "phase": "action"
+          },
+          {
+            "action": "read",
+            "path": "src/command.js"
+          },
+          {
+            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
+            "phase": "action"
+          },
           {
             "action": "read",
             "path": "src/cage/relay.js"
@@ -68,31 +82,16 @@
             "processContract": {
               "script": "src/cage/relay.js",
               "args": [
-                "/tmp/test.sock",
+                "/tmp/x.sock",
                 "0",
                 "--",
                 "node",
                 "-e",
-                "process.kill(process.pid, 'SIGINT')"
+                "process.kill(1, 'SIGINT')"
               ],
               "expectedExit": 130,
               "timeoutMs": 5000
             }
-          },
-          {
-            "action": "read",
-            "path": "src/cage/relay.js"
-          },
-          {
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
-            "phase": "action"
-          },
-          {
-            "action": "propose"
-          },
-          {
-            "error": "Unknown probe reference or non-regression destination",
-            "phase": "action"
           },
           {
             "action": "stop"
@@ -102,17 +101,17 @@
         "probes": [
           {
             "status": "baseline-failed",
-            "code": 1,
-            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 45.843221\n  type: 'test'\n  location: '/work/resident-regressions/probe-ed4df3dc8fea39a692211c8c.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-ed4df3dc8fea39a692211c8c.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 88.12786\n",
+            "code": 130,
+            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 45.04167\n  type: 'test'\n  location: '/work/resident-regressions/probe-a8aab55a0f9ed32f97ab1b7a.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    0 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 0\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-a8aab55a0f9ed32f97ab1b7a.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 86.030517\n",
             "processContract": {
               "script": "src/cage/relay.js",
               "args": [
-                "/tmp/test.sock",
+                "/tmp/x.sock",
                 "0",
                 "--",
                 "node",
                 "-e",
-                "process.kill(process.pid, 'SIGINT')"
+                "process.kill(1, 'SIGINT')"
               ],
               "expectedExit": 130,
               "timeoutMs": 5000
@@ -126,15 +125,15 @@
           }
         ],
         "attemptedMethod": {
-          "mode": "minimal-edit",
-          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"}],\"checks\":[]}",
-          "instructions": "Execute a new probe_process using a local Node.js binary (e.g., 'node' or 'n') instead of spawning a container, and pass the same reproduction command to verify the exit code is 143. If successful, edit line 46 in src/cage/relay.js to change the literal `15` to `2` within the ternary expression for SIGINT handling.",
-          "falsifier": "If the new probe_process with a local Node binary still fails or returns an unexpected exit code, it indicates the environment lacks a local Node runtime; otherwise, if the edit is made and the next execution returns 130, the method works.",
-          "id": "method-0849004eed78446ae950",
+          "mode": "contract-first",
+          "observation": "{\"status\":\"proposed\",\"blockers\":[],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+          "instructions": "Execute a new probe_process with the same script but explicitly verify the child process receives SIGINT and check if the relay correctly maps it to 130. If the test still fails with 143, propose a minimal edit to `src/cage/relay.js` line 52: replace `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` with `const sigNum = signal ? parseInt(signal.replace('SIG', '')) : 0; process.exit(128 + sigNum)` to correctly map SIGINT->2, SIGTERM->15, SIGKILL->9.",
+          "falsifier": "If the new probe_process runs successfully (exit code 0) and logs 'status: pass' with exit code 130, it confirms the previous failure was purely environmental (missing image). If it still fails with 143 or a different error, the logic in relay.js is confirmed broken.",
+          "id": "method-e1b0e60cc791e8ad77b5",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-26T16:37:40.461Z"
+      "cooldownUntil": "2026-11-26T17:13:59.707Z"
     },
     {
       "id": "work-1ca99c4589115e6ecff5",

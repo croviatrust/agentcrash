@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795712074411-ecb453e0",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "How to correctly execute `src/cage/relay.js` in isolation to observe its exit code when receiving SIGINT? Is the current `probe_process` tool execution context running a test runner instead of the raw script, or is there an import/environment issue preventing the relay logic from running?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
