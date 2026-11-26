@@ -1,85 +1,16 @@
 {
-  "observed": "2026-11-26T13:37:12.925Z",
-  "opportunities": [
+  "observed": "2026-11-26T14:09:59.043Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/Fuzzy-Technologies/1337/issues/548",
-      "title": "Import MCP inventories into the shared security model",
-      "excerpt": "## Deliverable\n\nDefine and document a versioned offline inventory for an MCP server, its declared capabilities, tool schemas and annotations, resource and prompt descriptors, and optional server instructions. Reuse Workbench object IDs, relations, provenance and evidence. Keep untrusted text inert and redact credential values before retention.\n\n## Acceptance\n\n- Import a local benign sample twice. The second import reuses the same identities and records provenance.\n- Distinguish an empty inventory from missing or unsupported sections and flag malformed input with an actionable diagnostic.\n- Verify that snapshot import starts no process, makes no network request and stores no sample secret.",
-      "updated": "2026-11-26T12:38:24Z",
-      "retrieved": "2026-11-26T13:37:12.925Z",
-      "evidenceHash": "92844e05e6f2d866971dbab3c2d2e812144eae7b8d47783b4ab3ffdb326a3b90",
       "query": "\"MCP\" \"security\"",
-      "repository": "Fuzzy-Technologies/1337",
-      "number": 548,
-      "id": "opp-564f5afe0b460037",
-      "matched": [
-        "mcp",
-        "untrusted",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/chalkbadger/stay-safe/issues/239",
-      "title": "Report Claude Code hooks and hook scripts added or changed since my last run",
-      "excerpt": "## Now\nEach stay-safe run is a fresh snapshot. If a project gains a command hook between two runs, or the repository script a hook runs changes while `.claude/settings.json` stays the same, the second report looks the same as the first one would have. Nothing tells me what is new. GTIG's SOMBERMEME report (see #163) describes intruders changing this settings file in internal repositories so that starting Claude Code downloaded a backdoor. A person who has already accepted a project's hooks has no signal when they change.\n\n## Change\nBuilds on #238, which identifies the repository script a hook runs.\n\nAdd an opt-in local history for Claude Code discovery runs, for example `--remember`, and `--forget` to delete one project's history.\n\n- **What is recorded:** for each command-running setting found (command hooks, and the helper settings once #192–#197 land), its source file and location (event, matcher group and position for a hook), a fingerprint of its command and `args`, and, for a script identified by #238, a fingerprint of the script's bytes.\n- **Fingerprints, not values:** each fingerprint is an HMAC-SHA-256 keyed by a random secret created on first use and stored beside the history. A plain hash of a short command or token could be checked by guessing. Commands, arguments, script contents and URLs are never stored.\n- **Where:** a per-user state folder outside the project, such as `$XDG_STATE_HOME/stay-safe/` with `~/.local/state/stay-safe/` as the fallback, keyed by a fingerprint of the project's resolved path. Nothing is written to, moved within or deleted from the project. The history file is written with owner-only permissions and replaced atomically.\n- **Reading a script:** a script is opened only to compute its fingerprint, with the existing input protections: a regular file inside the project, no symlink that resolves outside it, and the 1 MiB limit. It is never executed. Anything else is reported instead of read.\n\nOn a later run with `--remember`, the finding and the JSON entry say what differs from the history:\n\n- **Added:** the hook or helper wasn't in the last run's history, named with the date of that run.\n- **Script changed:** the script's fingerprint differs while the settings entry is unchanged, naming the script and saying that `settings.json` did not change.\n- **Command changed:** the command fingerprint differs; the command stays withheld",
-      "updated": "2026-11-26T11:45:00Z",
-      "retrieved": "2026-11-26T13:37:12.925Z",
-      "evidenceHash": "605022d27239a3037175c3df8083ec32ed470cc5ee972f05269c3d9851303181",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "chalkbadger/stay-safe",
-      "number": 239,
-      "id": "opp-bffd80b241648716",
-      "matched": [
-        "hook",
-        "permission"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/rohitg00/awesome-devops-mcp-servers/issues/429",
-      "title": "Add The Network Tools MCP Server (DNS, SSL/TLS, DMARC/SPF, RDAP & Security Headers)",
-      "excerpt": "### Server Details\n- **Name:** The Network Tools MCP (`com.thenetworktools/network-tools`)\n- **Repository (MIT):** https://github.com/theankitraj-cmd/thenetworktools-mcp\n- **Remote Streamable HTTP Endpoint:** `https://thenetworktools.com/mcp` (no API key required)\n- **Docs & Workflows:** https://thenetworktools.com/docs/mcp\n- **Official MCP Registry:** https://registry.modelcontextprotocol.io/v0/servers/com.thenetworktools%2Fnetwork-tools/versions/latest\n- **Glama Connector:** https://glama.ai/mcp/connectors/com.thenetworktools/network-tools\n\n### DevOps & Security Tools (12 Tools)\n- `dns_lookup` (RFC 8484 DoH via `1.1.1.1` / `8.8.8.8`)\n- `ssl_certificate` (TLS expiration, issuer, SANs)\n- `dmarc_analyze` (SPF/DMARC email deliverability)\n- `security_headers` (HSTS, CSP, X-Frame-Options grading)\n- `whois_lookup` (ICANN RDAP), `ip_intelligence`, `blacklist_check`, `subdomain_scanner`, `port_scanner`, `tech_stack_profiler`, `subnet_calculator`, `http_latency`\n",
-      "updated": "2026-11-26T13:01:26Z",
-      "retrieved": "2026-11-26T13:37:12.925Z",
-      "evidenceHash": "f2da65de3910848927c120a4c2b453074400fb09fb41ef305604fdd6ce60309f",
-      "query": "\"MCP\" \"security\"",
-      "repository": "rohitg00/awesome-devops-mcp-servers",
-      "number": 429,
-      "id": "opp-fff120b7da69eec1",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/YuzeHao2023/Awesome-MCP-Servers/issues/1025",
-      "title": "Add The Network Tools MCP Server (Live DNS, SSL/TLS, DMARC/SPF & Security Headers)",
-      "excerpt": "- **Name:** The Network Tools (`com.thenetworktools/network-tools`)\n- **GitHub (MIT):** https://github.com/theankitraj-cmd/thenetworktools-mcp\n- **Remote MCP Endpoint:** `https://thenetworktools.com/mcp` (Streamable HTTP, no API key required)\n- **Docs:** https://thenetworktools.com/docs/mcp\n- **Official Registry:** https://registry.modelcontextprotocol.io/v0/servers/com.thenetworktools%2Fnetwork-tools/versions/latest\n- **Summary:** 12 live network & security tools (`dns_lookup`, `ssl_certificate`, `security_headers`, `dmarc_analyze`, `whois_lookup`, `ip_intelligence`, `blacklist_check`, `subdomain_scanner`, `port_scanner`, `tech_stack_profiler`, `subnet_calculator`, `http_latency`) for Claude, Cursor, Windsurf, and Cline.\n",
-      "updated": "2026-11-26T13:01:29Z",
-      "retrieved": "2026-11-26T13:37:12.925Z",
-      "evidenceHash": "a67e36055969a27f0022076d1a8f2c1ec573a61b951d2e8b2bc89d692b10b3e2",
-      "query": "\"MCP\" \"security\"",
-      "repository": "YuzeHao2023/Awesome-MCP-Servers",
-      "number": 1025,
-      "id": "opp-604934e5bfe05c23",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

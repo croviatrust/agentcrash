@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795703041400-27ad9c3e",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Run a probe_process locally to observe the actual exit code and signal when the child receives SIGINT, confirming whether 143 (SIGKILL) or 130 (SIGINT) is produced. If local execution fails due to missing Node runtime, the gap must be recorded as 'No local Node runtime available'.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
