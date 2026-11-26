@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795662639475-73014ef8",
+  "source": {
+    "id": "opp-d437baaa8f511cce",
+    "url": "https://github.com/Zyrabit-tech/zyrabit-SLM/issues/116",
+    "title": "feat(security): Process Sandboxing & Resource Confinement for MCP Child Processes (Linux Namespaces / cgroups)",
+    "evidenceHash": "6b8c1afc29f33c07caa87c80ee11da5bf2bd453b3798c84a13657cc862dd6cef",
+    "updated": "2026-11-26T02:36:36Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Create src/command.js with a minimal stub to satisfy the controller's pre-flight check, then re-run the probe_process experiment to verify the relay's exit status behavior.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
