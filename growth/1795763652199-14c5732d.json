@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "episode": "1795763652199-14c5732d",
+  "source": null,
+  "experiment": {
+    "title": "Fix SIGINT exit code calculation in relay.js",
+    "hypothesis": "The relay exits with 143 (128+15) instead of 130 (128+2) because the signal handler maps SIGINT to 15, but the shell convention for SIGINT is 128+2=130.",
+    "falsifier": "If the probe passes with expectedExit=130 after the edit, the hypothesis is confirmed; if it still fails or throws an error, the hypothesis is falsified.",
+    "intendedBenefit": "Preserves the contract that relay.js returns the child's actual exit status (130 for SIGINT) rather than a hardcoded signal-derived code."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
