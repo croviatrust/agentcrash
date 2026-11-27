@@ -1,12 +1,12 @@
 {
-  "observed": "2026-11-27T16:24:46.042Z",
+  "observed": "2026-11-27T17:00:43.533Z",
   "opportunities": [
     {
       "url": "https://github.com/avidianity/codeint/issues/563",
       "title": "Spec: Correctness, security hardening, and MCP TOON parity",
       "excerpt": "## Problem Statement\n\nRunning codeint against untrusted repositories, third-party WebAssembly plugins, skewed Git histories, or coding-agent MCP sessions currently exposes several correctness and security gaps.\n\nFirst, the WebAssembly plugin host swallows plugin traps and timeouts during manifest discovery and Reference range queries, reuses mutable Wasm linear memory across plugin calls through an instance pool, skips host-side lifted-size budgets on custom Metric plugin results, and downloads remote plugin archives without a response size limit.\n\nSecond, `codeint update` relies on weak `curl` transport flags, fragile regex parsing of GitHub release JSON, external checksum binaries instead of in-process SHA-256 verification, and prints an inaccurate JSON-only schema reminder for YAML and TOML configs.\n\nThird, `codeint mcp` always emits raw JSON even though ADR 0033 selected TOON as the default compact agent output, routes only part of its eight tools through MCP-tailored error remedies, and silently accepts `max_paths` of `0`.\n\nFourth, `--since` and day-window Git history walks stop at the first commit older than the cutoff, which truncates newer commits after rebases or clock skew.\n\nFifth, small model and determinism defects remain: empty external package names are accepted as resolved imports, relative-file scanning uses an empty-string sentinel, Shell function scanning keeps a production panic path, and unresolved import sorting lacks deterministic tie-breaking.\n\n## Solution\n\nHarden the WebAssembly plugin host, `codeint update`, `codeint mcp`, Git history walking, and core model validation in one zero-breakage safety and ergonomics pass.\n\nThe plugin host propagates traps and timeouts instead of hiding them, instantiates a fresh pre-compiled Wasm store per call (ADR 0036), enforces lifted-size budgets on Metric plugins, and caps HTTPS plugin downloads at 50 MiB by default with an override option (ADR 0036).\n\n`codeint update` enforces HTTPS with TLS 1.2+, redirect protocol restriction, timeouts, and argument termination, parses release tags with structured JSON parsing, verifies SHA-256 digests in-process with constant-time comparison, and prints format-accurate schema reminders.\n\nAll eight `codeint mcp` tools default to TOON output with an optional `format` parameter (`toon` or `json`) per the ADR 0033 amendment, use unified MCP error remedies, and reject",
       "updated": "2026-11-27T16:16:41Z",
-      "retrieved": "2026-11-27T16:24:46.042Z",
+      "retrieved": "2026-11-27T17:00:43.534Z",
       "evidenceHash": "c06f5610671c493a6f87d2205e9035b6649bbdd54dbf3e384f82ce053b9fc4e0",
       "query": "\"MCP\" \"security\"",
       "repository": "avidianity/codeint",
@@ -22,51 +22,11 @@
       "attempts": 0
     },
     {
-      "url": "https://github.com/llm4s/llm4s/issues/3067",
-      "title": "[EPIC] MCP client and server: security, protocol conformance and transport parity",
-      "excerpt": "Defects, limitations and gaps in MCP support (`llm4s-mcp`, `modules/mcp`: the client, its three transports, `MCPToolRegistry` and `MCPServer`), found in a read-through review after 1.0.0. The code was compared with its contract (the `MCPClient` trait, the Scaladoc, `modules/mcp/README.md` and the MCP specification; there is no guide page yet, #1442) and each transport with the others: a difference between two backends is a finding.\n\nThe client findings were found by reading each code path end to end, not by running it. The server findings in #3069, #3071 and #3081 were reproduced with curl against a locally started `MCPServer`. No official-SDK client was run against the server.\n\n`llm4s-mcp` is not a frozen module, so the API changes these need are allowed in a minor release, with a CHANGELOG *Breaking changes* line and a migration note.\n\n## P0: fix soon (security, broken core behaviour)\n\n- [ ] #3068 `MCPToolRegistry.toolHints` gives an untrusted server's tool a trusted server's hints (approval bypass)\n- [x] #3069 `MCPServer` does not validate `Origin` or `Host`: DNS rebinding reaches the default unauthenticated loopback server\n- [ ] #3070 Stdio servers inherit the JVM's whole environment; `StdioTransport` has no `env` or working directory\n- [x] #3071 `MCPServer` replies are not valid JSON-RPC: no `jsonrpc` field, numeric ids returned as strings, empty `capabilities`\n- [x] #3072 The client never recovers a lost session or a restarted server; an agent's MCP tools then fail for good\n\n## P1: should fix\n\n- [ ] #3073 The \"SSE\" client transport is not the 2024-11-05 HTTP+SSE protocol, and lacks the Streamable transport's fixes\n- [ ] #3074 Tool results: only the first content block's text is returned; a non-text first block fails a call that succeeded\n- [ ] #3075 `tools/list`: pagination is ignored, and a tool without a `description` is dropped\n- [ ] #3076 Input-schema conversion: forced `additionalProperties: false`, dropped `$defs`, dropped constraints\n- [ ] #3077 Stdio transport: `timeout` ignored, a 10 s stall on quiet servers, misrouted server requests, orphaned child processes\n- [ ] #3078 The client cannot authenticate to, or route HTTP for, a remote server\n- [ ] #3079 Client handshake: advertises `roots` and `sampling` it does not implement, ignores the negotiated version\n- [ ] #3080 `MCPToolRegistry`: a dead server is re-dialled on every lookup, `healthCheck",
-      "updated": "2026-11-27T15:55:52Z",
-      "retrieved": "2026-11-27T16:24:46.042Z",
-      "evidenceHash": "cbca2382b00437de84b5f0f62be48b97dd8f2d232b6bfcd9b36c6f9782cbd6a9",
-      "query": "\"MCP\" \"security\"",
-      "repository": "llm4s/llm4s",
-      "number": 3067,
-      "id": "opp-27d927b7d264cd37",
-      "matched": [
-        "mcp",
-        "untrusted",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/NousResearch/hermes-agent/issues/160813",
-      "title": "[Bug]: claude-code skill: hook examples read env vars Claude Code never sets, so the \"security\" hooks block nothing",
-      "excerpt": "### Bug Description\n\nThe bundled `claude-code` skill (`skills/autonomous-ai-agents/claude-code/SKILL.md`) documents four things that don't match Claude Code itself. Checked against Claude Code 2.1.330 (`claude --help` and the shipped binary); all lines below are unchanged on main.\n\n1. **Hook examples read `$CLAUDE_TOOL_INPUT` / `$CLAUDE_FILE_PATHS`, which Claude Code doesn't set.** [SKILL.md#L604](https://github.com/NousResearch/hermes-agent/blob/5ba14569d4dd46606b179df4f0b3c6d083b56edf/skills/autonomous-ai-agents/claude-code/SKILL.md#L604), [#L608](https://github.com/NousResearch/hermes-agent/blob/5ba14569d4dd46606b179df4f0b3c6d083b56edf/skills/autonomous-ai-agents/claude-code/SKILL.md#L608), [#L633-L634](https://github.com/NousResearch/hermes-agent/blob/5ba14569d4dd46606b179df4f0b3c6d083b56edf/skills/autonomous-ai-agents/claude-code/SKILL.md#L633-L634), [#L641](https://github.com/NousResearch/hermes-agent/blob/5ba14569d4dd46606b179df4f0b3c6d083b56edf/skills/autonomous-ai-agents/claude-code/SKILL.md#L641):\n   ```\n   \"command\": \"ruff check --fix $CLAUDE_FILE_PATHS\"\n   \"command\": \"if echo \\\"$CLAUDE_TOOL_INPUT\\\" | grep -q 'rm -rf'; then echo 'Blocked!' && exit 2; fi\"\n   | `CLAUDE_FILE_PATHS` | Files being modified |\n   | `CLAUDE_TOOL_INPUT` | Tool parameters as JSON |\n   ```\n   Claude Code passes the hook event as JSON on stdin (`tool_input.command`, `tool_input.file_path`); neither variable name occurs anywhere in the shipped binary, while `CLAUDE_PROJECT_DIR` (a real hook variable) does:\n   ```\n   $ B=$(readlink -f \"$(command -v claude)\"); \"$B\" --version; for v in CLAUDE_TOOL_INPUT CLAUDE_FILE_PATHS CLAUDE_PROJECT_DIR; do printf '%s: ' $v; grep -c -a \"$v\" \"$B\"; done\n   2.1.330 (Claude Code)\n   CLAUDE_TOOL_INPUT: 0\n   CLAUDE_FILE_PATHS: 0\n   CLAUDE_PROJECT_DIR: 39\n   ```\n   So `echo \"$CLAUDE_TOOL_INPUT\"` is always empty: the \"Security Hook Examples\" never block `rm -rf` or a force push, and the PostToolUse example runs `ruff check --fix` with no path, i.e. over the whole working directory.\n\n2. **MCP scope storage table is wrong.** [SKILL.md#L665-L666](https://github.com/NousResearch/hermes-agent/blob/5ba14569d4dd46606b179df4f0b3c6d083b56edf/skills/autonomous-ai-agents/claude-code/SKILL.md#L665-L666) says `-s local` is stored in `.claude/settings.local.json` and `-s project` in `.claude/settings.json`. Run in a sandbox (bubblewrap, no network, throwaway HOME, ",
-      "updated": "2026-11-27T15:59:33Z",
-      "retrieved": "2026-11-27T16:24:46.042Z",
-      "evidenceHash": "375a71d914bdc79678a91c9ab467d892d0960b23a53ee41a43de36d7627452d2",
-      "query": "\"Claude Code\" \"hooks\"",
-      "repository": "NousResearch/hermes-agent",
-      "number": 160813,
-      "id": "opp-1d5a879f9791354e",
-      "matched": [
-        "mcp",
-        "hook",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
       "url": "https://github.com/ivan-pinatti-labs/devcontainer-airlock/issues/321",
       "title": "Revisit Claude Code /ship once its watch keeps git hooks on",
       "excerpt": "## Describe the Feature\n\nRevisit Claude Code's `/ship` command (added in 2.1.330) once it can be held\nto the organization's rules. Adoption is blocked for now; this issue tracks\nwhat has to change, here and upstream, before it is reconsidered.\n\n`/ship` commits, pushes and opens a pull request, runs `/code-review` on it,\nthen watches it for up to seven days: it fixes failing checks, merge\nconflicts and review comments (`+coderabbitai` adds CodeRabbit's comments),\nand pushes the fixes. It never merges. Docs:\nhttps://code.claude.com/docs/en/ship-command\n\n## Why it is blocked\n\nMeasured against the pull request flow every repository follows (draft,\nchecks green, ready, CodeRabbit, merge queue):\n\n1. **Hooks are bypassed during the watch.** Its commits and pushes run with\n   `core.hooksPath=/dev/null`, so pre-commit and the `commit-msg` hook\n   (`--no-ai-attribution`) never see them. The organization never skips\n   hooks. This is the blocker.\n2. **No draft.** It opens the pull request ready, which starts CodeRabbit\n   before the checks are green. The workaround is opening the draft by hand\n   and running `/ship <number>`, which is watch only.\n3. **No ready step.** It does not know that marking ready is what starts the\n   review here.\n4. **It blocks enqueueing.** During a watch it refuses `gh pr merge --auto`,\n   so the watch has to end before the merge is queued.\n5. **The workbench does not fit it.** It needs `gh auth login`; here `gh` goes\n   through the broker and holds no token. It starts no watch in\n   `bypassPermissions`.\n\n## Describe Ideal Solution\n\nBefore adopting it, any of these would unblock item 1:\n\n- Upstream: an option that keeps repository hooks on for the watch's\n  commits and pushes.\n- agent-policy: a rule that refuses `core.hooksPath=/dev/null` and\n  `--no-verify`, so a watch commit fails loudly rather than skipping hooks.\n- A repository `.claude/skills/steward/SKILL.md` telling the watch to commit\n  through the hooks. Weaker: it is guidance, not a control.\n\nThen check items 2 to 5 against the release at that time, and decide whether\n`/ship` (or watch only, `/steward`) replaces part of the flow.\n\n## Alternatives Considered\n\nKeep it off explicitly: `CLAUDE_CODE_DISABLE_SHIP=1`, or `skillOverrides`\nwith `ship-local` and `steward` set to `off`, in the workbench managed\nsettings. Worth doing now if it should not be reachable by accident.\n\n## Additional",
       "updated": "2026-11-27T16:11:10Z",
-      "retrieved": "2026-11-27T16:24:46.042Z",
+      "retrieved": "2026-11-27T17:00:43.534Z",
       "evidenceHash": "367940f243dd96ed76698eb8248b3203751b6979ec60c760a7672109cee25d0a",
       "query": "\"Claude Code\" \"hooks\"",
       "repository": "ivan-pinatti-labs/devcontainer-airlock",
@@ -79,6 +39,45 @@
       "score": 6,
       "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
       "attempts": 0
+    },
+    {
+      "url": "https://github.com/kefyusuf/astropress/issues/8",
+      "title": "[P0][Security] MCP & Admin: gray-matter RCE, Auth/CSRF/DNS Rebinding ve Same-Origin XSS",
+      "excerpt": "## Öncelik & Kapsam\n**Öncelik:** P0 (Acil Güvenlik)\n**Katman:** `mcp/http.mjs`, `mcp/store.mjs`, `admin/index.html`\n\n## Tespit Edilen Sorunlar\n\n1. **`gray-matter` Varsayılan JS Frontmatter Motoru ile RCE (Kritik)**\n   - **Konum:** `mcp/store.mjs:38, 49`\n   - `gray-matter` v4.0.3 varsayılan olarak `---js` / `---javascript` bloklarını `eval()` ile çalıştırır. `matter.read()` çağrılarında JS motoru kapatılmadığı için kötü niyetli frontmatter içeren bir `.md` dosyası sunucuda uzaktan kod çalıştırabilir.\n2. **Admin HTTP Sunucusunda Sıfır Kimlik Doğrulama, CSRF ve DNS Rebinding (Kritik)**\n   - **Konum:** `mcp/http.mjs:9, 12-13, 32-48, 66-108`\n   - Tüm `/api/*` uçları tam insan (`HUMAN.perms`) yetkisiyle çalışır. Auth yok, `Host` kontrolü yok (DNS rebinding), `Origin`/`Referer` veya CSRF token kontrolü yok ve `Content-Type: application/json` zorunlu değil.\n3. **Same-Origin `/site/` Önizleme → Stored XSS ile Admin Ele Geçirme (Kritik)**\n   - **Konum:** `mcp/http.mjs:101-103`, `admin/index.html:123`\n   - Derlenen statik site (`/site/`) Admin UI ile aynı origin'de (`127.0.0.1:4322`) sunuluyor. Önizlenen bir sayfadaki herhangi bir script doğrudan `/api/tasks/:id/approve` ve `/api/content` uçlarını çağırabilir.\n4. **Admin UI Stored XSS & Eksik Güvenlik Başlıkları (Yüksek)**\n   - **Konum:** `admin/index.html:216, 262, 330` (ve URL segmentleri `370, 390, 402, 406, 410`), `mcp/http.mjs:26-30, 50-54`\n   - `i.status`, `d.status`, `t.status` değerleri `esc()` olmadan `innerHTML` içine gömülüyor. `CSP`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` ve `Referrer-Policy` başlıkları gönderilmiyor.\n5. **Path Traversal (`listContent`) & Sunucu Çökertme / Symlink Kaçışı (`serveSite`) (Yüksek)**\n   - **Konum:** `mcp/store.mjs:31-44`, `mcp/http.mjs:50-64, 73, 99`\n   - `listContent` `collection` parametresini `COLLECTIONS` listesinde doğrulamıyor (`/api/content?collection=../../...`).\n   - `new URL(req.url, ...)` `try/catch` dışında (hatalı URL sunucuyu çökertir); `createReadStream` üzerinde `.on('error')` yok; `serveSite` `fs.realpathSync` kullanmadığı için symlink kaçışına açık.\n\n## Yapılacak Değişiklikler\n\n- [ ] `mcp/store.mjs`: Tüm `matter.read()` çağrılarında `js` / `javascript` frontmatter motorlarını devre dışı bırak (`engines: { js: () => { throw ... }, javascript: () => { throw ... } }`).\n- [ ] `mcp/store.mjs`: `listContent(collection, status)` başında `collection",
+      "updated": "2026-11-27T16:51:35Z",
+      "retrieved": "2026-11-27T17:00:43.534Z",
+      "evidenceHash": "c96c952c7de8485e75324cb1a64d193ddf4b949f6ca10f74cc6ec30422ac3c65",
+      "query": "\"MCP\" \"security\"",
+      "repository": "kefyusuf/astropress",
+      "number": 8,
+      "id": "opp-ab750801609beb7f",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/llm4s/llm4s/issues/3067",
+      "title": "[EPIC] MCP client and server: security, protocol conformance and transport parity",
+      "excerpt": "Defects, limitations and gaps in MCP support (`llm4s-mcp`, `modules/mcp`: the client, its three transports, `MCPToolRegistry` and `MCPServer`), found in a read-through review after 1.0.0. The code was compared with its contract (the `MCPClient` trait, the Scaladoc, `modules/mcp/README.md` and the MCP specification; there is no guide page yet, #1442) and each transport with the others: a difference between two backends is a finding.\n\nThe client findings were found by reading each code path end to end, not by running it. The server findings in #3069, #3071 and #3081 were reproduced with curl against a locally started `MCPServer`. No official-SDK client was run against the server.\n\n`llm4s-mcp` is not a frozen module, so the API changes these need are allowed in a minor release, with a CHANGELOG *Breaking changes* line and a migration note.\n\n## P0: fix soon (security, broken core behaviour)\n\n- [ ] #3068 `MCPToolRegistry.toolHints` gives an untrusted server's tool a trusted server's hints (approval bypass)\n- [x] #3069 `MCPServer` does not validate `Origin` or `Host`: DNS rebinding reaches the default unauthenticated loopback server\n- [ ] #3070 Stdio servers inherit the JVM's whole environment; `StdioTransport` has no `env` or working directory\n- [x] #3071 `MCPServer` replies are not valid JSON-RPC: no `jsonrpc` field, numeric ids returned as strings, empty `capabilities`\n- [x] #3072 The client never recovers a lost session or a restarted server; an agent's MCP tools then fail for good\n\n## P1: should fix\n\n- [ ] #3073 The \"SSE\" client transport is not the 2024-11-05 HTTP+SSE protocol, and lacks the Streamable transport's fixes\n- [ ] #3074 Tool results: only the first content block's text is returned; a non-text first block fails a call that succeeded\n- [ ] #3075 `tools/list`: pagination is ignored, and a tool without a `description` is dropped\n- [ ] #3076 Input-schema conversion: forced `additionalProperties: false`, dropped `$defs`, dropped constraints\n- [ ] #3077 Stdio transport: `timeout` ignored, a 10 s stall on quiet servers, misrouted server requests, orphaned child processes\n- [ ] #3078 The client cannot authenticate to, or route HTTP for, a remote server\n- [ ] #3079 Client handshake: advertises `roots` and `sampling` it does not implement, ignores the negotiated version\n- [ ] #3080 `MCPToolRegistry`: a dead server is re-dialled on every lookup, `healthCheck",
+      "updated": "2026-11-27T15:55:52Z",
+      "retrieved": "2026-11-27T17:00:43.534Z",
+      "evidenceHash": "cbca2382b00437de84b5f0f62be48b97dd8f2d232b6bfcd9b36c6f9782cbd6a9",
+      "query": "\"MCP\" \"security\"",
+      "repository": "llm4s/llm4s",
+      "number": 3067,
+      "id": "opp-27d927b7d264cd37",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 1
     }
   ],
   "errors": [],
