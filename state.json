@@ -1,51 +1,7 @@
 {
   "version": 1,
-  "generation": 58,
+  "generation": 59,
   "recent": [
-    {
-      "id": "1795609477329-bfd5dbcf",
-      "repo": "croviatrust/agentcrash",
-      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-      "started": "2026-11-25T12:24:37.333Z",
-      "finished": "2026-11-25T12:27:46.698Z",
-      "commitment": {
-        "id": "work-cd6a58b1132ae1d5fba5",
-        "evidenceHash": "accc3b45ebbd85735f1c"
-      },
-      "opportunity": {
-        "id": "opp-3cb01dfa27991c7a",
-        "url": "https://github.com/phil65/agentpool/issues/49",
-        "title": "MCP lifecycle, signal, concurrency & security bugs (cross-task cancel-scope cleanup, elicitation race, tool bridge ctx bypass, MCPDiscoveryToolset leak)",
-        "evidenceHash": "93f4d9c1a7adcf47c279e4d72c036f464844739ad55d0680f790582323d98e00",
-        "updated": "2026-11-25T11:11:53Z",
-        "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
-      },
-      "status": "stopped",
-      "localEvidence": "stopped",
-      "reason": "The probe_process tool requires literal strings in args, but the reproduction command needs to execute Node code dynamically. The previous attempts failed because I tried to pass null or a string representation of the command instead of using the $NODE placeholder correctly within the argument structure that the tool expects for executing a script with arguments.",
-      "observedBlockers": [
-        {
-          "phase": "action",
-          "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required."
-        },
-        {
-          "phase": "action",
-          "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required."
-        }
-      ],
-      "error": "",
-      "findings": [
-        {
-          "path": "src/cage/relay.js",
-          "repository": "self",
-          "sha": "11e8cce58b0ca0e0ae16df2b48112bcd65f074e7",
-          "note": "The child exit handler maps signals incorrectly: `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1)` results in 143 for SIGINT (mapped to 15), whereas the convention is 128+2=130.",
-          "confidence": "unverified observation"
-        }
-      ],
-      "next": "Execute a direct Node script using spawnSync to confirm the exit code is 143, then propose the fix mapping SIGINT to 130.",
-      "probes": []
-    },
     {
       "id": "1795611323315-db3a8fcb",
       "repo": "croviatrust/agentcrash",
@@ -1176,6 +1132,50 @@
         "falsifier": "Running the probe_process again with the same script and args must fail with code 143 if the fix is not applied.",
         "benefit": "Correctly propagates SIGINT exit status (130) instead of 143, satisfying the relay's contract to preserve child exit codes."
       }
+    },
+    {
+      "id": "1795805276017-93abd5f6",
+      "repo": "croviatrust/agentcrash",
+      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "started": "2026-11-27T18:47:56.030Z",
+      "finished": "2026-11-27T18:50:30.257Z",
+      "commitment": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "evidenceHash": "accc3b45ebbd85735f1c"
+      },
+      "opportunity": {
+        "id": "opp-9fc2ff2a403c476a",
+        "url": "https://github.com/ivan-pinatti-labs/devcontainer-airlock/issues/321",
+        "title": "Revisit Claude Code /ship once its watch keeps git hooks on",
+        "evidenceHash": "367940f243dd96ed76698eb8248b3203751b6979ec60c760a7672109cee25d0a",
+        "updated": "2026-11-27T16:11:10Z",
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+      },
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The regression test file creation failed due to an unknown action type ('create' not in allowed list). The minimal-edit method requires creating the test first, but I cannot execute that step directly via a 'create' action. I must switch to a falsifiable experiment using the available tools to verify the bug before proposing.",
+      "observedBlockers": [
+        {
+          "phase": "action",
+          "error": "Invalid relative path"
+        },
+        {
+          "phase": "action",
+          "error": "Unknown action"
+        }
+      ],
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "102196651d98338e07c68349f5badbc09ac5c84f",
+          "note": "Line 32 shows the buggy logic: `process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1);`. For SIGINT, this calculates 128 + 15 = 143. The correct shell status for SIGINT is 128 + 2 = 130.",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -1223,7 +1223,7 @@
       "rejected": 0
     },
     "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay": {
-      "attempts": 37,
+      "attempts": 38,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -1244,7 +1244,11 @@
     "exp-4e04979e3aaa079f04400b3619ec37b4ced427ad42c94447a406e5d3f912eb69",
     "exp-a29c824ade0c7d7fb59ba9f6b5d9e36d22174bab1f632ae6707dff649009485f"
   ],
-  "pendingResearch": null,
+  "pendingResearch": {
+    "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+    "question": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+    "attempts": 1
+  },
   "fleet": {
     "version": 1,
     "parent": "crovia",
@@ -1255,9 +1259,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 47,
+        "attempts": 48,
         "verified": 0,
-        "lastSeen": 58
+        "lastSeen": 59
       },
       {
         "id": "critic",
@@ -1265,9 +1269,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 47,
+        "attempts": 48,
         "verified": 0,
-        "lastSeen": 58
+        "lastSeen": 59
+      },
+      {
+        "id": "specialist-2e8beb06240e2567",
+        "role": "engineering",
+        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Create a new regression test file at `/work/resident-regressions/sigint-exit-status.test.mjs` that explicitly tests the SIGINT exit code mapping. The test should spawn the relay with a self-killing child and assert the expected status (130). Once thi\nSuggested method: Verify that bypassing git hooks in the `/ship` command causes pre-commit checks to fail, then implement a flag `--respect-hooks` to restore hook execution before pushing.",
+        "parent": "crovia",
+        "born": 59,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 59
       },
       {
         "id": "specialist-caa2b0c896f54aa4",
@@ -1318,24 +1332,14 @@
         "attempts": 1,
         "verified": 0,
         "lastSeen": 53
-      },
-      {
-        "id": "specialist-d37d7519dde4ef25",
-        "role": "engineering",
-        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Execute a new `probe_process` action targeting an explicitly available image (`node:20-bookworm`) to verify the relay logic without relying on network-dependent image pulls. Use the same script and args as the failed probe but change the container ba\nSuggested method: [Agent trial] Verify that `spawnSync` correctly propagates SIGINT-derived exit codes (130) when running a child process inside a Docker container with `node:20-bookworm`, and confirm the current `src/",
-        "parent": "crovia",
-        "born": 52,
-        "attempts": 1,
-        "verified": 0,
-        "lastSeen": 52
       }
     ],
     "last": {
-      "episode": "1795803259525-7b3f7612",
-      "status": "baseline-failed",
+      "episode": "1795805276017-93abd5f6",
+      "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-caa2b0c896f54aa4",
+        "specialist-2e8beb06240e2567",
         "critic"
       ],
       "modelCalls": 6,
@@ -1398,16 +1402,9 @@
         "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
         "source": "https://github.com/croviatrust/agentcrash/issues/9",
         "evidenceHash": "accc3b45ebbd85735f1c",
-        "status": "needs-research",
-        "attempts": 5,
+        "status": "blocked",
+        "attempts": 6,
         "checkpoints": [
-          {
-            "episode": "1795800091147-0c177ab9",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "The probe failed because the relay script requires command-line arguments (gate.sock, port, --, cmd), but the `probe_process` action was executed without them, causing the script to exit immediately with status 2 instead of running the child process.",
-            "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-          },
           {
             "episode": "1795801385835-e65e718d",
             "status": "stopped",
@@ -1421,13 +1418,20 @@
             "verdict": "baseline-failed",
             "next": "",
             "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+          },
+          {
+            "episode": "1795805276017-93abd5f6",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+            "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
           }
         ],
-        "lastEpisode": "1795803259525-7b3f7612",
-        "next": "",
-        "recoveryCycles": 5,
+        "lastEpisode": "1795805276017-93abd5f6",
+        "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+        "recoveryCycles": 6,
         "lastFailure": {
-          "episode": "1795803259525-7b3f7612",
+          "episode": "1795805276017-93abd5f6",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
           "snippetRevision": "Current checkout; prior findings require re-verification.",
           "task": {
@@ -1435,14 +1439,18 @@
             "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
             "source": "https://github.com/croviatrust/agentcrash/issues/9"
           },
-          "status": "proposed",
-          "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code propagation in relay.js\",\"hypothesis\":\"The child process exit handler incorrectly calculates the exit status for SIGINT. It currently returns 143 (128 + 15) but should return 130 (128 + 2).\",\"falsifier\":\"Running the probe_process again with the same script and args must fail with code 143 if the fix is not applied.\",\"benefit\":\"Correctly propagates SIGINT exit status (130) instead of 143, satisfying the relay's contract to preserve child exit codes.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (signal === 'SIGINT') {\\n    process.exit(130);\\n  } else if (signal === 'SIGTERM') {\\n    process.exit(143);\\n  } else if (signal === 'SIGKILL') {\\n    process.exit(137);\\n  } else {\\n    process.exit(code ?? 1);\\n  }\\n});\"}]}",
+          "status": "stopped",
           "observedBlockers": [
             {
               "phase": "action",
-              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+              "error": "Invalid relative path"
+            },
+            {
+              "phase": "action",
+              "error": "Unknown action"
             }
           ],
+          "modelReasonUnverified": "The regression test file creation failed due to an unknown action type ('create' not in allowed list). The minimal-edit method requires creating the test first, but I cannot execute that step directly via a 'create' action. I must switch to a falsifiable experiment using the available tools to verify the bug before proposing.",
           "actions": [
             {
               "action": "read",
@@ -1450,59 +1458,26 @@
             },
             {
               "action": "read",
-              "path": "src/cage/relay.js"
+              "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
             },
             {
-              "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+              "error": "Invalid relative path",
               "phase": "action"
             },
             {
-              "action": "probe_process",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/test.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "process.kill(process.pid, 'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
+              "action": "create",
+              "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
             },
             {
-              "action": "propose"
-            }
-          ],
-          "checks": [
+              "error": "Unknown action",
+              "phase": "action"
+            },
             {
-              "label": "baseline-suite",
-              "code": 1,
-              "log": "name only GitHub hosts\n  ---\n  duration_ms: 126.162153\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 182 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 174.539075\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 183 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.140544\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 184 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.749767\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 185 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.496095\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 186 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.159929\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 187 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.712455\n  type: 'test'\n  ...\n1..187\n# tests 187\n# suites 0\n# pass 177\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 12248.433564\n"
+              "action": "stop"
             }
           ],
-          "probes": [
-            {
-              "status": "baseline-failed",
-              "code": 1,
-              "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 43.187858\n  type: 'test'\n  location: '/work/resident-regressions/probe-a93c144cfe3b9f13bd14b3a5.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-a93c144cfe3b9f13bd14b3a5.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 82.292367\n",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/test.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "process.kill(process.pid, 'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            }
-          ],
+          "checks": [],
+          "probes": [],
           "snippets": [
             {
               "path": "src/cage/relay.js",
@@ -1510,15 +1485,15 @@
             }
           ],
           "attemptedMethod": {
-            "mode": "contract-first",
-            "observation": "{\"status\":\"proposed\",\"blockers\":[],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
-            "instructions": "1. Verify if the 'node:22-bookworm' image is available in the local registry or requires an explicit pull command before execution.\n2. If the image is missing locally, execute a pre-flight check to pull the image using `docker pull node:22-bookworm` before re-running the probe_process.\n3. Once the image is present, re-execute the probe_process with the same script and args to confirm the actual exit code (143 vs expected 130) without triggering network side effects on the socket.\n4. If the probe succeeds, analyze the `child.on('exit')` handler in relay.js to identify the missing bitwise AND operation (`code ?? 1`) that causes the addition of 9 instead of 2 for SIGINT.",
-            "falsifier": "If this method fails again, it will indicate either a persistent Docker registry connectivity issue or that the Node version required differs from 'node:22-bookworm', necessitating a switch to a locally available Node version for testing.",
-            "id": "method-3b67478a4b61a85c273c",
+            "mode": "minimal-edit",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Code changes require a new regression test\"}],\"checks\":[]}",
+            "instructions": "Create a new regression test file at `/work/resident-regressions/sigint-exit-status.test.mjs` that explicitly tests the SIGINT exit code mapping. The test should spawn the relay with a self-killing child and assert the expected status (130). Once this file exists, re-run `probe_process` with the corrected expectedExit value (143) to confirm the current buggy behavior, then propose the fix in `relay.js` that changes `15` to `2` in the signal mapping logic.",
+            "falsifier": "If the new test file is created and `probe_process` passes with expectedExit=143, it confirms the bug exists. If `probe_process` still fails after creating the test (e.g., due to a different error), the minimal-edit method failed.",
+            "id": "method-8fc04e7f376052871fbe",
             "status": "unverified-hypothesis"
           }
         },
-        "cooldownUntil": "2026-11-27T18:35:00.975Z"
+        "cooldownUntil": "2026-11-27T19:05:30.257Z"
       },
       {
         "id": "work-b3fa7fb504a6ee0bd549",

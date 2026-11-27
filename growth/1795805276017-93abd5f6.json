@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795805276017-93abd5f6",
+  "source": {
+    "id": "opp-9fc2ff2a403c476a",
+    "url": "https://github.com/ivan-pinatti-labs/devcontainer-airlock/issues/321",
+    "title": "Revisit Claude Code /ship once its watch keeps git hooks on",
+    "evidenceHash": "367940f243dd96ed76698eb8248b3203751b6979ec60c760a7672109cee25d0a",
+    "updated": "2026-11-27T16:11:10Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
