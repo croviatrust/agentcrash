@@ -1,31 +1,7 @@
 {
   "version": 1,
-  "generation": 51,
+  "generation": 52,
   "recent": [
-    {
-      "id": "1795570672206-b33333ee",
-      "repo": "croviatrust/agentcrash",
-      "focus": "Reproduce and reduce the failures in the latest controlled agent encounter.",
-      "started": "2026-11-25T01:34:07.177Z",
-      "finished": "2026-11-25T01:37:52.210Z",
-      "commitment": {
-        "id": "work-1ca99c4589115e6ecff5",
-        "evidenceHash": "c4abc36a325dfad4aa1b"
-      },
-      "status": "stopped",
-      "localEvidence": "stopped",
-      "reason": "Recovery research did not produce a valid method.",
-      "observedBlockers": [
-        {
-          "phase": "recovery",
-          "error": "Invalid recovery method"
-        }
-      ],
-      "error": "",
-      "findings": [],
-      "next": "Invalid recovery method",
-      "probes": []
-    },
     {
       "id": "1795572644300-cb736349",
       "repo": "croviatrust/agentcrash",
@@ -1206,6 +1182,50 @@
           "log": "19: Download complete\n1e6e7ca511b9: Verifying Checksum\n1e6e7ca511b9: Download complete\ndb1d5603818e: Download complete\n1743e5baab33: Verifying Checksum\n1743e5baab33: Download complete\n9e99979a8862: Verifying Checksum\n9e99979a8862: Download complete\n6e5ce812b3ad: Verifying Checksum\n6e5ce812b3ad: Download complete\n10a40058c783: Verifying Checksum\n10a40058c783: Download complete\n0db1ede1885b: Verifying Checksum\n0db1ede1885b: Download complete\n1e6e7ca511b9: Pull complete\nbdae095a5e19: Pull complete\ndb1d5603818e: Pull complete\n0db1ede1885b: Pull complete\n1743e5baab33: Pull complete\n6e5ce812b3ad: Pull complete\n9e99979a8862: Pull complete\n10a40058c783: Pull complete\nDigest: sha256:7c400d78797d8cbe3f6bb21d2227b86af4cd24b0014cc9f62ff989cc16de988e\nStatus: Downloaded newer image for node:22-bookworm\n"
         }
       ]
+    },
+    {
+      "id": "1795768662620-c757a0f9",
+      "repo": "croviatrust/agentcrash",
+      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "started": "2026-11-27T08:37:42.625Z",
+      "finished": "2026-11-27T08:40:42.185Z",
+      "commitment": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "evidenceHash": "accc3b45ebbd85735f1c"
+      },
+      "opportunity": {
+        "id": "opp-1b80269d6b807bb2",
+        "url": "https://github.com/Erriccc/osborn/issues/638",
+        "title": "Package Osborn's agents, skills and hooks as a Claude Code plugin (one source for every runtime)",
+        "evidenceHash": "d52e92015377f2151eb8d5ca9bb8a7ea7f4de09209717ec201df952cf76b3f0c",
+        "updated": "2026-11-27T04:27:35Z",
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+      },
+      "status": "stopped",
+      "localEvidence": "stopped",
+      "reason": "The relay script explicitly maps SIGINT to exit code 15 (128+7), but the task requires preserving the child's actual exit status (130 for SIGINT). The probe confirmed the bug exists in the source logic.",
+      "observedBlockers": [
+        {
+          "phase": "action",
+          "error": "Read the Node script before requesting a process experiment"
+        },
+        {
+          "phase": "action",
+          "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
+        }
+      ],
+      "error": "",
+      "findings": [
+        {
+          "path": "src/cage/relay.js",
+          "repository": "self",
+          "sha": "102196651d98338e07c68349f5badbc09ac5c84f",
+          "note": "Line 46 maps SIGINT to exit code 15 instead of propagating the child's status or using the correct shell convention (128+2=130).",
+          "confidence": "unverified observation"
+        }
+      ],
+      "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -1253,7 +1273,7 @@
       "rejected": 0
     },
     "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay": {
-      "attempts": 31,
+      "attempts": 32,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -1269,7 +1289,7 @@
   "pendingResearch": {
     "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
     "question": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
-    "attempts": 1
+    "attempts": 2
   },
   "fleet": {
     "version": 1,
@@ -1281,9 +1301,9 @@
         "mission": "Find external evidence and define the next specialization",
         "parent": "crovia",
         "born": 5,
-        "attempts": 41,
+        "attempts": 42,
         "verified": 0,
-        "lastSeen": 51
+        "lastSeen": 52
       },
       {
         "id": "critic",
@@ -1291,9 +1311,19 @@
         "mission": "Challenge the proposed experiment independently",
         "parent": "crovia",
         "born": 5,
-        "attempts": 41,
+        "attempts": 42,
         "verified": 0,
-        "lastSeen": 51
+        "lastSeen": 52
+      },
+      {
+        "id": "specialist-d37d7519dde4ef25",
+        "role": "engineering",
+        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Execute a new `probe_process` action targeting an explicitly available image (`node:20-bookworm`) to verify the relay logic without relying on network-dependent image pulls. Use the same script and args as the failed probe but change the container ba\nSuggested method: [Agent trial] Verify that `spawnSync` correctly propagates SIGINT-derived exit codes (130) when running a child process inside a Docker container with `node:20-bookworm`, and confirm the current `src/",
+        "parent": "crovia",
+        "born": 52,
+        "attempts": 1,
+        "verified": 0,
+        "lastSeen": 52
       },
       {
         "id": "specialist-7e6b573f4dcd9545",
@@ -1344,24 +1374,14 @@
         "attempts": 1,
         "verified": 0,
         "lastSeen": 47
-      },
-      {
-        "id": "specialist-2a6ca1c5b338e3e9",
-        "role": "engineering",
-        "mission": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay\nNext checkpoint: Execute a new probe_process with the same script but explicitly verify the child process receives SIGINT and check if the relay correctly maps it to 130. If the test still fails with 143, propose a minimal edit to `src/cage/relay.js` line 52: replace\nSuggested method: [Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay - Implement minimal edit to src/cage/relay.js line 52 to map SIGINT correctly.",
-        "parent": "crovia",
-        "born": 45,
-        "attempts": 1,
-        "verified": 0,
-        "lastSeen": 45
       }
     ],
     "last": {
-      "episode": "1795766197953-8f03297e",
+      "episode": "1795768662620-c757a0f9",
       "status": "stopped",
       "membersUsed": [
         "scout",
-        "specialist-7e6b573f4dcd9545",
+        "specialist-d37d7519dde4ef25",
         "critic"
       ],
       "modelCalls": 6,
@@ -1424,16 +1444,9 @@
         "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
         "source": "https://github.com/croviatrust/agentcrash/issues/9",
         "evidenceHash": "accc3b45ebbd85735f1c",
-        "status": "needs-research",
-        "attempts": 5,
+        "status": "blocked",
+        "attempts": 6,
         "checkpoints": [
-          {
-            "episode": "1795761423452-28a8e7c1",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "The probe confirms the bug (exit 143 vs expected 130) but reveals the test environment cannot execute the relay script directly due to missing Docker image dependencies, preventing a local verification of the fix before proposing.",
-            "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-          },
           {
             "episode": "1795763652199-14c5732d",
             "status": "baseline-failed",
@@ -1447,13 +1460,20 @@
             "verdict": "stopped",
             "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
             "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+          },
+          {
+            "episode": "1795768662620-c757a0f9",
+            "status": "stopped",
+            "verdict": "stopped",
+            "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+            "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
           }
         ],
-        "lastEpisode": "1795766197953-8f03297e",
+        "lastEpisode": "1795768662620-c757a0f9",
         "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
-        "recoveryCycles": 5,
+        "recoveryCycles": 6,
         "lastFailure": {
-          "episode": "1795766197953-8f03297e",
+          "episode": "1795768662620-c757a0f9",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
           "snippetRevision": "Current checkout; prior findings require re-verification.",
           "task": {
@@ -1465,64 +1485,40 @@
           "observedBlockers": [
             {
               "phase": "action",
-              "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file."
+              "error": "Read the Node script before requesting a process experiment"
+            },
+            {
+              "phase": "action",
+              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
             }
           ],
-          "modelReasonUnverified": "The probe failed due to Docker image pull errors ('Unable to find image node:22-bookworm locally') rather than the code logic, and the test assertion failure (Expected 130, got 0) indicates the child process exited with code 0 instead of a signal-derived code. The relay script's exit logic `process.exit(signal ? 128 + ... : code ?? 1)` suggests it expects a non-zero signal name or code to trigger the 128+ mapping, but received code=0 (clean exit). This implies the child process might be exiting cleanly rather than being killed by SIGINT, or the signal handling in `relay.js` is not triggering the expected behavior. The environment cannot execute the probe directly due to missing Docker dependencies, preventing verification of the fix before proposing. The core question remains: why does the child exit with code 0 instead of a signal-derived code when SIGINT is sent?",
+          "modelReasonUnverified": "The relay script explicitly maps SIGINT to exit code 15 (128+7), but the task requires preserving the child's actual exit status (130 for SIGINT). The probe confirmed the bug exists in the source logic.",
           "actions": [
             {
-              "action": "read",
-              "path": "src/cage/relay.js"
+              "action": "probe_process"
             },
             {
-              "action": "read",
-              "path": "src/cage/relay.js"
-            },
-            {
-              "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.",
+              "error": "Read the Node script before requesting a process experiment",
               "phase": "action"
             },
             {
-              "action": "probe_process",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/unused-agenthub-task.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "\"process.kill(process.pid, 'SIGINT')\""
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
+              "action": "read",
+              "path": "src/command.js"
+            },
+            {
+              "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
+              "phase": "action"
+            },
+            {
+              "action": "read",
+              "path": "src/cage/relay.js"
             },
             {
               "action": "stop"
             }
           ],
           "checks": [],
-          "probes": [
-            {
-              "status": "baseline-failed",
-              "code": 1,
-              "log": ")\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 114.797474\nUnable to find image 'node:22-bookworm' locally\n22-bookworm: Pulling from library/node\n1e6e7ca511b9: Pulling fs layer\nbdae095a5e19: Pulling fs layer\ndb1d5603818e: Pulling fs layer\n0db1ede1885b: Pulling fs layer\n1743e5baab33: Pulling fs layer\n6e5ce812b3ad: Pulling fs layer\n9e99979a8862: Pulling fs layer\n10a40058c783: Pulling fs layer\n1743e5baab33: Waiting\n6e5ce812b3ad: Waiting\n9e99979a8862: Waiting\n10a40058c783: Waiting\n0db1ede1885b: Waiting\nbdae095a5e19: Verifying Checksum\nbdae095a5e19: Download complete\n1e6e7ca511b9: Verifying Checksum\n1e6e7ca511b9: Download complete\ndb1d5603818e: Download complete\n1743e5baab33: Verifying Checksum\n1743e5baab33: Download complete\n9e99979a8862: Verifying Checksum\n9e99979a8862: Download complete\n6e5ce812b3ad: Verifying Checksum\n6e5ce812b3ad: Download complete\n10a40058c783: Verifying Checksum\n10a40058c783: Download complete\n0db1ede1885b: Verifying Checksum\n0db1ede1885b: Download complete\n1e6e7ca511b9: Pull complete\nbdae095a5e19: Pull complete\ndb1d5603818e: Pull complete\n0db1ede1885b: Pull complete\n1743e5baab33: Pull complete\n6e5ce812b3ad: Pull complete\n9e99979a8862: Pull complete\n10a40058c783: Pull complete\nDigest: sha256:7c400d78797d8cbe3f6bb21d2227b86af4cd24b0014cc9f62ff989cc16de988e\nStatus: Downloaded newer image for node:22-bookworm\n",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/unused-agenthub-task.sock",
-                  "0",
-                  "--",
-                  "node",
-                  "-e",
-                  "\"process.kill(process.pid, 'SIGINT')\""
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            }
-          ],
+          "probes": [],
           "snippets": [
             {
               "path": "src/cage/relay.js",
@@ -1530,15 +1526,15 @@
             }
           ],
           "attemptedMethod": {
-            "mode": "reference-first",
-            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"}],\"checks\":[]}",
-            "instructions": "1. Create the missing directory structure `/home/runner/work/agentcrash/agentcrash/controller/src/` using a shell command (e.g., `mkdir -p ...`).\n2. After the directory exists, re-execute the `probe_process` action with the specific script arguments defined in the task (`relay.js`, socket path, port 0, and the self-kill command) to verify the current exit status of 143.\n3. If the probe confirms the bug (exit 143 instead of 130), proceed to edit `src/cage/relay.js` to fix the signal mapping logic.",
-            "falsifier": "If the directory creation fails again or the probe_process still returns an error unrelated to file existence, it indicates a deeper permission or environment issue beyond the missing path. If the probe passes with exit 143 after directory creation, it confirms the bug is present and requires the code edit.",
-            "id": "method-50b1fefd31bc5ce8c564",
+            "mode": "contract-first",
+            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[]}",
+            "instructions": "Execute a new `probe_process` action targeting an explicitly available image (`node:20-bookworm`) to verify the relay logic without relying on network-dependent image pulls. Use the same script and args as the failed probe but change the container base to ensure immediate availability.",
+            "falsifier": "If this method fails with a different error (e.g., 'exit code 143' or 'exit code 128') instead of an image pull error, it confirms the relay logic is incorrect. If it succeeds with exit code 130, the fix requires editing `src/cage/relay.js` to map SIGINT correctly.",
+            "id": "method-b817145b2c162a16848d",
             "status": "unverified-hypothesis"
           }
         },
-        "cooldownUntil": "2026-11-27T08:19:16.059Z"
+        "cooldownUntil": "2026-11-27T08:55:42.185Z"
       },
       {
         "id": "work-b3fa7fb504a6ee0bd549",

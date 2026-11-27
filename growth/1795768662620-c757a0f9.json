@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795768662620-c757a0f9",
+  "source": {
+    "id": "opp-1b80269d6b807bb2",
+    "url": "https://github.com/Erriccc/osborn/issues/638",
+    "title": "Package Osborn's agents, skills and hooks as a Claude Code plugin (one source for every runtime)",
+    "evidenceHash": "d52e92015377f2151eb8d5ca9bb8a7ea7f4de09209717ec201df952cf76b3f0c",
+    "updated": "2026-11-27T04:27:35Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
