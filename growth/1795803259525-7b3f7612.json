@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "episode": "1795803259525-7b3f7612",
+  "source": null,
+  "experiment": {
+    "title": "Fix SIGINT exit code propagation in relay.js",
+    "hypothesis": "The child process exit handler incorrectly calculates the exit status for SIGINT. It currently returns 143 (128 + 15) but should return 130 (128 + 2).",
+    "falsifier": "Running the probe_process again with the same script and args must fail with code 143 if the fix is not applied.",
+    "intendedBenefit": "Correctly propagates SIGINT exit status (130) instead of 143, satisfying the relay's contract to preserve child exit codes."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

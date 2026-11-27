@@ -9,15 +9,8 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "needs-research",
-      "attempts": 4,
+      "attempts": 5,
       "checkpoints": [
-        {
-          "episode": "1795797558563-698e50a8",
-          "status": "baseline-failed",
-          "verdict": "baseline-failed",
-          "next": "",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
         {
           "episode": "1795800091147-0c177ab9",
           "status": "stopped",
@@ -31,13 +24,20 @@
           "verdict": "stopped",
           "next": "Inference HTTP 500",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+        },
+        {
+          "episode": "1795803259525-7b3f7612",
+          "status": "baseline-failed",
+          "verdict": "baseline-failed",
+          "next": "",
+          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
         }
       ],
-      "lastEpisode": "1795801385835-e65e718d",
-      "next": "Inference HTTP 500",
-      "recoveryCycles": 4,
+      "lastEpisode": "1795803259525-7b3f7612",
+      "next": "",
+      "recoveryCycles": 5,
       "lastFailure": {
-        "episode": "1795801385835-e65e718d",
+        "episode": "1795803259525-7b3f7612",
         "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -45,25 +45,90 @@
           "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
           "source": "https://github.com/croviatrust/agentcrash/issues/9"
         },
-        "status": "stopped",
+        "status": "proposed",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code propagation in relay.js\",\"hypothesis\":\"The child process exit handler incorrectly calculates the exit status for SIGINT. It currently returns 143 (128 + 15) but should return 130 (128 + 2).\",\"falsifier\":\"Running the probe_process again with the same script and args must fail with code 143 if the fix is not applied.\",\"benefit\":\"Correctly propagates SIGINT exit status (130) instead of 143, satisfying the relay's contract to preserve child exit codes.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  if (signal === 'SIGINT') {\\n    process.exit(130);\\n  } else if (signal === 'SIGTERM') {\\n    process.exit(143);\\n  } else if (signal === 'SIGKILL') {\\n    process.exit(137);\\n  } else {\\n    process.exit(code ?? 1);\\n  }\\n});\"}]}",
         "observedBlockers": [
           {
-            "phase": "recovery",
-            "error": "Inference HTTP 500"
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
           }
         ],
-        "modelReasonUnverified": "Recovery research did not produce a valid method.",
         "actions": [
           {
-            "error": "Inference HTTP 500",
-            "phase": "recovery"
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+            "phase": "action"
+          },
+          {
+            "action": "probe_process",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid, 'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          },
+          {
+            "action": "propose"
           }
         ],
-        "checks": [],
-        "probes": [],
-        "snippets": []
+        "checks": [
+          {
+            "label": "baseline-suite",
+            "code": 1,
+            "log": "name only GitHub hosts\n  ---\n  duration_ms: 126.162153\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 182 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 174.539075\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 183 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.140544\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 184 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.749767\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 185 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.496095\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 186 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.159929\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 187 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.712455\n  type: 'test'\n  ...\n1..187\n# tests 187\n# suites 0\n# pass 177\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 12248.433564\n"
+          }
+        ],
+        "probes": [
+          {
+            "status": "baseline-failed",
+            "code": 1,
+            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 43.187858\n  type: 'test'\n  location: '/work/resident-regressions/probe-a93c144cfe3b9f13bd14b3a5.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-a93c144cfe3b9f13bd14b3a5.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 82.292367\n",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/test.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid, 'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          }
+        ],
+        "snippets": [
+          {
+            "path": "src/cage/relay.js",
+            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+          }
+        ],
+        "attemptedMethod": {
+          "mode": "contract-first",
+          "observation": "{\"status\":\"proposed\",\"blockers\":[],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+          "instructions": "1. Verify if the 'node:22-bookworm' image is available in the local registry or requires an explicit pull command before execution.\n2. If the image is missing locally, execute a pre-flight check to pull the image using `docker pull node:22-bookworm` before re-running the probe_process.\n3. Once the image is present, re-execute the probe_process with the same script and args to confirm the actual exit code (143 vs expected 130) without triggering network side effects on the socket.\n4. If the probe succeeds, analyze the `child.on('exit')` handler in relay.js to identify the missing bitwise AND operation (`code ?? 1`) that causes the addition of 9 instead of 2 for SIGINT.",
+          "falsifier": "If this method fails again, it will indicate either a persistent Docker registry connectivity issue or that the Node version required differs from 'node:22-bookworm', necessitating a switch to a locally available Node version for testing.",
+          "id": "method-3b67478a4b61a85c273c",
+          "status": "unverified-hypothesis"
+        }
       },
-      "cooldownUntil": "2026-11-27T17:58:05.843Z"
+      "cooldownUntil": "2026-11-27T18:35:00.975Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",
