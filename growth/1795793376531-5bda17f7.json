@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795793376531-5bda17f7",
+  "source": {
+    "id": "opp-b6b605a4e234e025",
+    "url": "https://github.com/cdsap/daemonitor/issues/656",
+    "title": "security(mcp): restrict settings.properties permissions (0600) and harden MCP HTTP server",
+    "evidenceHash": "57c9e511f12fa6b2681539abe1d3b9ea1b3758726d29d0b576cb5bc712cd5213",
+    "updated": "2026-11-27T15:05:37Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

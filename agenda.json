@@ -2,62 +2,73 @@
   "version": 1,
   "tasks": [
     {
-      "id": "work-cd6a58b1132ae1d5fba5",
+      "id": "work-b3fa7fb504a6ee0bd549",
       "repo": "croviatrust/agentcrash",
-      "goal": "maintain",
-      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-      "source": "https://github.com/croviatrust/agentcrash/issues/9",
-      "evidenceHash": "accc3b45ebbd85735f1c",
-      "status": "blocked",
-      "attempts": 6,
+      "goal": "create",
+      "objective": "Investigate the reported need: Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+      "source": "https://github.com/brianreborn/familia/issues/407",
+      "evidenceHash": "efa74625cf13859b78cc",
+      "status": "needs-research",
+      "attempts": 1,
       "checkpoints": [
         {
-          "episode": "1795763652199-14c5732d",
-          "status": "baseline-failed",
-          "verdict": "baseline-failed",
-          "next": "",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
-        {
-          "episode": "1795766197953-8f03297e",
+          "episode": "1795793376531-5bda17f7",
           "status": "stopped",
           "verdict": "stopped",
-          "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
-        {
-          "episode": "1795768662620-c757a0f9",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+          "next": "Turn budget exhausted without a valid experiment.",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
         }
       ],
-      "lastEpisode": "1795768662620-c757a0f9",
-      "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
-      "recoveryCycles": 6,
+      "next": "Turn budget exhausted without a valid experiment.",
+      "lastEpisode": "1795793376531-5bda17f7",
+      "recoveryCycles": 1,
       "lastFailure": {
-        "episode": "1795768662620-c757a0f9",
+        "episode": "1795793376531-5bda17f7",
         "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
-          "id": "work-cd6a58b1132ae1d5fba5",
-          "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-          "source": "https://github.com/croviatrust/agentcrash/issues/9"
+          "id": "work-b3fa7fb504a6ee0bd549",
+          "objective": "Investigate the reported need: Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
+          "source": "https://github.com/brianreborn/familia/issues/407"
         },
         "status": "stopped",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code calculation in relay.js\",\"hypothesis\":\"The child.on('exit') handler incorrectly maps SIGINT to 143 instead of the conventional 130 (128 + 2).\",\"falsifier\":\"A regression test that spawns a child process with SIGINT and verifies the parent exits with 130 fails before this change and passes after.\",\"benefit\":\"Preserves correct Unix exit semantics for signal handling, matching the stated contract to leave with the child's exit status.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 2) : code ?? 1))\"},{\"path\":\"src/cage/relay-sigint.test.mjs\",\"content\":\"import { spawnSync } from 'node:child_process';\\n\\n// Reproduce the baseline failure: relay.js exits with 143 when child is SIGINTed.\\nconst result = spawnSync(process.execPath, [\\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\\n  process.execPath, '-e', \\\"process.kill(process.pid, 'SIGINT')\\\"\\n], { encoding: 'utf8', timeout: 5000 });\\n\\n// Expected: 130 (128 + 2). Observed baseline: 143.\\nif (result.status !== 130) {\\n  throw new Error(`Expected exit code 130, got ${result.status}`);\\n}\\n\",\"probeId\":\"probe-1\"}]}",
         "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+          },
           {
             "phase": "action",
             "error": "Read the Node script before requesting a process experiment"
           },
           {
             "phase": "action",
-            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'"
+            "error": "Code changes require a new regression test"
+          },
+          {
+            "phase": "action",
+            "error": "Unknown probe reference or non-regression destination"
           }
         ],
-        "modelReasonUnverified": "The relay script explicitly maps SIGINT to exit code 15 (128+7), but the task requires preserving the child's actual exit status (130 for SIGINT). The probe confirmed the bug exists in the source logic.",
+        "modelReasonUnverified": "Turn budget exhausted without a valid experiment.",
         "actions": [
+          {
+            "action": "read",
+            "path": "src/main/kotlin/io/github/cdsap/daemonitor/mcp/DaemonitorMcpHttpServer.kt"
+          },
+          {
+            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/main'",
+            "phase": "action"
+          },
+          {
+            "action": "read",
+            "path": "src/main/kotlin/io/github/cdsap/daemonitor/mcp/DaemonitorMcpHttpServer.kt"
+          },
+          {
+            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+            "phase": "action"
+          },
           {
             "action": "probe_process"
           },
@@ -67,18 +78,21 @@
           },
           {
             "action": "read",
-            "path": "src/command.js"
-          },
-          {
-            "error": "ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'",
-            "phase": "action"
-          },
-          {
-            "action": "read",
             "path": "src/cage/relay.js"
           },
           {
-            "action": "stop"
+            "action": "propose"
+          },
+          {
+            "error": "Code changes require a new regression test",
+            "phase": "action"
+          },
+          {
+            "action": "propose"
+          },
+          {
+            "error": "Unknown probe reference or non-regression destination",
+            "phase": "action"
           }
         ],
         "checks": [],
@@ -91,26 +105,14 @@
         ],
         "attemptedMethod": {
           "mode": "contract-first",
-          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"},{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[]}",
-          "instructions": "Execute a new `probe_process` action targeting an explicitly available image (`node:20-bookworm`) to verify the relay logic without relying on network-dependent image pulls. Use the same script and args as the failed probe but change the container base to ensure immediate availability.",
-          "falsifier": "If this method fails with a different error (e.g., 'exit code 143' or 'exit code 128') instead of an image pull error, it confirms the relay logic is incorrect. If it succeeds with exit code 130, the fix requires editing `src/cage/relay.js` to map SIGINT correctly.",
-          "id": "method-b817145b2c162a16848d",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[]}",
+          "instructions": "Execute a new `probe_process` action targeting the specific Node.js process running `relay.js` with the exact reproduction command from the task description. This bypasses the file-read restriction by observing the live process behavior (exit code 143 vs expected 130) rather than re-reading the static source text. The probe should capture the stdout/stderr and final exit status of the spawned child process to confirm the bug exists in the current environment.",
+          "falsifier": "If `probe_process` returns an exit code of 130 (or any value other than 143) for the SIGINT scenario, it confirms the baseline failure is resolved or the environment has changed; if it consistently returns 143, the bug is confirmed and the next step is to propose a minimal edit to the `child.on('exit')` handler in `relay.js`.",
+          "id": "method-40e6bac0c1a64edc8ac3",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-27T08:55:42.185Z"
-    },
-    {
-      "id": "work-b3fa7fb504a6ee0bd549",
-      "repo": "croviatrust/agentcrash",
-      "goal": "create",
-      "objective": "Investigate the reported need: Security MCPs for 0.3.0: inventory, tool boundaries, and allowlist",
-      "source": "https://github.com/brianreborn/familia/issues/407",
-      "evidenceHash": "efa74625cf13859b78cc",
-      "status": "queued",
-      "attempts": 0,
-      "checkpoints": [],
-      "next": "Source evidence changed; re-evaluate rather than assume the old diagnosis."
+      "cooldownUntil": "2026-11-27T15:47:31.213Z"
     },
     {
       "id": "work-ea953d519c46ecda7e4d",
@@ -355,6 +357,17 @@
       "objective": "Investigate the reported need: Claude Code setup: CLAUDE.md, permissions, hooks, MCP servers",
       "source": "https://github.com/affan80/REX/issues/35",
       "evidenceHash": "d8a934fbf791d5260459",
+      "status": "queued",
+      "attempts": 0,
+      "checkpoints": []
+    },
+    {
+      "id": "work-d55a750f69ef6c6f6575",
+      "repo": "croviatrust/agentcrash",
+      "goal": "create",
+      "objective": "Investigate the reported need: security(mcp): restrict settings.properties permissions (0600) and harden MCP HTTP server",
+      "source": "https://github.com/cdsap/daemonitor/issues/656",
+      "evidenceHash": "ffea3eb79288ecb9531d",
       "status": "queued",
       "attempts": 0,
       "checkpoints": []
