@@ -9,15 +9,8 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "needs-research",
-      "attempts": 4,
+      "attempts": 5,
       "checkpoints": [
-        {
-          "episode": "1795759231338-227d4d25",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "How does the child process handle the SIGINT signal? Is it exiting cleanly with code 0 instead of being terminated by the signal?",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
         {
           "episode": "1795761423452-28a8e7c1",
           "status": "stopped",
@@ -31,13 +24,20 @@
           "verdict": "baseline-failed",
           "next": "",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+        },
+        {
+          "episode": "1795766197953-8f03297e",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
         }
       ],
-      "lastEpisode": "1795763652199-14c5732d",
-      "next": "",
-      "recoveryCycles": 4,
+      "lastEpisode": "1795766197953-8f03297e",
+      "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+      "recoveryCycles": 5,
       "lastFailure": {
-        "episode": "1795763652199-14c5732d",
+        "episode": "1795766197953-8f03297e",
         "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -45,14 +45,14 @@
           "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
           "source": "https://github.com/croviatrust/agentcrash/issues/9"
         },
-        "status": "proposed",
-        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code calculation in relay.js\",\"hypothesis\":\"The relay exits with 143 (128+15) instead of 130 (128+2) because the signal handler maps SIGINT to 15, but the shell convention for SIGINT is 128+2=130.\",\"falsifier\":\"If the probe passes with expectedExit=130 after the edit, the hypothesis is confirmed; if it still fails or throws an error, the hypothesis is falsified.\",\"benefit\":\"Preserves the contract that relay.js returns the child's actual exit status (130 for SIGINT) rather than a hardcoded signal-derived code.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"content\":\"#!/usr/bin/env node\\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\\n// this forwards loopback ports to the gate's unix socket, then starts the\\n// caged command and leaves with its exit status.\\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\\n// The first port is the HTTP proxy. Every other port stands in for the same\\n// port on the machine outside: a model server running on localhost.\\nimport net from 'node:net';\\nimport { spawn } from 'node:child_process';\\n\\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\\n\\nconst listen = (port, opening) => new Promise((resolve) => {\\n  const server = net.createServer((c) => {\\n    const up = net.connect(sock);\\n    c.on('error', () => up.destroy());\\n    up.on('error', () => c.destroy());\\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\\n    // Ask the gate for the outside port, and only then hand the pipe over.\\n    c.pause();\\n    let head = Buffer.alloc(0);\\n    const onData = (d) => {\\n      head = Buffer.concat([head, d]);\\n      const end = head.indexOf('\\\\r\\\\n\\\\r\\\\n');\\n      if (end < 0) return;\\n      up.off('data', onData);\\n      if (!/^HTTP\\\\/1\\\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\\n      c.pipe(up); up.pipe(c); c.resume();\\n    };\\n    up.on('data', onData);\\n    up.on('connect', () => up.write(opening));\\n    up.on('close', () => c.destroy());\\n  });\\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\\n  server.listen(port, '127.0.0.1', resolve);\\n});\\n\\nawait listen(proxyPort);\\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\\\r\\\\n\\\\r\\\\n`);\\n\\nconst child = spawn(cmd, args, { stdio: 'inherit' });\\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\\nchild.on('exit', (code, signal) => {\\n  const sigMap = { 'SIGINT': 2, 'SIGTERM': 15, 'SIGKILL': 9 };\\n  const exitCode = signal ? 128 + sigMap[signal] : code ?? 0;\\n  process.exit(exitCode);\\n});\"}]}",
+        "status": "stopped",
         "observedBlockers": [
           {
             "phase": "action",
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+            "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file."
           }
         ],
+        "modelReasonUnverified": "The probe failed due to Docker image pull errors ('Unable to find image node:22-bookworm locally') rather than the code logic, and the test assertion failure (Expected 130, got 0) indicates the child process exited with code 0 instead of a signal-derived code. The relay script's exit logic `process.exit(signal ? 128 + ... : code ?? 1)` suggests it expects a non-zero signal name or code to trigger the 128+ mapping, but received code=0 (clean exit). This implies the child process might be exiting cleanly rather than being killed by SIGINT, or the signal handling in `relay.js` is not triggering the expected behavior. The environment cannot execute the probe directly due to missing Docker dependencies, preventing verification of the fix before proposing. The core question remains: why does the child exit with code 0 instead of a signal-derived code when SIGINT is sent?",
         "actions": [
           {
             "action": "read",
@@ -63,7 +63,7 @@
             "path": "src/cage/relay.js"
           },
           {
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
+            "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.",
             "phase": "action"
           },
           {
@@ -71,42 +71,36 @@
             "processContract": {
               "script": "src/cage/relay.js",
               "args": [
-                "/tmp/test.sock",
+                "/tmp/unused-agenthub-task.sock",
                 "0",
                 "--",
                 "node",
                 "-e",
-                "process.kill(process.pid,'SIGINT')"
+                "\"process.kill(process.pid, 'SIGINT')\""
               ],
               "expectedExit": 130,
               "timeoutMs": 5000
             }
           },
           {
-            "action": "propose"
+            "action": "stop"
           }
         ],
-        "checks": [
-          {
-            "label": "baseline-suite",
-            "code": 1,
-            "log": "name only GitHub hosts\n  ---\n  duration_ms: 135.159416\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 182 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 187.786145\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 183 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.351043\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 184 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.907803\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 185 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.550469\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 186 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.160334\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 187 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.833416\n  type: 'test'\n  ...\n1..187\n# tests 187\n# suites 0\n# pass 177\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13069.444838\n"
-          }
-        ],
+        "checks": [],
         "probes": [
           {
             "status": "baseline-failed",
             "code": 1,
-            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 45.199436\n  type: 'test'\n  location: '/work/resident-regressions/probe-9c29c20bbc9fa1b1a42dd6b5.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-9c29c20bbc9fa1b1a42dd6b5.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 85.782597\n",
+            "log": ")\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 114.797474\nUnable to find image 'node:22-bookworm' locally\n22-bookworm: Pulling from library/node\n1e6e7ca511b9: Pulling fs layer\nbdae095a5e19: Pulling fs layer\ndb1d5603818e: Pulling fs layer\n0db1ede1885b: Pulling fs layer\n1743e5baab33: Pulling fs layer\n6e5ce812b3ad: Pulling fs layer\n9e99979a8862: Pulling fs layer\n10a40058c783: Pulling fs layer\n1743e5baab33: Waiting\n6e5ce812b3ad: Waiting\n9e99979a8862: Waiting\n10a40058c783: Waiting\n0db1ede1885b: Waiting\nbdae095a5e19: Verifying Checksum\nbdae095a5e19: Download complete\n1e6e7ca511b9: Verifying Checksum\n1e6e7ca511b9: Download complete\ndb1d5603818e: Download complete\n1743e5baab33: Verifying Checksum\n1743e5baab33: Download complete\n9e99979a8862: Verifying Checksum\n9e99979a8862: Download complete\n6e5ce812b3ad: Verifying Checksum\n6e5ce812b3ad: Download complete\n10a40058c783: Verifying Checksum\n10a40058c783: Download complete\n0db1ede1885b: Verifying Checksum\n0db1ede1885b: Download complete\n1e6e7ca511b9: Pull complete\nbdae095a5e19: Pull complete\ndb1d5603818e: Pull complete\n0db1ede1885b: Pull complete\n1743e5baab33: Pull complete\n6e5ce812b3ad: Pull complete\n9e99979a8862: Pull complete\n10a40058c783: Pull complete\nDigest: sha256:7c400d78797d8cbe3f6bb21d2227b86af4cd24b0014cc9f62ff989cc16de988e\nStatus: Downloaded newer image for node:22-bookworm\n",
             "processContract": {
               "script": "src/cage/relay.js",
               "args": [
-                "/tmp/test.sock",
+                "/tmp/unused-agenthub-task.sock",
                 "0",
                 "--",
                 "node",
                 "-e",
-                "process.kill(process.pid,'SIGINT')"
+                "\"process.kill(process.pid, 'SIGINT')\""
               ],
               "expectedExit": 130,
               "timeoutMs": 5000
@@ -120,15 +114,15 @@
           }
         ],
         "attemptedMethod": {
-          "mode": "contract-first",
-          "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
-          "instructions": "Execute a fresh probe_process using a DIFFERENT container image tag that is likely pre-cached or available locally (e.g., 'node:20-bookworm' or 'node:22-slim') to bypass the pull failure. Once the process starts successfully, run the exact reproduction command from the task description within that container to capture the actual exit code (expected 143 vs expected 130). If the image pull succeeds but the script still exits with 143, proceed to propose a minimal edit to src/cage/relay.js specifically targeting the SIGINT signal handling logic.",
-          "falsifier": "If the new probe_process with an alternative image tag fails again due to missing Docker layers or network isolation, it confirms the environment is fully isolated from external registries; otherwise, if the process runs and exits with 143, it confirms the source code bug exists and requires a fix.",
-          "id": "method-8e1d8766656f3322ec90",
+          "mode": "reference-first",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"ENOENT: no such file or directory, lstat '/home/runner/work/agentcrash/agentcrash/controller/src/command.js'\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"}],\"checks\":[]}",
+          "instructions": "1. Create the missing directory structure `/home/runner/work/agentcrash/agentcrash/controller/src/` using a shell command (e.g., `mkdir -p ...`).\n2. After the directory exists, re-execute the `probe_process` action with the specific script arguments defined in the task (`relay.js`, socket path, port 0, and the self-kill command) to verify the current exit status of 143.\n3. If the probe confirms the bug (exit 143 instead of 130), proceed to edit `src/cage/relay.js` to fix the signal mapping logic.",
+          "falsifier": "If the directory creation fails again or the probe_process still returns an error unrelated to file existence, it indicates a deeper permission or environment issue beyond the missing path. If the probe passes with exit 143 after directory creation, it confirms the bug is present and requires the code edit.",
+          "id": "method-50b1fefd31bc5ce8c564",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-27T07:34:53.682Z"
+      "cooldownUntil": "2026-11-27T08:19:16.059Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",

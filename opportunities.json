@@ -1,16 +1,88 @@
 {
-  "observed": "2026-11-27T06:59:33.962Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-27T07:35:19.998Z",
+  "opportunities": [
     {
+      "url": "https://github.com/chase-us/Crabdeck-/issues/7",
+      "title": "M6 — CRAB-SHIELD security perimeter, MCP validation, and execution jail",
+      "excerpt": "## Objective\nEstablish defense-in-depth for all untrusted input, tool routing, and process execution.\n\n## Work\n- Implement strict loopback defaults, authentication/authorization, CSRF/rate controls where applicable, and secret management.\n- Validate MCP protocol headers against JSON-RPC bodies; reject desynchronization and unsigned privilege metadata.\n- Apply SSRF-safe address validation, redirect denial, DNS/IP pinning, and outbound allowlists.\n- Confine filesystem operations to canonical workspace roots.\n- Use AST-based command/query policies and sandboxed execution with hard step/time/resource budgets.\n- Redact secrets and PII from logs and telemetry.\n\n## Acceptance\n- Adversarial tests cover SSRF, DNS rebinding, redirects, path traversal, command injection, SQL injection, MCP desync, privilege spoofing, replay, and secret leakage.\n- Destructive actions require authenticated, expiring, single-use approval.\n- Security invariants hard-fail the release gate.",
+      "updated": "2026-11-27T05:19:09Z",
+      "retrieved": "2026-11-27T07:35:19.999Z",
+      "evidenceHash": "d3d9190376fe5e2fc7c802c64b4f796b4ffc136ffe0c64cda8837c5603f79d7d",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "chase-us/Crabdeck-",
+      "number": 7,
+      "id": "opp-6df2e52e5e77baa2",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/m00sfett/Itsova/issues/143",
+      "title": "Pre-1.0.0 security review: capture, redaction, file permissions, hooks, and MCP server",
+      "excerpt": "## Summary\nTracking issue for the formal pre-`1.0.0` security review defined in `docs/security-review-checklist.md` (follow-up to #139).\n\n## Scope\n- [ ] **Screen capture & D-Bus/Wayland boundaries:** `ScreenShot2`, `zkde_screencast_unstable_v1`, local session D-Bus (`CaptureSync`) vs. MCP access boundaries.\n- [ ] **Redaction:** Verify `Solid` opaque replacement (including HiDPI edge rounding and unredacted `Print` snapshot cleanup) and verify UI/docs accurately frame `Pixelate`/`Blur` as visual obfuscation rather than audited irreversible redaction.\n- [ ] **File permissions & path handling:** Capture directory confinement, symlink rejection, atomic writes, config/history/pin file permissions.\n- [ ] **Hooks & external processes:** Post-capture hook execution, `tesseract` / `ffmpeg` / `ffprobe` invocation, argument handling, timeouts.\n- [ ] **Local MCP server:** Default-off state, `Allowlist` / `ConfirmPerCapture` / `FullSession` enforcement, `annotate_image` confinement and overwrite protection.",
+      "updated": "2026-11-27T05:26:32Z",
+      "retrieved": "2026-11-27T07:35:19.999Z",
+      "evidenceHash": "ded1a75c666275613ad5aa48e0acfc03166b9cf5de8bb3e3b03c9e1ea774840b",
+      "query": "\"MCP\" \"security\"",
+      "repository": "m00sfett/Itsova",
+      "number": 143,
+      "id": "opp-ca71d13bb4ee76da",
+      "matched": [
+        "mcp",
+        "hook",
+        "permission",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 1
+    },
+    {
+      "url": "https://github.com/tbrandenburg/agentiplex/issues/35",
+      "title": "[P0] Security: authenticate individual agents across A2A, MCP and HTTP",
+      "excerpt": "## Goal\n\nGive each registered agent a stable, authenticated identity when calling Agentiplex over HTTPS. Prevent impersonation and cross-agent request/result collisions without turning the middleware into an identity provider or multi-tenant platform.\n\n## Background\n\nAgentiplex already supports verified TLS, static operator/collaborator/viewer bearer credentials and origin-scoped outbound A2A credentials (docs/DEPLOYMENT.md). Shared collaborator credentials authorize a role, not an individual; MCP client names and note authors are claims, A2A message IDs are namespace-global, and all collaborators share delivery/state access. This matters when agents run on different machines. See docs/ARCH.md, docs/A2A.md, docs/MCP.md and #25 (caller identity). This issue takes the narrow identity portion of #25 forward; ask_all, general cycle detection and unrestricted any-agent delegation remain deferred.\n\n## KISS principle\n\n**Early-stage simplification:** Agentiplex is pre-1.0. Breaking changes to its own APIs, configuration, storage formats, and tools, removal of obsolete features, and refactoring are explicitly allowed when they reduce complexity. Prefer replacing inadequate mechanisms over maintaining parallel implementations. Do not add compatibility layers, migration machinery or speculative abstractions without a demonstrated requirement. Preserve A2A/MCP standards interoperability, security and durable-work safety; document breaking changes and any explicit disposable-data reset. Never silently discard or replay outstanding work.\n\n- Reuse current native HTTPS, bearer middleware, logical agent IDs, existing Go core and JetStream records.\n- Replace shared collaborator credentials with one operator-provisioned credential per agent; one small principal model (role + stable agent ID). Keep operator/viewer roles only for their distinct administrative/read-only purposes. One trust domain, no new infrastructure.\n- Default-deny the named agent's access outside its explicit permissions. Keep discovery and intentional team shared state simple.\n- No OAuth/SSO, DIDs, mTLS client PKI, policy engine, federation, dynamic credential issuance, broker credentials exposed to agents, or changes to A2A/MCP standards.\n\n## Detailed implementation plan\n\n1. **Principal and provisioning.** Inspect existing authentication and registry code. Replace the shared collaborator-token configuration",
+      "updated": "2026-11-27T07:00:43Z",
+      "retrieved": "2026-11-27T07:35:19.999Z",
+      "evidenceHash": "19f4b8ce779dd1a55473c61b1ec6b6df37fe1b3799a728e8e890eeaf5b3be391",
+      "query": "\"MCP\" \"security\"",
+      "repository": "tbrandenburg/agentiplex",
+      "number": 35,
+      "id": "opp-cc257ad4c952f214",
+      "matched": [
+        "mcp",
+        "permission",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/Erriccc/osborn/issues/638",
+      "title": "Package Osborn's agents, skills and hooks as a Claude Code plugin (one source for every runtime)",
+      "excerpt": "## Goal\nOsborn's agent framework (named agents, skills, hooks, chain order and the patterns around them) should follow the Claude Code **plugin** layout, so one folder is the single source that every runtime loads:\n- the Osborn voice runtime (Agent SDK),\n- the `issue-agent` GitHub Actions run,\n- local Claude Code sessions in this repo,\n- and anyone else who installs it.\n\nChanging a file in that folder changes all of them. No copies to maintain.\n\n## Today\n- Named agents (researcher, reasoner, planner, writer, tester, steward, reviewer) are TypeScript literals in `agent/src/claude-llm.ts` (`NAMED_AGENTS`); roles and chains in `agent/src/agent-store.ts`. Only the steward reads its prompt from a file (`agent/src/prompts/steward.md`, shared with `.claude/agents/steward.md`).\n- Bundled skills live in `agent/.claude/skills/`; repo skills in `.claude/skills/`.\n- Hooks: repo hooks in `.claude/settings.json` + `.claude/hooks/`; the chain advance and role write gate run in-process in the Osborn runtime.\n- The `issue-agent` run therefore loads the steward, the pre-PR reviewer and the repo hooks, but not the other agents, the bundled skills or the chain.\n\n## Ask\n1. Check the current Claude Code plugin format against the official docs (manifest, agents/, skills/, hooks/, commands/, MCP) and whether the Agent SDK and `claude-code-action` (`--plugin-dir` / plugin inputs) load it the same way.\n2. Audit each existing skill, agent and hook against that format and list what does not follow it.\n3. Propose the folder layout and the smallest changes so Osborn's runtime and the cloud run load the same plugin folder. Name what cannot be file-based (in-process callbacks) and the workaround.\n\nRelated design notes: agent instructions move from TypeScript into plain files (steward pattern), chain order lives in the `chain-after-<role>.md` files, and cloud chain enforcement uses a PostToolUse plus Stop hook. Related: #626, #629, #453.\n\n## Done when\n- A written audit and target layout are posted on this issue.\n- The plugin loads in a local Claude Code session and in one `issue-agent` run, and both list the same agents and skills.\n",
+      "updated": "2026-11-27T04:27:35Z",
+      "retrieved": "2026-11-27T07:35:19.999Z",
+      "evidenceHash": "d52e92015377f2151eb8d5ca9bb8a7ea7f4de09209717ec201df952cf76b3f0c",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "Erriccc/osborn",
+      "number": 638,
+      "id": "opp-1b80269d6b807bb2",
+      "matched": [
+        "mcp",
+        "hook"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

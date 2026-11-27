@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795766197953-8f03297e",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Why does the child process exit with code 0 instead of a signal-derived code when SIGINT is sent? Is the child process exiting cleanly rather than being terminated by the signal?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
