@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795761423452-28a8e7c1",
+  "source": {
+    "id": "opp-ca71d13bb4ee76da",
+    "url": "https://github.com/m00sfett/Itsova/issues/143",
+    "title": "Pre-1.0.0 security review: capture, redaction, file permissions, hooks, and MCP server",
+    "evidenceHash": "ded1a75c666275613ad5aa48e0acfc03166b9cf5de8bb3e3b03c9e1ea774840b",
+    "updated": "2026-11-27T05:26:32Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
