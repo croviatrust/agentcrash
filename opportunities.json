@@ -1,84 +1,16 @@
 {
-  "observed": "2026-11-27T15:20:14.052Z",
-  "opportunities": [
+  "observed": "2026-11-27T15:48:04.868Z",
+  "opportunities": [],
+  "errors": [
     {
-      "url": "https://github.com/cdsap/daemonitor/issues/656",
-      "title": "security(mcp): restrict settings.properties permissions (0600) and harden MCP HTTP server",
-      "excerpt": "## Severity\nMedium\n\n## Summary\nThe local MCP bearer token is stored in `settings.properties` without owner-only POSIX permissions, and the MCP HTTP server has several defense-in-depth gaps.\n\n## Affected Files\n- `core/src/main/kotlin/io/github/cdsap/daemonitor/store/SettingsStore.kt`\n- `src/main/kotlin/io/github/cdsap/daemonitor/mcp/DaemonitorMcpHttpServer.kt`\n\n## Details\n1. **Plaintext MCP token file permissions (`SettingsStore.kt`):** `save()` creates `settings.properties` using the process default umask (typically `0644`) and never sets `rw-------` (`0600`), allowing other local users on macOS/Linux to read `mcpToken`.\n2. **Unbounded request body & thread pool (`DaemonitorMcpHttpServer.kt`):** `handlePost()` calls `requestBody.readBytes()` with no size cap and runs on an unbounded `Executors.newCachedThreadPool()`.\n3. **Non-constant-time token check:** `hasToken()` compares tokens with `==` instead of `MessageDigest.isEqual()`.\n4. **Missing `Host` header check:** `originIsAllowed()` checks `Origin`, but the server does not validate the `Host` header (`127.0.0.1` / `localhost` / `[::1]`) against DNS rebinding.\n\n## Suggested Fix\n1. Enforce `0700` on the parent data directory and `0600` (`rw-------`) on `settings.properties` on POSIX systems (on both save and load/migration).\n2. Cap POST body reads (e.g., 1 MiB) returning HTTP 413 on overflow, and replace `newCachedThreadPool()` with a bounded thread pool.\n3. Compare bearer tokens using `MessageDigest.isEqual`.\n4. Validate that the `Host` header resolves to loopback (`127.0.0.1`, `localhost`, `[::1]`).\n5. Add unit tests for body-size rejection, `Host` header validation, and POSIX file permissions.",
-      "updated": "2026-11-27T15:05:37Z",
-      "retrieved": "2026-11-27T15:20:14.053Z",
-      "evidenceHash": "57c9e511f12fa6b2681539abe1d3b9ea1b3758726d29d0b576cb5bc712cd5213",
       "query": "\"MCP\" \"security\"",
-      "repository": "cdsap/daemonitor",
-      "number": 656,
-      "id": "opp-b6b605a4e234e025",
-      "matched": [
-        "mcp",
-        "permission",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     },
     {
-      "url": "https://github.com/kefyusuf/astropress/issues/8",
-      "title": "[P0][Security] MCP & Admin: gray-matter RCE, Auth/CSRF/DNS Rebinding ve Same-Origin XSS",
-      "excerpt": "## Öncelik & Kapsam\n**Öncelik:** P0 (Acil Güvenlik)\n**Katman:** `mcp/http.mjs`, `mcp/store.mjs`, `admin/index.html`\n\n## Tespit Edilen Sorunlar\n\n1. **`gray-matter` Varsayılan JS Frontmatter Motoru ile RCE (Kritik)**\n   - **Konum:** `mcp/store.mjs:38, 49`\n   - `gray-matter` v4.0.3 varsayılan olarak `---js` / `---javascript` bloklarını `eval()` ile çalıştırır. `matter.read()` çağrılarında JS motoru kapatılmadığı için kötü niyetli frontmatter içeren bir `.md` dosyası sunucuda uzaktan kod çalıştırabilir.\n2. **Admin HTTP Sunucusunda Sıfır Kimlik Doğrulama, CSRF ve DNS Rebinding (Kritik)**\n   - **Konum:** `mcp/http.mjs:9, 12-13, 32-48, 66-108`\n   - Tüm `/api/*` uçları tam insan (`HUMAN.perms`) yetkisiyle çalışır. Auth yok, `Host` kontrolü yok (DNS rebinding), `Origin`/`Referer` veya CSRF token kontrolü yok ve `Content-Type: application/json` zorunlu değil.\n3. **Same-Origin `/site/` Önizleme → Stored XSS ile Admin Ele Geçirme (Kritik)**\n   - **Konum:** `mcp/http.mjs:101-103`, `admin/index.html:123`\n   - Derlenen statik site (`/site/`) Admin UI ile aynı origin'de (`127.0.0.1:4322`) sunuluyor. Önizlenen bir sayfadaki herhangi bir script doğrudan `/api/tasks/:id/approve` ve `/api/content` uçlarını çağırabilir.\n4. **Admin UI Stored XSS & Eksik Güvenlik Başlıkları (Yüksek)**\n   - **Konum:** `admin/index.html:216, 262, 330` (ve URL segmentleri `370, 390, 402, 406, 410`), `mcp/http.mjs:26-30, 50-54`\n   - `i.status`, `d.status`, `t.status` değerleri `esc()` olmadan `innerHTML` içine gömülüyor. `CSP`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` ve `Referrer-Policy` başlıkları gönderilmiyor.\n5. **Path Traversal (`listContent`) & Sunucu Çökertme / Symlink Kaçışı (`serveSite`) (Yüksek)**\n   - **Konum:** `mcp/store.mjs:31-44`, `mcp/http.mjs:50-64, 73, 99`\n   - `listContent` `collection` parametresini `COLLECTIONS` listesinde doğrulamıyor (`/api/content?collection=../../...`).\n   - `new URL(req.url, ...)` `try/catch` dışında (hatalı URL sunucuyu çökertir); `createReadStream` üzerinde `.on('error')` yok; `serveSite` `fs.realpathSync` kullanmadığı için symlink kaçışına açık.\n\n## Yapılacak Değişiklikler\n\n- [ ] `mcp/store.mjs`: Tüm `matter.read()` çağrılarında `js` / `javascript` frontmatter motorlarını devre dışı bırak (`engines: { js: () => { throw ... }, javascript: () => { throw ... } }`).\n- [ ] `mcp/store.mjs`: `listContent(collection, status)` başında `collection",
-      "updated": "2026-11-27T15:19:17Z",
-      "retrieved": "2026-11-27T15:20:14.053Z",
-      "evidenceHash": "2b6e5cbe329053fadfc037394cc55f01d5649b81e17d0d97eb4b169b99762abf",
-      "query": "\"MCP\" \"security\"",
-      "repository": "kefyusuf/astropress",
-      "number": 8,
-      "id": "opp-ab750801609beb7f",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/kefyusuf/astropress/issues/9",
-      "title": "[P0][Security] MCP Streamable HTTP & Guardrail/RBAC Sikilastirmasi",
-      "excerpt": "## Öncelik & Kapsam\n**Öncelik:** P0 (Acil Güvenlik)\n**Katman:** `mcp/http-server.mjs`, `mcp/ops.mjs`, `mcp/factory.mjs`, `mcp/store.mjs`\n\n## Tespit Edilen Sorunlar\n\n1. **Kimlik Doğrulamasız Yetki Yükseltme (`X-Astropress-Agent`) (Kritik)**\n   - **Konum:** `mcp/http-server.mjs:54-58`, `agents.json:2-5`\n   - MCP HTTP oturum açılışında kimlik doğrudan istemci başlığından (`X-Astropress-Agent`) alınır. Herhangi bir istemci `X-Astropress-Agent: operator` göndererek `publish: true` yetkisi elde edebilir.\n2. **Guardrail Bypass: Yayındaki (`published`) İçeriğin Onaysız Değiştirilmesi ve Silinmesi (Kritik / Yüksek)**\n   - **Konum:** `mcp/ops.mjs:46-71`\n   - `ops.update`, `status: 'published'` kayıtları insan onayı olmadan doğrudan günceller ve yayında bırakır (`seo-agent`/`commerce-bot` tüm alanları değiştirebilir).\n   - `ops.remove`, `content-studio` (`delete: true, publish: false`) kimliğinin yayındaki içeriği onaysız silmesine izin verir.\n3. **Onay Akışında TOCTOU (Bait-and-Switch) ve `reject` Durum Hatası (Yüksek / Orta)**\n   - **Konum:** `mcp/ops.mjs:73-110`\n   - `requestPublish` içerik SHA-256 hash'i veya talep eden `actor` bilgisini saklamaz; agent onay öncesinde taslağın içeriğini değiştirebilir. Aynı slug için mükerrer onay görevleri açılabilir.\n   - `reject` (`ops.mjs:101-110`), `t.status !== 'approval'` kontrolü yapmadığı için zaten onaylanmış (`done`) görevleri `rejected` yapabilir.\n4. **`request_publish` ve `run_build` Üzerinde Eksik RBAC (Yüksek)**\n   - **Konum:** `mcp/ops.mjs:73-82, 117-127`, `mcp/factory.mjs:46-49, 66-69`\n   - `reader` (tüm yetkileri `false`) bile onay kuyruğunu doldurup build tetikleyebilir.\n5. **MCP Streamable HTTP Spec ve DoS Eksikleri (Yüksek / Orta)**\n   - **Konum:** `mcp/http-server.mjs:12, 25, 37-95`, `mcp/factory.mjs:12-13`, `mcp/store.mjs:84-88`\n   - `Origin` başlığı doğrulanmıyor (MCP Streamable HTTP spec zorunluluğu).\n   - `transports` haritasında max-session sınırı ve idle TTL yok (memory leak DoS).\n   - Bilinmeyen/eski `Mcp-Session-Id` için `404` yerine `400` dönülüyor; >1MB gövdede `413` yerine socket kapatılıp `400` dönülüyor.\n   - `factory.mjs` audit kaydında tüm agent'ları `'agent'` olarak birleştiriyor (`agent.id` kayboluyor); `audit.json` 200 kayıtla kırpıldığı için `denied` seliyle tüm audit geçmişi silinebilir.\n\n## Yapılacak Değişiklikler\n\n- [ ] `mcp/http-server.mjs`: Bearer token (backend `TokenStore` ile uyumlu)",
-      "updated": "2026-11-27T15:19:27Z",
-      "retrieved": "2026-11-27T15:20:14.053Z",
-      "evidenceHash": "0e0822e36aac95374ba01bcbb3ef9d8525363cfb641d533813ea68e57fd3a3a3",
-      "query": "\"MCP\" \"security\"",
-      "repository": "kefyusuf/astropress",
-      "number": 9,
-      "id": "opp-9c17d4a3ab172ac4",
-      "matched": [
-        "mcp",
-        "security"
-      ],
-      "score": 6,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/atlowChemi/nakama/issues/27",
-      "title": "INS-2 · Integration target framework, guard script and Claude Code hooks target",
-      "excerpt": "**Plan:** [05 Installer and onboarding](https://github.com/atlowChemi/nakama/blob/main/docs/plans/05-installer-and-onboarding.md#ins-2--integration-target-framework-guard-script-and-claude-code-hooks-target) · **PRD:** [05 Installer and onboarding](https://github.com/atlowChemi/nakama/blob/main/docs/prd/05-installer-and-onboarding.md)\n\n**Kind:** task · **Stage:** M1\n\n### What to build\n\nThe target interface (detect, plan, diff, apply, verify, repair, disconnect); a single sibling backup (`<file>.nakama-backup`) written before every write; atomic writes; re-planning if a file changed since preview; the guard script (`~/.nakama/bin/nakama-hook`); the Claude Code hooks target for every hook in PRD 04's table.\n\n### Files or crates it touches\n\n`crates/nakama-core/src/installer/**`\n\n### Tests that prove it works\n\nPreview equals applied change; backup exists before each write; atomic write survives a simulated crash; a hook command with the app missing exits 0 silently; disconnect removes exactly the added entries.\n\n### Done when\n\nPRD 05 AC-2, AC-3, AC-5 and AC-7 pass.\n\n### Blocked by\n\n- INS-1 · Format-preserving JSON editing\n- HKH-1 · Helper binary skeleton",
-      "updated": "2026-11-27T14:14:29Z",
-      "retrieved": "2026-11-27T15:20:14.053Z",
-      "evidenceHash": "3cc4d9fa9014a78be300ff7467d2e930a1aba0aed85f742b84669b9c8b42182a",
       "query": "\"Claude Code\" \"hooks\"",
-      "repository": "atlowChemi/nakama",
-      "number": 27,
-      "id": "opp-f18da1826c83d0aa",
-      "matched": [
-        "hook"
-      ],
-      "score": 4,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
+      "error": "Evidence HTTP 403"
     }
   ],
-  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

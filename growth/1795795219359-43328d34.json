@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795795219359-43328d34",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "What is the complete content of src/cage/relay.js so a valid diff can be constructed?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
