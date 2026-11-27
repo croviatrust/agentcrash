@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "episode": "1795797558563-698e50a8",
+  "source": {
+    "id": "opp-27d927b7d264cd37",
+    "url": "https://github.com/llm4s/llm4s/issues/3067",
+    "title": "[EPIC] MCP client and server: security, protocol conformance and transport parity",
+    "evidenceHash": "cbca2382b00437de84b5f0f62be48b97dd8f2d232b6bfcd9b36c6f9782cbd6a9",
+    "updated": "2026-11-27T15:55:52Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": {
+    "title": "Fix SIGINT exit status mapping in relay.js",
+    "hypothesis": "The relay incorrectly calculates the exit code for SIGINT by adding 15 instead of 2 to the base 128, resulting in 143 instead of the expected 130.",
+    "falsifier": "Running the same probe_process with expectedExit=130 will fail if the fix is incorrect or if the signal handling logic differs from a simple arithmetic mapping.",
+    "intendedBenefit": "Restores compliance with the relay's contract to preserve child exit status, matching shell conventions (SIGINT=128+2=130)."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
