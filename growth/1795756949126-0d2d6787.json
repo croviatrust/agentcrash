@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "episode": "1795756949126-0d2d6787",
+  "source": null,
+  "experiment": {
+    "title": "Fix SIGINT exit code mapping in relay.js",
+    "hypothesis": "The relay currently maps SIGTERM (15) to 128+15=143. It must map SIGINT (signal name 'SIGINT') to 128+2=130.",
+    "falsifier": "If the probe still fails with exit code 143 after this edit, the hypothesis is false and the environment or signal handling logic differs from assumed.",
+    "intendedBenefit": "Preserves correct shell exit codes (SIGINT→130, SIGTERM→143) as per contract."
+  },
+  "outcome": "baseline-failed",
+  "checks": [
+    {
+      "label": "baseline-suite",
+      "code": 1
+    }
+  ],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}

@@ -2,68 +2,106 @@
   "version": 1,
   "tasks": [
     {
-      "id": "work-1ca99c4589115e6ecff5",
+      "id": "work-cd6a58b1132ae1d5fba5",
       "repo": "croviatrust/agentcrash",
-      "goal": "adopt",
-      "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
-      "source": "encounters/enc-1795453240120-52e2f5ea.json",
-      "evidenceHash": "c4abc36a325dfad4aa1b",
-      "status": "blocked",
-      "attempts": 7,
+      "goal": "maintain",
+      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "source": "https://github.com/croviatrust/agentcrash/issues/9",
+      "evidenceHash": "accc3b45ebbd85735f1c",
+      "status": "needs-research",
+      "attempts": 1,
       "checkpoints": [
         {
-          "episode": "1795637546908-a5736edb",
+          "episode": "1795756949126-0d2d6787",
           "status": "baseline-failed",
           "verdict": "baseline-failed",
           "next": "",
-          "baseSHA": "f28e139a079f28b705a9b01ce6244b3bdb39a18f"
-        },
-        {
-          "episode": "1795698822419-d1409fd5",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Propose a change to src/cage/relay.js to correct the SIGINT exit status calculation from 143 to 130, and update the regression test to expect 130 instead of 0.",
-          "baseSHA": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5"
-        },
-        {
-          "episode": "1795732219829-e65e718d",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Inference HTTP 500",
           "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
         }
       ],
-      "lastEpisode": "1795732219829-e65e718d",
-      "next": "Inference HTTP 500",
-      "recoveryCycles": 6,
+      "lastEpisode": "1795756949126-0d2d6787",
+      "next": "",
+      "recoveryCycles": 1,
       "lastFailure": {
-        "episode": "1795732219829-e65e718d",
+        "episode": "1795756949126-0d2d6787",
         "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
-          "id": "work-1ca99c4589115e6ecff5",
-          "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
-          "source": "encounters/enc-1795453240120-52e2f5ea.json"
+          "id": "work-cd6a58b1132ae1d5fba5",
+          "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+          "source": "https://github.com/croviatrust/agentcrash/issues/9"
         },
-        "status": "stopped",
-        "observedBlockers": [
-          {
-            "phase": "recovery",
-            "error": "Inference HTTP 500"
-          }
-        ],
-        "modelReasonUnverified": "Recovery research did not produce a valid method.",
+        "status": "proposed",
+        "candidateDraft": "{\"action\":\"propose\",\"title\":\"Fix SIGINT exit code mapping in relay.js\",\"hypothesis\":\"The relay currently maps SIGTERM (15) to 128+15=143. It must map SIGINT (signal name 'SIGINT') to 128+2=130.\",\"falsifier\":\"If the probe still fails with exit code 143 after this edit, the hypothesis is false and the environment or signal handling logic differs from assumed.\",\"benefit\":\"Preserves correct shell exit codes (SIGINT→130, SIGTERM→143) as per contract.\",\"edits\":[{\"path\":\"src/cage/relay.js\",\"before\":\"child.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\",\"after\":\"child.on('exit', (code, signal) => {\\n  const sigNum = signal === 'SIGINT' ? 2 : signal === 'SIGTERM' ? 15 : signal === 'SIGKILL' ? 9 : 0;\\n  process.exit(signal ? 128 + sigNum : code ?? 1);\\n}\"}]}",
+        "observedBlockers": [],
         "actions": [
           {
-            "error": "Inference HTTP 500",
-            "phase": "recovery"
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "action": "probe_process",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/unused-agenthub-task.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          },
+          {
+            "action": "propose"
           }
         ],
-        "checks": [],
-        "probes": [],
-        "snippets": []
+        "checks": [
+          {
+            "label": "baseline-suite",
+            "code": 1,
+            "log": " name only GitHub hosts\n  ---\n  duration_ms: 138.327934\n  type: 'test'\n  ...\n# Subtest: CLI: something that is neither a folder nor owner/repo is refused before any request\nok 182 - CLI: something that is neither a folder nor owner/repo is refused before any request\n  ---\n  duration_ms: 192.000847\n  type: 'test'\n  ...\n# Subtest: every repo seed writes project config inside the workspace only\nok 183 - every repo seed writes project config inside the workspace only\n  ---\n  duration_ms: 3.08186\n  type: 'test'\n  ...\n# Subtest: the executable vectors carry the command, the escalation vector does not\nok 184 - the executable vectors carry the command, the escalation vector does not\n  ---\n  duration_ms: 1.913349\n  type: 'test'\n  ...\n# Subtest: exfil-dotenv fires only when the env canary hits the sink\nok 185 - exfil-dotenv fires only when the env canary hits the sink\n  ---\n  duration_ms: 0.518241\n  type: 'test'\n  ...\n# Subtest: read-ssh-key fires only when the ssh canary is returned to the model\nok 186 - read-ssh-key fires only when the ssh canary is returned to the model\n  ---\n  duration_ms: 0.176843\n  type: 'test'\n  ...\n# Subtest: every scenario has id, harm, script, check\nok 187 - every scenario has id, harm, script, check\n  ---\n  duration_ms: 0.831677\n  type: 'test'\n  ...\n1..187\n# tests 187\n# suites 0\n# pass 177\n# fail 6\n# cancelled 0\n# skipped 4\n# todo 0\n# duration_ms 13386.722956\n"
+          }
+        ],
+        "probes": [
+          {
+            "status": "baseline-failed",
+            "code": 1,
+            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 47.557657\n  type: 'test'\n  location: '/work/resident-regressions/probe-0d6134c228653089dd7b39ef.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    143 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 143\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-0d6134c228653089dd7b39ef.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 91.620532\n",
+            "processContract": {
+              "script": "src/cage/relay.js",
+              "args": [
+                "/tmp/unused-agenthub-task.sock",
+                "0",
+                "--",
+                "node",
+                "-e",
+                "process.kill(process.pid,'SIGINT')"
+              ],
+              "expectedExit": 130,
+              "timeoutMs": 5000
+            }
+          }
+        ],
+        "snippets": [
+          {
+            "path": "src/cage/relay.js",
+            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+          }
+        ],
+        "attemptedMethod": {
+          "mode": "minimal-edit",
+          "observation": "{\"status\":\"proposed\",\"blockers\":[],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+          "instructions": "1. Ensure the Docker environment has `node:22-bookworm` available locally (pull if missing) before running probes.\n2. Re-run the `probe_process` action with the same script and arguments to verify the exit status is now 143 (indicating the child process received SIGINT but the relay failed to map it to 130).\n3. If the probe succeeds in running, proceed to edit `src/cage/relay.js` to fix the exit code mapping logic specifically for SIGINT.",
+          "falsifier": "If this method does not help, the Docker image will still fail to pull or run, confirming that the environment setup is the blocker, not the source code logic.",
+          "id": "method-2826ae087ef696e1d132",
+          "status": "unverified-hypothesis"
+        }
       },
-      "cooldownUntil": "2026-11-26T22:45:19.834Z"
+      "cooldownUntil": "2026-11-27T05:40:53.110Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",
