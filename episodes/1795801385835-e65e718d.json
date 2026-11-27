@@ -1,0 +1,439 @@
+{
+  "id": "1795801385835-e65e718d",
+  "repo": "croviatrust/agentcrash",
+  "commitment": {
+    "id": "work-cd6a58b1132ae1d5fba5",
+    "repo": "croviatrust/agentcrash",
+    "goal": "maintain",
+    "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+    "source": "https://github.com/croviatrust/agentcrash/issues/9",
+    "evidenceHash": "accc3b45ebbd85735f1c",
+    "status": "needs-research",
+    "attempts": 3,
+    "checkpoints": [
+      {
+        "episode": "1795795219359-43328d34",
+        "status": "stopped",
+        "verdict": "stopped",
+        "next": "What is the complete content of src/cage/relay.js so a valid diff can be constructed?",
+        "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+      },
+      {
+        "episode": "1795797558563-698e50a8",
+        "status": "baseline-failed",
+        "verdict": "baseline-failed",
+        "next": "",
+        "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+      },
+      {
+        "episode": "1795800091147-0c177ab9",
+        "status": "stopped",
+        "verdict": "stopped",
+        "next": "The probe failed because the relay script requires command-line arguments (gate.sock, port, --, cmd), but the `probe_process` action was executed without them, causing the script to exit immediately with status 2 instead of running the child process.",
+        "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+      }
+    ],
+    "lastEpisode": "1795800091147-0c177ab9",
+    "next": "The probe failed because the relay script requires command-line arguments (gate.sock, port, --, cmd), but the `probe_process` action was executed without them, causing the script to exit immediately with status 2 instead of running the child process.",
+    "recoveryCycles": 3,
+    "lastFailure": {
+      "episode": "1795800091147-0c177ab9",
+      "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
+      "snippetRevision": "Current checkout; prior findings require re-verification.",
+      "task": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "source": "https://github.com/croviatrust/agentcrash/issues/9"
+      },
+      "status": "stopped",
+      "observedBlockers": [],
+      "modelReasonUnverified": "The probe failed because the relay script requires command-line arguments (gate.sock, port, --, cmd), but the `probe_process` action was executed without them, causing the script to exit immediately with status 2 instead of running the child process.",
+      "actions": [
+        {
+          "action": "read",
+          "path": "src/cage/relay.js"
+        },
+        {
+          "action": "probe_process",
+          "processContract": {
+            "script": "src/cage/relay.js",
+            "args": [
+              "node:22-bookworm/bin/node",
+              "-e",
+              "process.kill(process.pid, 'SIGINT')"
+            ],
+            "expectedExit": 143,
+            "timeoutMs": 5000
+          }
+        },
+        {
+          "action": "stop"
+        }
+      ],
+      "checks": [],
+      "probes": [
+        {
+          "status": "baseline-failed",
+          "code": 1,
+          "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 26.048686\n  type: 'test'\n  location: '/work/resident-regressions/probe-763df00dd14df084be41af79.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]\n    \n    \n    2 !== 143\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 143\n  actual: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-763df00dd14df084be41af79.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 71.931516\n",
+          "processContract": {
+            "script": "src/cage/relay.js",
+            "args": [
+              "node:22-bookworm/bin/node",
+              "-e",
+              "process.kill(process.pid, 'SIGINT')"
+            ],
+            "expectedExit": 143,
+            "timeoutMs": 5000
+          }
+        }
+      ],
+      "snippets": [
+        {
+          "path": "src/cage/relay.js",
+          "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+        }
+      ],
+      "attemptedMethod": {
+        "mode": "contract-first",
+        "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"inference\",\"error\":\"Inference HTTP 500\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+        "instructions": "Execute `docker pull node:22-bookworm` to ensure the runtime is available. Then, re-run the specific regression test using `spawnSync` with the exact command from the task description (`src/cage/relay.js ... -e process.kill(process.pid, 'SIGINT')`) to capture the current exit code (expected 143) and confirm the baseline failure before proposing any edits.",
+        "falsifier": "If the new regression test still fails with a non-130 exit code after ensuring Docker is available, it indicates either an environment isolation issue or that the previous 'missing image' error masked a deeper logic bug in `relay.js`.",
+        "id": "method-4beae04e325cac46f224",
+        "status": "unverified-hypothesis"
+      }
+    },
+    "cooldownUntil": "2026-11-27T17:40:09.853Z"
+  },
+  "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
+  "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+  "started": "2026-11-27T17:42:03.052Z",
+  "finished": "2026-11-27T17:43:05.843Z",
+  "status": "stopped",
+  "observedBlockers": [
+    {
+      "phase": "recovery",
+      "error": "Inference HTTP 500"
+    }
+  ],
+  "reason": "Recovery research did not produce a valid method.",
+  "next": "Inference HTTP 500",
+  "autonomy": {
+    "version": 1,
+    "attempts": [],
+    "lessons": [],
+    "appliedMethod": null,
+    "researchFailure": {
+      "episode": "1795801385835-e65e718d",
+      "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
+      "snippetRevision": "Current checkout; prior findings require re-verification.",
+      "task": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "source": "https://github.com/croviatrust/agentcrash/issues/9"
+      },
+      "status": "stopped",
+      "observedBlockers": [
+        {
+          "phase": "recovery",
+          "error": "Inference HTTP 500"
+        }
+      ],
+      "modelReasonUnverified": "Recovery research did not produce a valid method.",
+      "actions": [
+        {
+          "error": "Inference HTTP 500",
+          "phase": "recovery"
+        }
+      ],
+      "checks": [],
+      "probes": [],
+      "snippets": []
+    },
+    "modelCalls": 1,
+    "maximumCalls": 16,
+    "elapsedMs": 62792,
+    "deadlineMs": 3000000,
+    "note": "Method hypotheses are not validated until the separate independent verifier accepts the final candidate. No weights or tool authority are changed."
+  },
+  "localEvidence": "stopped",
+  "error": "",
+  "inference": [
+    {
+      "phase": "recovery",
+      "error": "Inference HTTP 500"
+    }
+  ],
+  "verdict": {
+    "episode": "1795801385835-e65e718d",
+    "status": "stopped",
+    "checks": [],
+    "proposalHash": null
+  },
+  "context": {
+    "revision": "102196651d98338e07c68349f5badbc09ac5c84f",
+    "learnedMethods": [],
+    "maintainerAssignment": {
+      "issueNumber": 9,
+      "note": "Maintainer-assigned real repair; acceptance and baseline reproduction are in issue #9. No implementation is supplied."
+    },
+    "assignedTask": {
+      "number": 9,
+      "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption."
+    },
+    "latestEncounter": {
+      "id": "enc-1795639078056-4421f9bc",
+      "sourceSHA": "f28e139a079f28b705a9b01ce6244b3bdb39a18f",
+      "variant": "benign",
+      "kind": "controlled-local-task",
+      "cohorts": [
+        {
+          "cohort": "files-only",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": true,
+            "missing": {
+              "commands": [],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        },
+        {
+          "cohort": "catalog-available",
+          "discovered": false,
+          "toolCalls": 0,
+          "score": {
+            "completed": true,
+            "correct": true,
+            "missing": {
+              "commands": [],
+              "endpoints": []
+            },
+            "extra": {
+              "commands": [],
+              "endpoints": []
+            }
+          },
+          "errors": []
+        }
+      ],
+      "limitation": "Controlled same-model task; not public discovery or adoption."
+    },
+    "issues": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "updated": "2026-11-23T21:08:15Z"
+      }
+    ],
+    "commits": [
+      {
+        "sha": "102196651d98338e07c68349f5badbc09ac5c84f",
+        "message": "record: run of 2026-11-26\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45898223437"
+      },
+      {
+        "sha": "3efa21b23a8b148a663c2c72304c1c300ae8fb82",
+        "message": "npm: the package name is @crovia/agentcrash\n\ncrovia-seal already publishes @crovia/seal. The @croviatrust scope\ndoes not exist on npm, and the bare name agentcrash is another\nharness on PyPI."
+      },
+      {
+        "sha": "d4e6561f4866810a8a8993a9f1eb7cf1d2ceafe5",
+        "message": "record: run of 2026-11-26\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45780866711"
+      },
+      {
+        "sha": "1ad613aa913b03d0e534a6f91f9a0a84390131b6",
+        "message": "record: run of 2026-11-25\n\nProduced by https://github.com/croviatrust/agentcrash/actions/runs/45706169815"
+      },
+      {
+        "sha": "f28e139a079f28b705a9b01ce6244b3bdb39a18f",
+        "message": "readme: the logo in a paragraph, so the page outline has no empty heading"
+      }
+    ],
+    "openProposals": [],
+    "openWork": [
+      {
+        "number": 16,
+        "title": "Let the scout originate objectives from unexplored source files",
+        "body": "Rotate source excerpts across generations. Ask the unassigned scout to compare two improvements and choose a falsifiable objective when no inbound feedback is available. Existing assignments retain priority. Local resident suite: 96 passed. Live autonomous selection remains unverified.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/16"
+      },
+      {
+        "number": 1,
+        "title": "Reject incomplete and duplicated paired report cells",
+        "body": "Require the bare and caged sides to have the same unique observation keys. The regression test failed before the fix and all nine record tests passed afterward. Scope is pair parity; an observation missing from both sides needs a separate expected inventory.",
+        "url": "https://github.com/croviatrust/agentcrash/pull/1"
+      }
+    ],
+    "metrics": {
+      "stars": 0,
+      "forks": 0,
+      "openIssues": 3,
+      "observed": "2026-11-27T17:40:32.608Z",
+      "note": "Repository attention; not adoption or revenue."
+    },
+    "opportunities": [
+      {
+        "url": "https://github.com/getsentry/toolkit/issues/2562",
+        "title": "No MCP tool changes project or organization Security & Privacy settings (IP scrubbing, data scrubbing)",
+        "excerpt": "## Problem\n\nAn agent asked to turn on \"Prevent Storing of IP Addresses\" (or change data scrubbing) has no MCP tool for it, so it sends the user to the web UI.\n\n- `update_project` only takes `name`, `slug` and `platform` (`packages/mcp-core/src/tools/catalog/update-project.ts:28-49`), and `SentryApiService.updateProject` only forwards those three fields (`packages/mcp-core/src/api-client/client.ts:1709-1729`). No other catalog tool writes project or organization privacy options.\n- The hosted MCP requests `project:write` but not `org:write` (`packages/mcp-core/src/scopes.ts:2-8`), so organization-level settings are out of reach even with a new tool.\n\nThe Sentry API already supports both levels (getsentry/sentry @ c04def2681):\n\n- **Project** — `PUT /api/0/projects/{org}/{project}/` accepts `scrubIPAddresses`, `dataScrubber`, `dataScrubberDefaults`, `sensitiveFields`, `safeFields` (`src/sentry/core/endpoints/project_details.py:311-328`, `:357-360`; saved at `:879-909`). `project:write` is enough (`:663`, `:797-799`), and the MCP already requests it.\n- **Organization** — `PUT /api/0/organizations/{org}/` (PUBLIC) accepts `scrubIPAddresses` (\"prevent IP addresses from being stored for new events on all projects\"), `dataScrubber`, `dataScrubberDefaults`, `sensitiveFields`, `safeFields` (`src/sentry/core/endpoints/organization_details.py:120-172`, `:956-977`). This needs `org:write`.\n\n## Suggested fix\n\n1. Extend `update_project` (project-management skill, already `project:write`) with optional `scrubIPAddresses`, `dataScrubber`, `dataScrubberDefaults`, `sensitiveFields`, `safeFields`, sent only when set, and return the resulting values in the output so the agent can confirm the change.\n2. Say in the `update_project` description that organization-wide privacy settings are not available through MCP, so agents stop guessing and point users at **Organization Settings → Security & Privacy**.\n3. Maintainer decision: whether the MCP should ever request `org:write` for org-level privacy settings. That is a scope expansion, so it belongs in the write/admin policy discussion rather than a one-off fix.\n\nTests: MSW handler for project PUT; `update_project` with only `scrubIPAddresses: true` sends just that field and does not reset name/slug/platform.\n\n## Related\n\n- Same family as other missing write/admin asks: #2471 (cron update/delete), #2137 (code mappings), #2047 (invite me",
+        "updated": "2026-11-27T17:06:37Z",
+        "retrieved": "2026-11-27T17:40:32.609Z",
+        "evidenceHash": "e30ee35db91ad676146b36e160d9bfe1ae071084003af85c98bc4ee838b81753",
+        "query": "\"MCP\" \"security\"",
+        "repository": "getsentry/toolkit",
+        "number": 2562,
+        "id": "opp-d0b5bfc11e9938ae",
+        "matched": [
+          "mcp",
+          "security"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/Industrial/claude-setup/issues/7",
+        "title": "security: pin every MCP server, no bunx @latest",
+        "excerpt": "Part of Industrial/nixos-dotfiles#339.\n\n## Context\n`.claude/mcp.json` starts two servers from whatever npm serves at that moment: `bunx @playwright/mcp@latest` and `bunx mcp-searxng` (no version). A compromised or hijacked release would run with the session's full access the next time a session starts. `@questdb/mcp-server-questdb@0.4.0` is pinned, which is the pattern to follow.\n\n## Scope\n- Pin `@playwright/mcp` and `mcp-searxng` to exact versions. Better: package them in Nix (`features/ai/*` in nixos-dotfiles) so the hash is locked and `bunx` does no network fetch at start; then `mcp.json` calls the binary by name, like `lean-ctx`, `roam`, `context7-mcp` and `maestro` already do.\n- Record, for each of the seven servers, where its binary comes from and how its version is locked.\n- Drop servers nobody uses (check `questdb` and `playwright` usage first).\n\n## Acceptance criteria\n- [ ] No `@latest` and no unversioned `bunx` package in `mcp.json`.\n- [ ] A table in README: server, source, pinned version or Nix attribute, update path.\n- [ ] Sessions start with all remaining servers connected.\n\n## Constraints (every session)\n- This repo is **public** and `~/.claude` is a symlink into it: never commit transcripts, history, credentials or tokens.\n- Work via branch + PR; one logical change per commit.\n- Verify each setting against the current Claude Code documentation before relying on it; do not write settings keys from memory.",
+        "updated": "2026-11-27T17:30:06Z",
+        "retrieved": "2026-11-27T17:40:32.609Z",
+        "evidenceHash": "59fc765d22ed26ffafeaf031af9eb55aa7d856f3628d4be2ccd2851d15561fe3",
+        "query": "\"MCP\" \"security\"",
+        "repository": "Industrial/claude-setup",
+        "number": 7,
+        "id": "opp-bcb70a6b744e1813",
+        "matched": [
+          "mcp",
+          "security"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/ivan-pinatti-labs/devcontainer-airlock/issues/321",
+        "title": "Revisit Claude Code /ship once its watch keeps git hooks on",
+        "excerpt": "## Describe the Feature\n\nRevisit Claude Code's `/ship` command (added in 2.1.330) once it can be held\nto the organization's rules. Adoption is blocked for now; this issue tracks\nwhat has to change, here and upstream, before it is reconsidered.\n\n`/ship` commits, pushes and opens a pull request, runs `/code-review` on it,\nthen watches it for up to seven days: it fixes failing checks, merge\nconflicts and review comments (`+coderabbitai` adds CodeRabbit's comments),\nand pushes the fixes. It never merges. Docs:\nhttps://code.claude.com/docs/en/ship-command\n\n## Why it is blocked\n\nMeasured against the pull request flow every repository follows (draft,\nchecks green, ready, CodeRabbit, merge queue):\n\n1. **Hooks are bypassed during the watch.** Its commits and pushes run with\n   `core.hooksPath=/dev/null`, so pre-commit and the `commit-msg` hook\n   (`--no-ai-attribution`) never see them. The organization never skips\n   hooks. This is the blocker.\n2. **No draft.** It opens the pull request ready, which starts CodeRabbit\n   before the checks are green. The workaround is opening the draft by hand\n   and running `/ship <number>`, which is watch only.\n3. **No ready step.** It does not know that marking ready is what starts the\n   review here.\n4. **It blocks enqueueing.** During a watch it refuses `gh pr merge --auto`,\n   so the watch has to end before the merge is queued.\n5. **The workbench does not fit it.** It needs `gh auth login`; here `gh` goes\n   through the broker and holds no token. It starts no watch in\n   `bypassPermissions`.\n\n## Describe Ideal Solution\n\nBefore adopting it, any of these would unblock item 1:\n\n- Upstream: an option that keeps repository hooks on for the watch's\n  commits and pushes.\n- agent-policy: a rule that refuses `core.hooksPath=/dev/null` and\n  `--no-verify`, so a watch commit fails loudly rather than skipping hooks.\n- A repository `.claude/skills/steward/SKILL.md` telling the watch to commit\n  through the hooks. Weaker: it is guidance, not a control.\n\nThen check items 2 to 5 against the release at that time, and decide whether\n`/ship` (or watch only, `/steward`) replaces part of the flow.\n\n## Alternatives Considered\n\nKeep it off explicitly: `CLAUDE_CODE_DISABLE_SHIP=1`, or `skillOverrides`\nwith `ship-local` and `steward` set to `off`, in the workbench managed\nsettings. Worth doing now if it should not be reachable by accident.\n\n## Additional",
+        "updated": "2026-11-27T16:11:10Z",
+        "retrieved": "2026-11-27T17:40:32.609Z",
+        "evidenceHash": "367940f243dd96ed76698eb8248b3203751b6979ec60c760a7672109cee25d0a",
+        "query": "\"Claude Code\" \"hooks\"",
+        "repository": "ivan-pinatti-labs/devcontainer-airlock",
+        "number": 321,
+        "id": "opp-9fc2ff2a403c476a",
+        "matched": [
+          "hook",
+          "permission"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      },
+      {
+        "url": "https://github.com/kefyusuf/astropress/issues/8",
+        "title": "[P0][Security] MCP & Admin: gray-matter RCE, Auth/CSRF/DNS Rebinding ve Same-Origin XSS",
+        "excerpt": "## Öncelik & Kapsam\n**Öncelik:** P0 (Acil Güvenlik)\n**Katman:** `mcp/http.mjs`, `mcp/store.mjs`, `admin/index.html`\n\n## Tespit Edilen Sorunlar\n\n1. **`gray-matter` Varsayılan JS Frontmatter Motoru ile RCE (Kritik)**\n   - **Konum:** `mcp/store.mjs:38, 49`\n   - `gray-matter` v4.0.3 varsayılan olarak `---js` / `---javascript` bloklarını `eval()` ile çalıştırır. `matter.read()` çağrılarında JS motoru kapatılmadığı için kötü niyetli frontmatter içeren bir `.md` dosyası sunucuda uzaktan kod çalıştırabilir.\n2. **Admin HTTP Sunucusunda Sıfır Kimlik Doğrulama, CSRF ve DNS Rebinding (Kritik)**\n   - **Konum:** `mcp/http.mjs:9, 12-13, 32-48, 66-108`\n   - Tüm `/api/*` uçları tam insan (`HUMAN.perms`) yetkisiyle çalışır. Auth yok, `Host` kontrolü yok (DNS rebinding), `Origin`/`Referer` veya CSRF token kontrolü yok ve `Content-Type: application/json` zorunlu değil.\n3. **Same-Origin `/site/` Önizleme → Stored XSS ile Admin Ele Geçirme (Kritik)**\n   - **Konum:** `mcp/http.mjs:101-103`, `admin/index.html:123`\n   - Derlenen statik site (`/site/`) Admin UI ile aynı origin'de (`127.0.0.1:4322`) sunuluyor. Önizlenen bir sayfadaki herhangi bir script doğrudan `/api/tasks/:id/approve` ve `/api/content` uçlarını çağırabilir.\n4. **Admin UI Stored XSS & Eksik Güvenlik Başlıkları (Yüksek)**\n   - **Konum:** `admin/index.html:216, 262, 330` (ve URL segmentleri `370, 390, 402, 406, 410`), `mcp/http.mjs:26-30, 50-54`\n   - `i.status`, `d.status`, `t.status` değerleri `esc()` olmadan `innerHTML` içine gömülüyor. `CSP`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` ve `Referrer-Policy` başlıkları gönderilmiyor.\n5. **Path Traversal (`listContent`) & Sunucu Çökertme / Symlink Kaçışı (`serveSite`) (Yüksek)**\n   - **Konum:** `mcp/store.mjs:31-44`, `mcp/http.mjs:50-64, 73, 99`\n   - `listContent` `collection` parametresini `COLLECTIONS` listesinde doğrulamıyor (`/api/content?collection=../../...`).\n   - `new URL(req.url, ...)` `try/catch` dışında (hatalı URL sunucuyu çökertir); `createReadStream` üzerinde `.on('error')` yok; `serveSite` `fs.realpathSync` kullanmadığı için symlink kaçışına açık.\n\n## Yapılacak Değişiklikler\n\n- [ ] `mcp/store.mjs`: Tüm `matter.read()` çağrılarında `js` / `javascript` frontmatter motorlarını devre dışı bırak (`engines: { js: () => { throw ... }, javascript: () => { throw ... } }`).\n- [ ] `mcp/store.mjs`: `listContent(collection, status)` başında `collection",
+        "updated": "2026-11-27T16:51:35Z",
+        "retrieved": "2026-11-27T17:40:32.609Z",
+        "evidenceHash": "c96c952c7de8485e75324cb1a64d193ddf4b949f6ca10f74cc6ec30422ac3c65",
+        "query": "\"MCP\" \"security\"",
+        "repository": "kefyusuf/astropress",
+        "number": 8,
+        "id": "opp-ab750801609beb7f",
+        "matched": [
+          "mcp",
+          "security"
+        ],
+        "score": 6,
+        "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+        "attempts": 0
+      }
+    ],
+    "opportunityErrors": [],
+    "inboundFeedback": [
+      {
+        "number": 9,
+        "title": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "body": "Maintainer-assigned real engineering task for the resident. This is not external adoption feedback.\n\nObserved on the current source: src/cage/relay.js exits with 143 when its child terminates with SIGINT. The relay's stated contract is to leave with the child's exit status; the conventional shell status for SIGINT is 128 + 2 = 130.\n\nReproduction (run from the repository, Node on Linux/macOS):\n\n```js\nimport { spawnSync } from 'node:child_process';\nconst result = spawnSync(process.execPath, [\n  'src/cage/relay.js', '/tmp/unused-agenthub-task.sock', '0', '--',\n  process.execPath, '-e', \"process.kill(process.pid, 'SIGINT')\"\n], { encoding: 'utf8', timeout: 5000 });\nconsole.log(result.status); // observed 143; expected 130\n```\n\nThe unused Unix socket is never contacted by this reproduction. Port 0 requests an ephemeral loopback port. No external service or credentials are needed.\n\nAcceptance:\n- Independently reproduce the baseline failure with a new regression test.\n- Correct source behavior without editing existing tests, the controller, workflows or manifests.\n- Preserve ordinary numeric child exit codes, SIGTERM=143 and SIGKILL=137.\n- The exact regression must fail before the change and pass after it; the complete existing suite must pass.\n- Save a candidate branch/PR with actual execution evidence. Do not claim success from a proposed patch or model review.\n\nStart with src/cage/relay.js. Do not pursue the earlier unverified port-binding-race hypothesis for this task. If blocked, record the actual tool error and checkpoint.\n\nThis task tests one useful repair, not autonomous general intelligence or adoption.",
+        "evidenceLevel": "self-reported inbound feedback; unverified"
+      }
+    ],
+    "siblingCapabilities": [],
+    "capabilityTemplates": [],
+    "previousFailure": {
+      "episode": "1795800091147-0c177ab9",
+      "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
+      "snippetRevision": "Current checkout; prior findings require re-verification.",
+      "task": {
+        "id": "work-cd6a58b1132ae1d5fba5",
+        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+        "source": "https://github.com/croviatrust/agentcrash/issues/9"
+      },
+      "status": "stopped",
+      "observedBlockers": [],
+      "modelReasonUnverified": "The probe failed because the relay script requires command-line arguments (gate.sock, port, --, cmd), but the `probe_process` action was executed without them, causing the script to exit immediately with status 2 instead of running the child process.",
+      "actions": [
+        {
+          "action": "read",
+          "path": "src/cage/relay.js"
+        },
+        {
+          "action": "probe_process",
+          "processContract": {
+            "script": "src/cage/relay.js",
+            "args": [
+              "node:22-bookworm/bin/node",
+              "-e",
+              "process.kill(process.pid, 'SIGINT')"
+            ],
+            "expectedExit": 143,
+            "timeoutMs": 5000
+          }
+        },
+        {
+          "action": "stop"
+        }
+      ],
+      "checks": [],
+      "probes": [
+        {
+          "status": "baseline-failed",
+          "code": 1,
+          "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 26.048686\n  type: 'test'\n  location: '/work/resident-regressions/probe-763df00dd14df084be41af79.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]\n    \n    \n    2 !== 143\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 143\n  actual: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-763df00dd14df084be41af79.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 71.931516\n",
+          "processContract": {
+            "script": "src/cage/relay.js",
+            "args": [
+              "node:22-bookworm/bin/node",
+              "-e",
+              "process.kill(process.pid, 'SIGINT')"
+            ],
+            "expectedExit": 143,
+            "timeoutMs": 5000
+          }
+        }
+      ],
+      "snippets": [
+        {
+          "path": "src/cage/relay.js",
+          "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+        }
+      ],
+      "attemptedMethod": {
+        "mode": "contract-first",
+        "observation": "{\"status\":\"proposed\",\"blockers\":[{\"phase\":\"inference\",\"error\":\"Inference HTTP 500\"},{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"inference\",\"error\":\"Inference output limit reached; emit a smaller action rather than a long explanation\"}],\"checks\":[{\"label\":\"baseline-suite\",\"code\":1}]}",
+        "instructions": "Execute `docker pull node:22-bookworm` to ensure the runtime is available. Then, re-run the specific regression test using `spawnSync` with the exact command from the task description (`src/cage/relay.js ... -e process.kill(process.pid, 'SIGINT')`) to capture the current exit code (expected 143) and confirm the baseline failure before proposing any edits.",
+        "falsifier": "If the new regression test still fails with a non-130 exit code after ensuring Docker is available, it indicates either an environment isolation issue or that the previous 'missing image' error masked a deeper logic bug in `relay.js`.",
+        "id": "method-4beae04e325cac46f224",
+        "status": "unverified-hypothesis"
+      }
+    }
+  }
+}
