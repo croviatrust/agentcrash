@@ -2,106 +2,6 @@
   "version": 1,
   "tasks": [
     {
-      "id": "work-cd6a58b1132ae1d5fba5",
-      "repo": "croviatrust/agentcrash",
-      "goal": "maintain",
-      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-      "source": "https://github.com/croviatrust/agentcrash/issues/9",
-      "evidenceHash": "accc3b45ebbd85735f1c",
-      "status": "blocked",
-      "attempts": 6,
-      "checkpoints": [
-        {
-          "episode": "1795801385835-e65e718d",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Inference HTTP 500",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
-        {
-          "episode": "1795803259525-7b3f7612",
-          "status": "baseline-failed",
-          "verdict": "baseline-failed",
-          "next": "",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        },
-        {
-          "episode": "1795805276017-93abd5f6",
-          "status": "stopped",
-          "verdict": "stopped",
-          "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
-          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
-        }
-      ],
-      "lastEpisode": "1795805276017-93abd5f6",
-      "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
-      "recoveryCycles": 6,
-      "lastFailure": {
-        "episode": "1795805276017-93abd5f6",
-        "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
-        "snippetRevision": "Current checkout; prior findings require re-verification.",
-        "task": {
-          "id": "work-cd6a58b1132ae1d5fba5",
-          "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-          "source": "https://github.com/croviatrust/agentcrash/issues/9"
-        },
-        "status": "stopped",
-        "observedBlockers": [
-          {
-            "phase": "action",
-            "error": "Invalid relative path"
-          },
-          {
-            "phase": "action",
-            "error": "Unknown action"
-          }
-        ],
-        "modelReasonUnverified": "The regression test file creation failed due to an unknown action type ('create' not in allowed list). The minimal-edit method requires creating the test first, but I cannot execute that step directly via a 'create' action. I must switch to a falsifiable experiment using the available tools to verify the bug before proposing.",
-        "actions": [
-          {
-            "action": "read",
-            "path": "src/cage/relay.js"
-          },
-          {
-            "action": "read",
-            "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
-          },
-          {
-            "error": "Invalid relative path",
-            "phase": "action"
-          },
-          {
-            "action": "create",
-            "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
-          },
-          {
-            "error": "Unknown action",
-            "phase": "action"
-          },
-          {
-            "action": "stop"
-          }
-        ],
-        "checks": [],
-        "probes": [],
-        "snippets": [
-          {
-            "path": "src/cage/relay.js",
-            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
-          }
-        ],
-        "attemptedMethod": {
-          "mode": "minimal-edit",
-          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Code changes require a new regression test\"}],\"checks\":[]}",
-          "instructions": "Create a new regression test file at `/work/resident-regressions/sigint-exit-status.test.mjs` that explicitly tests the SIGINT exit code mapping. The test should spawn the relay with a self-killing child and assert the expected status (130). Once this file exists, re-run `probe_process` with the corrected expectedExit value (143) to confirm the current buggy behavior, then propose the fix in `relay.js` that changes `15` to `2` in the signal mapping logic.",
-          "falsifier": "If the new test file is created and `probe_process` passes with expectedExit=143, it confirms the bug exists. If `probe_process` still fails after creating the test (e.g., due to a different error), the minimal-edit method failed.",
-          "id": "method-8fc04e7f376052871fbe",
-          "status": "unverified-hypothesis"
-        }
-      },
-      "cooldownUntil": "2026-11-27T19:05:30.257Z"
-    },
-    {
       "id": "work-b3fa7fb504a6ee0bd549",
       "repo": "croviatrust/agentcrash",
       "goal": "create",
@@ -212,7 +112,7 @@
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-27T15:47:31.213Z"
+      "cooldownUntil": "1970-01-01T00:00:00.000Z"
     },
     {
       "id": "work-ea953d519c46ecda7e4d",
@@ -460,6 +360,106 @@
       "status": "queued",
       "attempts": 0,
       "checkpoints": []
+    },
+    {
+      "id": "work-cd6a58b1132ae1d5fba5",
+      "repo": "croviatrust/agentcrash",
+      "goal": "maintain",
+      "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+      "source": "https://github.com/croviatrust/agentcrash/issues/9",
+      "evidenceHash": "accc3b45ebbd85735f1c",
+      "status": "blocked",
+      "attempts": 6,
+      "checkpoints": [
+        {
+          "episode": "1795801385835-e65e718d",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Inference HTTP 500",
+          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+        },
+        {
+          "episode": "1795803259525-7b3f7612",
+          "status": "baseline-failed",
+          "verdict": "baseline-failed",
+          "next": "",
+          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+        },
+        {
+          "episode": "1795805276017-93abd5f6",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+          "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f"
+        }
+      ],
+      "lastEpisode": "1795805276017-93abd5f6",
+      "next": "Execute `probe_process` with the current buggy logic to confirm exit code 143, then propose the fix changing '15' to '2' in relay.js and include the regression test in the proposal.",
+      "recoveryCycles": 6,
+      "lastFailure": {
+        "episode": "1795805276017-93abd5f6",
+        "baseSHA": "102196651d98338e07c68349f5badbc09ac5c84f",
+        "snippetRevision": "Current checkout; prior findings require re-verification.",
+        "task": {
+          "id": "work-cd6a58b1132ae1d5fba5",
+          "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
+          "source": "https://github.com/croviatrust/agentcrash/issues/9"
+        },
+        "status": "stopped",
+        "observedBlockers": [
+          {
+            "phase": "action",
+            "error": "Invalid relative path"
+          },
+          {
+            "phase": "action",
+            "error": "Unknown action"
+          }
+        ],
+        "modelReasonUnverified": "The regression test file creation failed due to an unknown action type ('create' not in allowed list). The minimal-edit method requires creating the test first, but I cannot execute that step directly via a 'create' action. I must switch to a falsifiable experiment using the available tools to verify the bug before proposing.",
+        "actions": [
+          {
+            "action": "read",
+            "path": "src/cage/relay.js"
+          },
+          {
+            "action": "read",
+            "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
+          },
+          {
+            "error": "Invalid relative path",
+            "phase": "action"
+          },
+          {
+            "action": "create",
+            "path": "/work/resident-regressions/sigint-exit-status.test.mjs"
+          },
+          {
+            "error": "Unknown action",
+            "phase": "action"
+          },
+          {
+            "action": "stop"
+          }
+        ],
+        "checks": [],
+        "probes": [],
+        "snippets": [
+          {
+            "path": "src/cage/relay.js",
+            "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
+          }
+        ],
+        "attemptedMethod": {
+          "mode": "minimal-edit",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Code changes require a new regression test\"}],\"checks\":[]}",
+          "instructions": "Create a new regression test file at `/work/resident-regressions/sigint-exit-status.test.mjs` that explicitly tests the SIGINT exit code mapping. The test should spawn the relay with a self-killing child and assert the expected status (130). Once this file exists, re-run `probe_process` with the corrected expectedExit value (143) to confirm the current buggy behavior, then propose the fix in `relay.js` that changes `15` to `2` in the signal mapping logic.",
+          "falsifier": "If the new test file is created and `probe_process` passes with expectedExit=143, it confirms the bug exists. If `probe_process` still fails after creating the test (e.g., due to a different error), the minimal-edit method failed.",
+          "id": "method-8fc04e7f376052871fbe",
+          "status": "unverified-hypothesis"
+        }
+      },
+      "cooldownUntil": "2026-11-27T19:05:30.257Z"
     }
   ]
 }

@@ -1,8 +1,8 @@
 # Crovia resident memory
 
-Generation: 59
+Generation: 60
 
-Latest: stopped
+Latest: encounter-recorded
 
 No pull request produced.
 
@@ -16,7 +16,7 @@ No pull request produced.
 
 ## External needs and experiments
 
-[Latest source evidence](opportunities.json) · [This experiment](growth/1795805276017-93abd5f6.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
+[Latest source evidence](opportunities.json) · [This experiment](growth/1795822786560-0d405fa8.json). Reported issues and inbound feedback remain unverified. No adoption inferred.
 
 ## Fleet
 
@@ -35,7 +35,7 @@ The model contexts run sequentially on one runner. Repair credit is assigned to 
 
 ## Latest controlled encounter
 
-[enc-1795639078056-4421f9bc](encounters/enc-1795639078056-4421f9bc.json) — same-model local task, not organic adoption.
+[enc-1795822758199-c998f7fc](encounters/enc-1795822758199-c998f7fc.json) — same-model local task, not organic adoption.
 
 ## Retained repair recipes
 
