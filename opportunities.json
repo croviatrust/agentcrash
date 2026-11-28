@@ -1,48 +1,6 @@
 {
-  "observed": "2026-11-28T09:30:55.323Z",
-  "opportunities": [
-    {
-      "url": "https://github.com/m00sfett/Itsova/issues/143",
-      "title": "Pre-1.0.0 security review: capture, redaction, file permissions, hooks, and MCP server",
-      "excerpt": "## Summary\nTracking issue for the formal pre-`1.0.0` security review defined in `docs/security-review-checklist.md` (follow-up to #139).\n\n## Scope\n- [ ] **Screen capture & D-Bus/Wayland boundaries:** `ScreenShot2`, `zkde_screencast_unstable_v1`, local session D-Bus (`CaptureSync`) vs. MCP access boundaries.\n- [ ] **Redaction:** Verify `Solid` opaque replacement (including HiDPI edge rounding and unredacted `Print` snapshot cleanup) and verify UI/docs accurately frame `Pixelate`/`Blur` as visual obfuscation rather than audited irreversible redaction.\n- [ ] **File permissions & path handling:** Capture directory confinement, symlink rejection, atomic writes, config/history/pin file permissions.\n- [ ] **Hooks & external processes:** Post-capture hook execution, `tesseract` / `ffmpeg` / `ffprobe` invocation, argument handling, timeouts.\n- [ ] **Local MCP server:** Default-off state, `Allowlist` / `ConfirmPerCapture` / `FullSession` enforcement, `annotate_image` confinement and overwrite protection.",
-      "updated": "2026-11-28T09:26:07Z",
-      "retrieved": "2026-11-28T09:30:55.324Z",
-      "evidenceHash": "713baceaf9f76780921a1116825bee1b13535e26024cad935e594056870272ca",
-      "query": "\"MCP\" \"security\"",
-      "repository": "m00sfett/Itsova",
-      "number": 143,
-      "id": "opp-ca71d13bb4ee76da",
-      "matched": [
-        "mcp",
-        "hook",
-        "permission",
-        "security"
-      ],
-      "score": 10,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    },
-    {
-      "url": "https://github.com/llm4s/llm4s/issues/3067",
-      "title": "[EPIC] MCP client and server: security, protocol conformance and transport parity",
-      "excerpt": "Defects, limitations and gaps in MCP support (`llm4s-mcp`, `modules/mcp`: the client, its three transports, `MCPToolRegistry` and `MCPServer`), found in a read-through review after 1.0.0. The code was compared with its contract (the `MCPClient` trait, the Scaladoc, `modules/mcp/README.md` and the MCP specification; there is no guide page yet, #1442) and each transport with the others: a difference between two backends is a finding.\n\nThe client findings were found by reading each code path end to end, not by running it. The server findings in #3069, #3071 and #3081 were reproduced with curl against a locally started `MCPServer`. No official-SDK client was run against the server.\n\n`llm4s-mcp` is not a frozen module, so the API changes these need are allowed in a minor release, with a CHANGELOG *Breaking changes* line and a migration note.\n\n## P0: fix soon (security, broken core behaviour)\n\n- [x] #3068 `MCPToolRegistry.toolHints` gives an untrusted server's tool a trusted server's hints (approval bypass)\n- [x] #3069 `MCPServer` does not validate `Origin` or `Host`: DNS rebinding reaches the default unauthenticated loopback server\n- [x] #3070 Stdio servers inherit the JVM's whole environment; `StdioTransport` has no `env` or working directory\n- [x] #3071 `MCPServer` replies are not valid JSON-RPC: no `jsonrpc` field, numeric ids returned as strings, empty `capabilities`\n- [x] #3072 The client never recovers a lost session or a restarted server; an agent's MCP tools then fail for good\n\n## P1: should fix\n\n- [x] #3073 The \"SSE\" client transport is not the 2024-11-05 HTTP+SSE protocol, and lacks the Streamable transport's fixes\n- [x] #3074 Tool results: only the first content block's text is returned; a non-text first block fails a call that succeeded\n- [x] #3075 `tools/list`: pagination is ignored, and a tool without a `description` is dropped\n- [x] #3076 Input-schema conversion: forced `additionalProperties: false`, dropped `$defs`, dropped constraints\n- [x] #3077 Stdio transport: `timeout` ignored, a 10 s stall on quiet servers, misrouted server requests, orphaned child processes\n- [x] #3078 The client cannot authenticate to, or route HTTP for, a remote server\n- [x] #3079 Client handshake: advertises `roots` and `sampling` it does not implement, ignores the negotiated version\n- [x] #3080 `MCPToolRegistry`: a dead server is re-dialled on every lookup, `healthCheck",
-      "updated": "2026-11-28T09:16:58Z",
-      "retrieved": "2026-11-28T09:30:55.324Z",
-      "evidenceHash": "987bc7fe427a3275b372fb0584bb8ead2525a41d71b649c62939110382c71d52",
-      "query": "\"MCP\" \"security\"",
-      "repository": "llm4s/llm4s",
-      "number": 3067,
-      "id": "opp-27d927b7d264cd37",
-      "matched": [
-        "mcp",
-        "untrusted",
-        "security"
-      ],
-      "score": 8,
-      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
-      "attempts": 0
-    }
-  ],
+  "observed": "2026-11-28T10:03:21.408Z",
+  "opportunities": [],
   "errors": [
     {
       "query": "\"MCP\" \"security\"",
