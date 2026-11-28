@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795856853142-f8b8dcee",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Why does the child process exit with status 0 when killed by SIGINT? Is there a signal handler in the child process that catches SIGINT and exits cleanly?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
