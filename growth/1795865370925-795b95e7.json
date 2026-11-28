@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795865370925-795b95e7",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Read src/cage/run.js to verify if the child process catches SIGINT internally and exits with code 0, which would explain why relay.js receives signal 15 instead of 2. If confirmed, the fix is to map 'SIGINT' to 2 in relay.js; otherwise, investigate spawn differences.",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
