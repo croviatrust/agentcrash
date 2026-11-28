@@ -1,16 +1,86 @@
 {
-  "observed": "2026-11-28T11:18:00.195Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-28T11:49:48.662Z",
+  "opportunities": [
     {
+      "url": "https://github.com/bobcat88/footnote/issues/278",
+      "title": "security(audit-prefix): block repo .mcp.json exec and Windows CWD hijack",
+      "excerpt": "## Context & Evidence\n\nAt commit `446cf28a` (`v0.13.0`), `footnote audit-prefix --probe-mcp` executes untrusted commands from repository-local `.mcp.json` files and is vulnerable to Windows CWD binary/script hijacking when probing user-level MCP server configs.\n\n- **Repo-local `.mcp.json` command execution** (`src/audit_prefix.rs:579-587`, `src/audit_prefix.rs:623-625`, `src/audit_prefix.rs:309-353`):\n  `run_with_home` loads `<root>/.mcp.json` alongside user-level MCP configs (`~/.claude.json`, `~/.claude/settings.json`, etc.) without marking it as untrusted or project-scoped:\n  ```rust\n  if want_agent(agent_filter, \"claude\") {\n      parse_json_mcp_servers(&root.join(\".mcp.json\"), \"claude\", &mut mcp_entries);\n      parse_json_mcp_servers(&home.join(\".claude.json\"), \"claude\", &mut mcp_entries);\n      ...\n  }\n  ```\n  When `--probe-mcp` is passed, `probe_stdio_mcp` unconditionally spawns `entry.command` with `entry.args` and `entry.env` for every entry in `mcp_entries`, including entries parsed from `<root>/.mcp.json`. This contradicts the module's read-only local-scan contract and allows an untrusted cloned repository's `.mcp.json` to execute arbitrary commands on the host (or inside a container) when the user runs `footnote audit-prefix --probe-mcp`.\n\n- **Windows CWD binary/script hijack** (`src/audit_prefix.rs:318-344`):\n  ```rust\n  let spawn_with = |program: &str| {\n      let mut cmd = Command::new(program);\n      cmd.args(&entry.args)\n          ...\n          .spawn()\n  };\n  let mut child = match spawn_with(cmd_str) {\n      Ok(c) => c,\n      #[cfg(windows)]\n      Err(e) if e.kind() == std::io::ErrorKind::NotFound && !cmd_str.ends_with(\".cmd\") => {\n          match spawn_with(&format!(\"{cmd_str}.cmd\")) {\n  ```\n  On Windows, `CreateProcessW` (used by `std::process::Command::new`) searches the current working directory before `PATH` when `program` is a bare name (e.g. `npx`, `node`, `python`, `uvx`). Even if `<root>/.mcp.json` is skipped, an untrusted repository containing a malicious `npx.exe` or `npx.cmd` in the working directory hijacks `probe_stdio_mcp` when probing user-level MCP configs.\n\n- **Severity**: High (`[MAJOR]`)\n- **CWE**: CWE-78 (Improper Neutralization of Special Elements used in an OS Command), CWE-427 (Uncontrolled Search Path Element)\n\n## Reproduction\n\n1. **Repo-local `.mcp.json` execution**:\n   - Place a `.mcp.json` in an untrusted reposito",
+      "updated": "2026-11-28T11:46:28Z",
+      "retrieved": "2026-11-28T11:49:48.663Z",
+      "evidenceHash": "bd7f541d386c693e9a8f6c602b89f3f3553dec00f54bbc6b8662aed3442deef2",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "bobcat88/footnote",
+      "number": 278,
+      "id": "opp-04ff1c13823e4669",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/FuRongJun-1999/dsh-bounty/issues/2900",
+      "title": "第三方独立复验：dsh-memory PR #1013（fix(security,mcp)：harden hottier, sustain tick hook, private-domain filters & regressions——外部贡献者 STARDUSTLC666）——独立脚本守卫 55 检查项基线 35 红（SEC-01 热层泄露×10/SEC-02 tick hook 注入×16/SEC-03 私密域×7/BUG×2 全数实锤）→修复全绿；作者交付票 #2830 分账",
+      "excerpt": "# 第三方独立复验：dsh-memory PR #1013（fix(security,mcp)：harden hottier, sustain tick hook, private-domain filters & regressions——外部贡献者 STARDUSTLC666）——独立脚本守卫 55 检查项基线 35 红（SEC-01 热层泄露/SEC-02 tick hook 注入/SEC-03 私密域三族全数实锤）→修复全绿\n\n<!-- intake:v1 {\"project\":\"memory\",\"difficulty\":\"hard\",\"impact\":\"A\",\"target\":\"memory\",\"form\":\"intake\"} -->\n\n## 结论\n\n**判定：修复真实落地（安全加固单——三族修复：①SEC-01 热层密级与可见性（hottier build 跳过加密/restricted/未知密级节点不落明文、search/browse/relation 强制可见性与私密域隔离、带过滤绕过热层）；②SEC-02 _tick_hook 加固（配置优先、目录穿越/兄弟前缀/注入/劫持/非 .py 全拒、子进程剥离密钥 env、last_tick_hook_error 非静默）；③SEC-03 私密域缓存与布尔解析（include_private='false' 不放行 域:私密、热缓存二次命中不泄、route/read 快速通道剔除）+BUG-12 时间意图正则+BUG-13 写闸缺省）**。落点为 `97b4b625`（PR #1013，2026-11-23T02:02:26Z 合并，作者实查（pulls/1013 user.login）：STARDUSTLC666——外部贡献者）。范围（实查 diff，7 文件 +1021/-136）：`md_cg/hottier.py` +91/-13＋`md_cg/sustain.py` +229/-28＋`md_cg/mcp_server.py` +106/-36＋`md_cg/run_tests.py` +3（BUG-13）＋新守卫 `md_cg/test_issue1009_1010_fixes.py` +533（**独立脚本守卫：python -m md_cg.test_issue1009_1010_fixes 执行，_PASS/_FAIL 计数器 55 检查项——hottier/sustain/mcp_server 安全面首个专门守卫**）＋docs ×2 改写。对象侧：作者已自报 intake 交付票 **dsh-bounty #2830**（2026-11-22T06:56:09Z，先于合并约 19.1 小时，difficulty=hard/**impact=A** 自评——memory 项目本批第三张 A，关联 issue=dsh-memory#1009/#1010/#1011）；**对象侧缺陷票=dsh-memory issues #1009（closed，P0 安全——热层明文落盘与 ACL 绕过/_tick_hook 注入/缓存泄露）/#1010（closed，P1 回归票）**；本票为 #2830 所指交付的**独立第三方复验**（自采双腿证据，分账详见查重声明）。基线 `61f8553b` = **分支点本身**（gh api commits 实查——单父 squash 型合并直落分支点，parents=[61f8553b]；本票 merge=97b4b625 与 #1012（3dc43f23，单23）同日背靠背）。\n\n**判别证据（双腿，判据级红——安全面全数实锤）**：修复腿（tarball `97b4b625`）**55 通过 / 0 失败 / exit 0**；基线腿（tarball `61f8553b`，gh api parents 实查，拷入脚本守卫至 md_cg/——守卫为 added 文件基线不存在）**20 通过 / 35 失败 / exit 1**——\n\n```\n红分布（35）：SEC-01b/c/d/g/h/i/j/k/l/m 热层密级与私密域泄露 ×10\n  （SEC-01h cg(op=read) match 向 guest 泄露 TOPSECRET_CANARY 明文 preview；\n    SEC-02b 投毒 _tick_hook.json 被执行）\n  + SEC-02a/a3/b/b2/b3/c/d/d2/d3/e/f/f2/g/h/m/n tick hook\n    注入/穿越/劫持/剥离/非静默 ×14\n  + SEC-03b/c/d/f/g/h/j 私密域缓存/路由/布尔解析 ×7\n  + BUG-12a 时间意图 ×1 + BUG-13a 写闸缺省 ×1\n（「拒绝数为 0」类直读：SEC-01d meta skipped_sensitive=0——加密/restricted\n  节点未跳过即落明文）\n```\n\n## 复验环境与方法\n\n- 双腿 GitHub API tarball 解包独立目录：基线 `61f8553b`（merge 唯一父提交=分支点）、修复 `97b4b625`。脚本守卫拷入基线腿 md_cg/（守卫为 added，基线无该文件）。执行：`python -X utf8 -m md_cg.test_issue1009_1010_fixes`（守卫 docstring 自述执行方式；绿退出 0/败退出 1，全程隔离临时目录）。Python 3.12.10 / Windows。证据日志：`evidence/249_1013_secharden.log`（含谱系/作者/交付票实查",
+      "updated": "2026-11-28T10:09:52Z",
+      "retrieved": "2026-11-28T11:49:48.663Z",
+      "evidenceHash": "bf30eebc88d70e38d39aba71319826a50026ebbdbe31183c793c7feae3efa470",
+      "query": "\"MCP\" \"security\"",
+      "repository": "FuRongJun-1999/dsh-bounty",
+      "number": 2900,
+      "id": "opp-7e53dfd9a643d99b",
+      "matched": [
+        "mcp",
+        "hook",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/son-nguyen-301/HydraLoop/issues/207",
+      "title": "[Story] 8.4 - Claude Code memory hooks",
+      "excerpt": "> **Story 8.4** · Epic #191 · Sprint 8 (8 Mar 2027 to 19 Mar 2027) · Release **v0.4.0** · Priority **P2**\n\n## User story\n\nAs a **Claude Code session working in a repo**, I want **the memory index at session start and matching entries when I touch an area**, so that **I use memory even when nobody tells me to call recall**.\n\n## Details\n\nThe Claude Code adapter adds hooks like hydra-claude. At session start a hook prints the memory index (area, type and title of each entry). When a prompt or a tool call touches an area (a file path in an Edit, Write or Read call, or words that match an area), a hook prints the matching entries. Other agents call hydraloop recall as a runbook step or through the recall MCP tool.\n\n## Acceptance criteria\n\n- [ ] The plugin's hooks.json has a SessionStart hook that prints the index as additional context.\n- [ ] A UserPromptSubmit hook prints matching entries for the prompt words.\n- [ ] A PreToolUse hook on Edit, Write and Read prints entries whose scope matches the file path.\n- [ ] The same entry is not printed twice in one session.\n- [ ] Hooks finish in under 1 second on a repo with 200 entries.\n\n## Tasks\n\nEach task is a sub-issue of this story. Total: 3 tasks, 5 points.\n\n| Task | Title | Size | Points | Priority |\n| --- | --- | --- | --- | --- |\n| HL-813 | Add hydraloop memory hook commands | feature | 3 | P2 |\n| HL-814 | Register the memory hooks in the Claude Code plugin | small | 1 | P2 |\n| HL-815 | Turn the hooks off when hydra-claude is still on | small | 1 | P2 |\n\n---\n\nSource: `planning/epics/E08-memory.yaml` · Design: [HydraLoop plugin design](https://claude.ai/code/artifact/a14891a2-9485-4b29-bf29-a4291b30ccc4)\n\n<!-- planning:id=8.4 -->",
+      "updated": "2026-11-28T11:45:46Z",
+      "retrieved": "2026-11-28T11:49:48.663Z",
+      "evidenceHash": "dbf65e936b4b25cfce72ad671c2601767801338509c560e4af1247dd0a10b541",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "son-nguyen-301/HydraLoop",
+      "number": 207,
+      "id": "opp-ffeb0710e3413702",
+      "matched": [
+        "mcp",
+        "hook"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/Industrial/claude-setup/issues/7",
+      "title": "security: pin every MCP server, no bunx @latest",
+      "excerpt": "Part of Industrial/nixos-dotfiles#339.\n\n## Context\n`.claude/mcp.json` starts two servers from whatever npm serves at that moment: `bunx @playwright/mcp@latest` and `bunx mcp-searxng` (no version). A compromised or hijacked release would run with the session's full access the next time a session starts. `@questdb/mcp-server-questdb@0.4.0` is pinned, which is the pattern to follow.\n\n## Scope\n- Pin `@playwright/mcp` and `mcp-searxng` to exact versions. Better: package them in Nix (`features/ai/*` in nixos-dotfiles) so the hash is locked and `bunx` does no network fetch at start; then `mcp.json` calls the binary by name, like `lean-ctx`, `roam`, `context7-mcp` and `maestro` already do.\n- Record, for each of the seven servers, where its binary comes from and how its version is locked.\n- Drop servers nobody uses (check `questdb` and `playwright` usage first).\n\n## Acceptance criteria\n- [ ] No `@latest` and no unversioned `bunx` package in `mcp.json`.\n- [ ] A table in README: server, source, pinned version or Nix attribute, update path.\n- [ ] Sessions start with all remaining servers connected.\n\n## Constraints (every session)\n- This repo is **public** and `~/.claude` is a symlink into it: never commit transcripts, history, credentials or tokens.\n- Work via branch + PR; one logical change per commit.\n- Verify each setting against the current Claude Code documentation before relying on it; do not write settings keys from memory.",
+      "updated": "2026-11-28T09:51:49Z",
+      "retrieved": "2026-11-28T11:49:48.663Z",
+      "evidenceHash": "8257e23f5ef7ede46adde274257ae3c8498d4a7f377e6f1117843732c0b112cc",
+      "query": "\"MCP\" \"security\"",
+      "repository": "Industrial/claude-setup",
+      "number": 7,
+      "id": "opp-bcb70a6b744e1813",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 4,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 1
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,
