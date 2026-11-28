@@ -1,16 +1,85 @@
 {
-  "observed": "2026-11-27T23:36:26.283Z",
-  "opportunities": [],
-  "errors": [
+  "observed": "2026-11-28T08:06:58.949Z",
+  "opportunities": [
     {
+      "url": "https://github.com/llm4s/llm4s/issues/3067",
+      "title": "[EPIC] MCP client and server: security, protocol conformance and transport parity",
+      "excerpt": "Defects, limitations and gaps in MCP support (`llm4s-mcp`, `modules/mcp`: the client, its three transports, `MCPToolRegistry` and `MCPServer`), found in a read-through review after 1.0.0. The code was compared with its contract (the `MCPClient` trait, the Scaladoc, `modules/mcp/README.md` and the MCP specification; there is no guide page yet, #1442) and each transport with the others: a difference between two backends is a finding.\n\nThe client findings were found by reading each code path end to end, not by running it. The server findings in #3069, #3071 and #3081 were reproduced with curl against a locally started `MCPServer`. No official-SDK client was run against the server.\n\n`llm4s-mcp` is not a frozen module, so the API changes these need are allowed in a minor release, with a CHANGELOG *Breaking changes* line and a migration note.\n\n## P0: fix soon (security, broken core behaviour)\n\n- [x] #3068 `MCPToolRegistry.toolHints` gives an untrusted server's tool a trusted server's hints (approval bypass)\n- [x] #3069 `MCPServer` does not validate `Origin` or `Host`: DNS rebinding reaches the default unauthenticated loopback server\n- [x] #3070 Stdio servers inherit the JVM's whole environment; `StdioTransport` has no `env` or working directory\n- [x] #3071 `MCPServer` replies are not valid JSON-RPC: no `jsonrpc` field, numeric ids returned as strings, empty `capabilities`\n- [x] #3072 The client never recovers a lost session or a restarted server; an agent's MCP tools then fail for good\n\n## P1: should fix\n\n- [x] #3073 The \"SSE\" client transport is not the 2024-11-05 HTTP+SSE protocol, and lacks the Streamable transport's fixes\n- [ ] #3074 Tool results: only the first content block's text is returned; a non-text first block fails a call that succeeded\n- [ ] #3075 `tools/list`: pagination is ignored, and a tool without a `description` is dropped\n- [ ] #3076 Input-schema conversion: forced `additionalProperties: false`, dropped `$defs`, dropped constraints\n- [x] #3077 Stdio transport: `timeout` ignored, a 10 s stall on quiet servers, misrouted server requests, orphaned child processes\n- [x] #3078 The client cannot authenticate to, or route HTTP for, a remote server\n- [x] #3079 Client handshake: advertises `roots` and `sampling` it does not implement, ignores the negotiated version\n- [ ] #3080 `MCPToolRegistry`: a dead server is re-dialled on every lookup, `healthCheck",
+      "updated": "2026-11-28T07:25:45Z",
+      "retrieved": "2026-11-28T08:06:58.949Z",
+      "evidenceHash": "1bcd848dab9e520f88d639f94f9b6cdff358101e91963f78866a479f3c9819ff",
       "query": "\"MCP\" \"security\"",
-      "error": "Evidence HTTP 403"
+      "repository": "llm4s/llm4s",
+      "number": 3067,
+      "id": "opp-27d927b7d264cd37",
+      "matched": [
+        "mcp",
+        "untrusted",
+        "security"
+      ],
+      "score": 8,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     },
     {
+      "url": "https://github.com/bfxh/trit/issues/771",
+      "title": "security(trit-tech-stack-mcp): Windows 尾随点/空格绕过 Python test-only 闸门（`src/evil.py.` 返回 allowed:true）",
+      "excerpt": "## 摘要\n\n`trit-tech-stack-mcp` 的 `validate_path` 在 Windows 上接受尾随点/空格的 `.py` 路径：`src/evil.py.` 和 `src/evil.py ` 都返回 `allowed:true`，但 Win32 文件 API 会把它们解析为 `src/evil.py`。因此“新增 Python 只准测试代码”的策略门可以被绕过。\n\n## 复现\n\nMCP 请求（stdio JSON-RPC）：\n\n```json\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"validate_path\",\"arguments\":{\"path\":\"src/evil.py.\"}}}\n```\n\n响应：\n\n```json\n{\"allowed\":true,\"path\":\"src/evil.py.\",\"rule\":\"project-stack\"}\n```\n\n对照：\n\n```json\n{\"path\":\"src/evil.py\"}\n```\n\n返回 `allowed:false` / `rule:\"python-test-only\"`。\n\nWindows 实际落盘验证（PowerShell）：\n\n```powershell\n$d = Join-Path $env:TEMP 'trit-trailing-dot-poc'\nNew-Item -ItemType Directory -Path $d -Force | Out-Null\nSet-Content -LiteralPath (Join-Path $d 'evil.py.') -Value 'print(\"pwned\")'\nGet-ChildItem -LiteralPath $d | Select-Object Name\n# evil.py\nTest-Path -LiteralPath (Join-Path $d 'evil.py')\n# True\n```\n\n尾随空格 `evil2.py ` 同样会创建 `evil2.py`。\n\n## 根因\n\n- `tools/tech-stack-mcp/src/main.rs` 的 `is_test_only()` 直接 `path.rsplit('.').next()` 取扩展名：\n  - `src/evil.py.` 的“扩展名”为空，`\"\" != \"py\"`，判为非 Python；\n  - `src/evil.py ` 的“扩展名”为 `\"py \"`，同样不等。\n- `is_test_path()` 只检查 `/tests/`、`test_` 等前缀/文件名，不会把尾随点/空格视为测试路径。\n- 因此 `validate()` 的 `!is_test_only(path) || is_test_path(path)` 对这两个路径都为真。\n- Windows 的 Win32 路径规范化会去掉每个路径分量末尾的点和空格，`evil.py.` 和 `evil.py ` 最终都指向 `evil.py`。\n\n## 影响\n\n- 任何依赖该 MCP 做写入门禁的 agent/subagent，只要把目标路径写成 `src/evil.py.` 或 `src/evil.py `，就能通过校验并实际创建非测试目录下的 Python 文件，绕过 `python-test-only` 策略。\n- 这是策略门绕过，不是普通路径解析差异；在 Windows 主机上是确定性的。\n\n## 修复建议\n\n1. 在 `validate()` 开头对路径做跨平台规范化：拒绝任何路径分量以 `.` 或空格结尾（或按 Win32 规则 trim 后再判断）。\n2. 扩展名判断前先规范化 basename：`path.trim_end_matches(['.', ' '])` 仅作为拒绝前的检测，不要静默改路径。\n3. 同时处理 `::$DATA`、尾随多个点、混合 `\\`/`/` 等 Windows 变体；为这些输入增加回归测试。\n4. 如果策略门只允许 POSIX 语义，则在 Windows 上直接返回 `allowed:false` 并说明不支持尾随点/空格。\n\n## 环境\n\n- 基线 `1a2ace8c`；`trit-tech-stack-mcp` release；Windows 11 / PowerShell 7.6.4。\n",
+      "updated": "2026-11-28T07:19:45Z",
+      "retrieved": "2026-11-28T08:06:58.949Z",
+      "evidenceHash": "2d17bbde47239aac707a34868f46df6fefbdb10cbf5832467154a4d4e7c1fc0e",
+      "query": "\"MCP\" \"security\"",
+      "repository": "bfxh/trit",
+      "number": 771,
+      "id": "opp-6e14cf264d93dfcc",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/micci184/Attackarium/issues/88",
+      "title": "[Security] Stop public views, dashboard, and MCP from acting as a sensor-identification oracle",
+      "excerpt": "## Summary\n\nThe public dashboard, the public Supabase views, and the Remote MCP currently republish **attacker-chosen content and second-precision timing** from individual events. Anyone can use this as an **identification oracle**: send a unique marker to a suspected IP, then look for it on Attackarium. A hit proves that the IP is an Attackarium sensor. The same path also lets anyone place arbitrary text on our public pages.\n\nThis issue documents the threat model as verified against current `main`, a layered design, an honest assessment of what each countermeasure does and does not stop, and the decisions the operator needs to make. No production change is proposed without separate approval.\n\n> The sensor IP itself is not secret: every scanner that reaches it knows it. The asset we protect is the **link between an IP and Attackarium**. Low-interaction honeypots can also be fingerprinted from service banners. That risk exists without the dashboard and is out of scope here.\n\n---\n\n## Verified oracles (current `main`)\n\n| # | Oracle | Attacker cost / certainty | Where it leaks (verified) |\n|---|---|---|---|\n| O1 | **Unique HTTP path marker.** Send `GET /<random>` and search for it. | 1 request, certain | `public_events.http_path_redacted` (Events page, `/events/[id]`). Path segments are kept; only query values are masked. |\n| O2 | **Marker promoted as a \"new pattern.\"** Send the marker 5 or more times from one IP. | 5 requests, certain | `observed_patterns` uses the full `http_path_redacted` as `pattern_key`, with no source threshold. The Overview reads `public_observed_patterns` where `first_seen_at >= now-24h`, and `buildNoteworthyObservations` (`dashboard-metrics.ts`) renders the title `New HTTP pattern observed (<pattern_key>)` once `totalCount >= MIN_NOTEWORTHY_COUNT` (5, an event count rather than a source count). |\n| O3 | **Precomputable fingerprint.** `fingerprint = \"http-\" + sha256(\"{method}:{path}:{user-agent}\")[:16]`, and the formula is public in `sensors/http-collector/collector.py`. Even if paths were hidden, an attacker can choose a UA, compute the fingerprint, and search for it. | 1 request, certain | `public_events.fingerprint` (shown when no method or path), and `observed_patterns` with `pattern_type = 'signature'`. |\n| O4 | **Timing correlation.** Send one Telnet or SSH connection at second T and look for an event at T. At the observed rate of ",
+      "updated": "2026-11-28T07:48:31Z",
+      "retrieved": "2026-11-28T08:06:58.949Z",
+      "evidenceHash": "d43887a6154e31e3a51eaf8dff65b9ef99284e3c063da2f6b8c0f5ccd3f5c34d",
+      "query": "\"MCP\" \"security\"",
+      "repository": "micci184/Attackarium",
+      "number": 88,
+      "id": "opp-af6fc2c4976eca91",
+      "matched": [
+        "mcp",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
+    },
+    {
+      "url": "https://github.com/Stackbilt-dev/charter/issues/311",
+      "title": "score: add harness-enforcement dimensions (Claude Code hooks, evals, memory, cost, GitHub hygiene, deploy targets)",
+      "excerpt": "## Problem\n\n`charter score` grades six categories — Agent config, Grounding, Architecture, Testing, Governance, Freshness. It measures whether agent *instructions* are well-formed, but under-measures whether the harness around them is *enforced*.\n\nConcretely, on a real repo (`aegis`, scoring 87/100 B today):\n\n- **Claude Code hooks are invisible.** `detectHookFiles` in `packages/cli/src/commands/score.ts` reads only `.husky/`, `.githooks/`, `.git/hooks/` and `core.hooksPath`. A repo with seven PreToolUse/PostToolUse/Stop hooks wired in `.claude/settings.json` scores identically to one with none. `aegis` reports \"1 hook(s) wired\" — that is the git `pre-commit`, counted correctly — while seven Claude Code hooks in `.claude/settings.json` stay invisible to it.\n- **No GitHub hygiene checks** — `PULL_REQUEST_TEMPLATE.md`, `CODEOWNERS`, `ISSUE_TEMPLATE/` are not looked at. All three are missing in `aegis` and nothing surfaces it.\n- **No Eval Coverage, Memory Persistence or Cost Efficiency category.**\n- **Deploy targets are not a category.** `wrangler.toml` appears in `score.ts` only as a config file feeding freshness, never as a Cloudflare-integration check. Same for `vercel.json`, `netlify.toml`, `fly.toml`.\n\n## Prior art\n\n[affaan-m/ECC](https://github.com/affaan-m/ECC) (MIT, `934195f`) ships `scripts/harness-audit.js`: a zero-dependency, deterministic 12-category rubric with `--format json`, reproducible per commit, and a distinct \"consumer\" mode for repos that use a harness rather than ship one. Its categories are Tool Coverage, Context Efficiency, Quality Gates, Memory Persistence, Eval Coverage, Security Guardrails, Cost Efficiency, GitHub Integration, plus deploy-target categories that activate only when a marker file is present (Vercel, Netlify, Cloudflare, Fly).\n\nRun against `aegis` it returns 28/39 with five failing checks — three genuinely actionable (the three GitHub hygiene files above), two specific to ECC's own install layout.\n\nThe conditional-category design is the part worth borrowing: `max_score` varies with which categories apply, so a Worker repo is not penalised for lacking `vercel.json`.\n\n## Proposal\n\n1. Teach `detectHookFiles` to read `.claude/settings.json` (and `settings.local.json`) hook entries alongside git hooks, reporting the two separately — they enforce different things at different moments.\n2. Add GitHub hygiene checks (`PULL_REQUEST",
+      "updated": "2026-11-28T00:58:27Z",
+      "retrieved": "2026-11-28T08:06:58.949Z",
+      "evidenceHash": "906e0f293ca0eb239e05dbad82d4b3fb58f56900f0710c47e221f66177a6c4b7",
       "query": "\"Claude Code\" \"hooks\"",
-      "error": "Evidence HTTP 403"
+      "repository": "Stackbilt-dev/charter",
+      "number": 311,
+      "id": "opp-b5fd09885453404f",
+      "matched": [
+        "hook",
+        "security"
+      ],
+      "score": 6,
+      "evidenceLevel": "reported open issue; neither validated demand nor endorsement",
+      "attempts": 0
     }
   ],
+  "errors": [],
   "inboundFeedback": [
     {
       "number": 9,

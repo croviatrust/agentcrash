@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795854521119-45e3a677",
+  "source": {
+    "id": "opp-6e14cf264d93dfcc",
+    "url": "https://github.com/bfxh/trit/issues/771",
+    "title": "security(trit-tech-stack-mcp): Windows 尾随点/空格绕过 Python test-only 闸门（`src/evil.py.` 返回 allowed:true）",
+    "evidenceHash": "2d17bbde47239aac707a34868f46df6fefbdb10cbf5832467154a4d4e7c1fc0e",
+    "updated": "2026-11-28T07:19:45Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": null,
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
