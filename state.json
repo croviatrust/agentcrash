@@ -1,36 +1,7 @@
 {
   "version": 1,
-  "generation": 67,
+  "generation": 68,
   "recent": [
-    {
-      "id": "1795672128975-9069f039",
-      "repo": "croviatrust/agentcrash",
-      "focus": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-      "started": "2026-11-26T05:48:48.979Z",
-      "finished": "2026-11-26T05:52:14.947Z",
-      "commitment": {
-        "id": "work-cd6a58b1132ae1d5fba5",
-        "evidenceHash": "accc3b45ebbd85735f1c"
-      },
-      "opportunity": null,
-      "status": "stopped",
-      "localEvidence": "stopped",
-      "reason": "The tool chain enforces a prerequisite check that requires reading `src/command.js` before executing `probe_process`. This is a hard constraint of the current environment, not a logical inference error. The previous attempts to bypass this by reusing evidence or skipping the read were rejected by the system itself. Since I cannot satisfy the prerequisite (reading the file) without violating the 'no repeated reads' rule for files I've already fully read (or the specific tool's internal state check), and creating a new file `src/command.js` is not permitted as it would alter the repository state, I must stop to avoid blocking further progress.",
-      "observedBlockers": [
-        {
-          "phase": "action",
-          "error": "Read the Node script before requesting a process experiment"
-        },
-        {
-          "phase": "action",
-          "error": "Read the Node script before requesting a process experiment"
-        }
-      ],
-      "error": "",
-      "findings": [],
-      "next": "The prerequisite for running a process experiment (`probe_process`) on `src/command.js` is that the file must be read first. However, `src/command.js` does not exist in the provided repository files list, and creating it is forbidden. The tool's error 'Read the Node script before requesting a process experiment' indicates an internal state check preventing execution without this specific read. Since I cannot create the file and cannot re-read a non-existent file, and the task requires reproducing the failure on `relay.js` (which doesn't strictly require reading `command.js` if I can construct the test directly in `relay.js` or use the provided reproduction command), I will pivot to executing the exact reproduction command defined in the task description within `relay.js` itself, bypassing the need for an external `src/command.js` file and the associated read block. This fulfills the 'reproduce baseline failure' requirement without triggering the forbidden read.",
-      "probes": []
-    },
     {
       "id": "1795698822419-d1409fd5",
       "repo": "croviatrust/agentcrash",
@@ -1208,6 +1179,70 @@
         }
       ],
       "probes": []
+    },
+    {
+      "id": "1795885394211-18c90408",
+      "repo": "croviatrust/agentcrash",
+      "focus": "Measure whether an agent can discover and use the product on a controlled task.",
+      "started": "2026-11-28T17:02:45.046Z",
+      "finished": "2026-11-28T17:03:14.210Z",
+      "status": "encounter-recorded",
+      "localEvidence": "stopped",
+      "reason": "Controlled encounter recorded; no code repair or organic adoption inferred.",
+      "error": "",
+      "findings": [],
+      "encounterSummary": {
+        "id": "enc-1795885365046-067ad08e",
+        "sourceSHA": "cc45857c3039edfde39adc374fad21d67b8b571b",
+        "variant": "configured",
+        "kind": "controlled-local-task",
+        "cohorts": [
+          {
+            "cohort": "files-only",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": false,
+              "missing": {
+                "commands": [
+                  "node tools/server-b592250be576.mjs",
+                  "node scripts/prepare-b592250be576.mjs"
+                ],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          },
+          {
+            "cohort": "catalog-available",
+            "discovered": false,
+            "toolCalls": 0,
+            "score": {
+              "completed": true,
+              "correct": false,
+              "missing": {
+                "commands": [
+                  "node tools/server-b592250be576.mjs",
+                  "node scripts/prepare-b592250be576.mjs"
+                ],
+                "endpoints": []
+              },
+              "extra": {
+                "commands": [],
+                "endpoints": []
+              }
+            },
+            "errors": []
+          }
+        ],
+        "limitation": "Controlled same-model task; not public discovery or adoption."
+      },
+      "probes": []
     }
   ],
   "outcomes": {},
@@ -1237,7 +1272,7 @@
       "rejected": 0
     },
     "Measure whether an agent can discover and use the product on a controlled task.": {
-      "attempts": 5,
+      "attempts": 6,
       "verified": 0,
       "merged": 0,
       "rejected": 0
@@ -1376,13 +1411,13 @@
   },
   "capabilities": [],
   "lastEncounter": {
-    "id": "enc-1795822758199-c998f7fc",
+    "id": "enc-1795885365046-067ad08e",
     "sourceSHA": "cc45857c3039edfde39adc374fad21d67b8b571b",
     "variant": "configured",
     "kind": "controlled-local-task",
     "cohorts": [
       {
-        "cohort": "catalog-available",
+        "cohort": "files-only",
         "discovered": false,
         "toolCalls": 0,
         "score": {
@@ -1390,8 +1425,8 @@
           "correct": false,
           "missing": {
             "commands": [
-              "node tools/server-6ee9527fdbcc.mjs",
-              "node scripts/prepare-6ee9527fdbcc.mjs"
+              "node tools/server-b592250be576.mjs",
+              "node scripts/prepare-b592250be576.mjs"
             ],
             "endpoints": []
           },
@@ -1403,7 +1438,7 @@
         "errors": []
       },
       {
-        "cohort": "files-only",
+        "cohort": "catalog-available",
         "discovered": false,
         "toolCalls": 0,
         "score": {
@@ -1411,8 +1446,8 @@
           "correct": false,
           "missing": {
             "commands": [
-              "node tools/server-6ee9527fdbcc.mjs",
-              "node scripts/prepare-6ee9527fdbcc.mjs"
+              "node tools/server-b592250be576.mjs",
+              "node scripts/prepare-b592250be576.mjs"
             ],
             "endpoints": []
           },
@@ -1429,130 +1464,6 @@
   "agenda": {
     "version": 1,
     "tasks": [
-      {
-        "id": "work-cd6a58b1132ae1d5fba5",
-        "repo": "croviatrust/agentcrash",
-        "goal": "maintain",
-        "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-        "source": "https://github.com/croviatrust/agentcrash/issues/9",
-        "evidenceHash": "accc3b45ebbd85735f1c",
-        "status": "blocked",
-        "attempts": 6,
-        "checkpoints": [
-          {
-            "episode": "1795863538460-fdd9a41e",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Does the child process itself handle SIGINT by catching it and exiting with code 0, causing the relay to report 143 instead of 130? Or does the spawn environment differ from production?",
-            "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b"
-          },
-          {
-            "episode": "1795865370925-795b95e7",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "Read src/cage/run.js to verify if the child process catches SIGINT internally and exits with code 0, which would explain why relay.js receives signal 15 instead of 2. If confirmed, the fix is to map 'SIGINT' to 2 in relay.js; otherwise, investigate spawn differences.",
-            "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b"
-          },
-          {
-            "episode": "1795867915139-a748f5e6",
-            "status": "stopped",
-            "verdict": "stopped",
-            "next": "The probe_process tool requires the Node executable path to be passed as a literal string argument (e.g., '/usr/bin/node'), but the reproduction command uses `$NODE` which is a placeholder for the current environment's Node binary. The source code `src/cage/relay.js` correctly handles SIGINT by passing the signal name ('SIGINT') to the child process, and the child process exits with status 128 + 2 = 130. The observed exit code of 143 suggests the relay is incorrectly interpreting the signal or the child's exit code. However, without being able to execute a `probe_process` due to the tool's argument validation error (requiring a literal string instead of a placeholder), I cannot empirically verify the current behavior versus the expected behavior in this specific turn. The source code logic",
-            "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b"
-          }
-        ],
-        "lastEpisode": "1795867915139-a748f5e6",
-        "next": "The probe_process tool requires the Node executable path to be passed as a literal string argument (e.g., '/usr/bin/node'), but the reproduction command uses `$NODE` which is a placeholder for the current environment's Node binary. The source code `src/cage/relay.js` correctly handles SIGINT by passing the signal name ('SIGINT') to the child process, and the child process exits with status 128 + 2 = 130. The observed exit code of 143 suggests the relay is incorrectly interpreting the signal or the child's exit code. However, without being able to execute a `probe_process` due to the tool's argument validation error (requiring a literal string instead of a placeholder), I cannot empirically verify the current behavior versus the expected behavior in this specific turn. The source code logic",
-        "recoveryCycles": 6,
-        "lastFailure": {
-          "episode": "1795867915139-a748f5e6",
-          "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b",
-          "snippetRevision": "Current checkout; prior findings require re-verification.",
-          "task": {
-            "id": "work-cd6a58b1132ae1d5fba5",
-            "objective": "[Agent trial] Maintainer assignment: preserve SIGINT child exit status in cage relay",
-            "source": "https://github.com/croviatrust/agentcrash/issues/9"
-          },
-          "status": "stopped",
-          "observedBlockers": [
-            {
-              "phase": "action",
-              "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required."
-            },
-            {
-              "phase": "action",
-              "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required."
-            }
-          ],
-          "modelReasonUnverified": "The probe_process tool requires the Node executable path to be passed as a literal string argument (e.g., '/usr/bin/node'), but the reproduction command uses `$NODE` which is a placeholder for the current environment's Node binary. The source code `src/cage/relay.js` correctly handles SIGINT by passing the signal name ('SIGINT') to the child process, and the child process exits with status 128 + 2 = 130. The observed exit code of 143 suggests the relay is incorrectly interpreting the signal or the child's exit code. However, without being able to execute a `probe_process` due to the tool's argument validation error (requiring a literal string instead of a placeholder), I cannot empirically verify the current behavior versus the expected behavior in this specific turn. The source code logic appears correct for preserving the signal-based exit code (130 for SIGINT), but the discrepancy with the observed 143 needs empirical confirmation which is blocked by the tool constraint.",
-          "actions": [
-            {
-              "action": "read",
-              "path": "src/cage/relay.js"
-            },
-            {
-              "action": "probe_process",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/unused-agenthub-task.sock",
-                  "0",
-                  "--",
-                  null,
-                  "-e",
-                  "process.kill(process.pid,'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            },
-            {
-              "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required.",
-              "phase": "action"
-            },
-            {
-              "action": "probe_process",
-              "processContract": {
-                "script": "src/cage/relay.js",
-                "args": [
-                  "/tmp/unused-agenthub-task.sock",
-                  "0",
-                  "--",
-                  null,
-                  "-e",
-                  "process.kill(process.pid,'SIGINT')"
-                ],
-                "expectedExit": 130,
-                "timeoutMs": 5000
-              }
-            },
-            {
-              "error": "Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required.",
-              "phase": "action"
-            },
-            {
-              "action": "stop"
-            }
-          ],
-          "checks": [],
-          "probes": [],
-          "snippets": [
-            {
-              "path": "src/cage/relay.js",
-              "text": "#!/usr/bin/env node\n// Runs inside the cage. The cage has a loopback interface and nothing else, so\n// this forwards loopback ports to the gate's unix socket, then starts the\n// caged command and leaves with its exit status.\n//   node relay.js <gate.sock> <proxy-port>[,<local-port>...] -- <command> [args...]\n// The first port is the HTTP proxy. Every other port stands in for the same\n// port on the machine outside: a model server running on localhost.\nimport net from 'node:net';\nimport { spawn } from 'node:child_process';\n\nconst [sock, ports, dash, cmd, ...args] = process.argv.slice(2);\nif (dash !== '--' || !cmd) { console.error('usage: relay.js <gate.sock> <port>[,<port>...] -- <command> [args...]'); process.exit(2); }\nconst [proxyPort, ...localPorts] = ports.split(',').map(Number);\n\nconst listen = (port, opening) => new Promise((resolve) => {\n  const server = net.createServer((c) => {\n    const up = net.connect(sock);\n    c.on('error', () => up.destroy());\n    up.on('error', () => c.destroy());\n    if (!opening) { c.pipe(up); up.pipe(c); return; }\n    // Ask the gate for the outside port, and only then hand the pipe over.\n    c.pause();\n    let head = Buffer.alloc(0);\n    const onData = (d) => {\n      head = Buffer.concat([head, d]);\n      const end = head.indexOf('\\r\\n\\r\\n');\n      if (end < 0) return;\n      up.off('data', onData);\n      if (!/^HTTP\\/1\\.1 200/.test(head.toString('latin1'))) { c.destroy(); up.destroy(); return; }\n      if (head.length > end + 4) c.write(head.subarray(end + 4));\n      c.pipe(up); up.pipe(c); c.resume();\n    };\n    up.on('data', onData);\n    up.on('connect', () => up.write(opening));\n    up.on('close', () => c.destroy());\n  });\n  server.on('error', (e) => { console.error(`agentcrash cage: relay port ${port}: ${e.message}`); process.exit(125); });\n  server.listen(port, '127.0.0.1', resolve);\n});\n\nawait listen(proxyPort);\nfor (const p of localPorts) await listen(p, `CONNECT 127.0.0.1:${p} HTTP/1.1\\r\\n\\r\\n`);\n\nconst child = spawn(cmd, args, { stdio: 'inherit' });\nfor (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => child.kill(sig));\nchild.on('error', (e) => { console.error(`agentcrash cage: cannot start ${cmd}: ${e.message}`); process.exit(127); });\nchild.on('exit', (code, signal) => process.exit(signal ? 128 + (signal === 'SIGKILL' ? 9 : 15) : code ?? 1));\n"
-            }
-          ],
-          "attemptedMethod": {
-            "mode": "contract-first",
-            "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.\"}],\"checks\":[]}",
-            "instructions": "Execute a new `probe_process` with an explicit `--no-cache` flag (or equivalent environment variable) to force a fresh pull of `node:22-bookworm`. If network is unavailable, switch the target image to `node:20-alpine`. Once the container pulls successfully, re-run the exact reproduction command (`process.kill(process.pid,'SIGINT')`) and verify the exit code is 143 (confirming the bug exists) rather than 130.",
-            "falsifier": "If this method does not help, it will either fail with a network error indicating no fresh pull was possible, or the process will still exit with 143 but the tool will refuse to run due to an unmet 'read source' precondition that cannot be bypassed without a new probeId.",
-            "id": "method-c5e4525a4bad5c61e217",
-            "status": "unverified-hypothesis"
-          }
-        },
-        "cooldownUntil": "2026-11-28T12:34:40.616Z"
-      },
       {
         "id": "work-b3fa7fb504a6ee0bd549",
         "repo": "croviatrust/agentcrash",
@@ -1889,6 +1800,17 @@
         "objective": "Investigate the reported need: Claude Code setup: CLAUDE.md, permissions, hooks, MCP servers",
         "source": "https://github.com/affan80/REX/issues/35",
         "evidenceHash": "d8a934fbf791d5260459",
+        "status": "queued",
+        "attempts": 0,
+        "checkpoints": []
+      },
+      {
+        "id": "work-1ca99c4589115e6ecff5",
+        "repo": "croviatrust/agentcrash",
+        "goal": "adopt",
+        "objective": "Reproduce and reduce the failures in the latest controlled agent encounter.",
+        "source": "encounters/enc-1795822758199-c998f7fc.json",
+        "evidenceHash": "f47ce289e513b9e71348",
         "status": "queued",
         "attempts": 0,
         "checkpoints": []
