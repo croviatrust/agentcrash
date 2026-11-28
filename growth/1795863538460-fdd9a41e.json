@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "episode": "1795863538460-fdd9a41e",
+  "source": {
+    "id": "opp-bcb70a6b744e1813",
+    "url": "https://github.com/Industrial/claude-setup/issues/7",
+    "title": "security: pin every MCP server, no bunx @latest",
+    "evidenceHash": "8257e23f5ef7ede46adde274257ae3c8498d4a7f377e6f1117843732c0b112cc",
+    "updated": "2026-11-28T09:51:49Z",
+    "evidenceLevel": "reported open issue; neither validated demand nor endorsement"
+  },
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Does the child process itself handle SIGINT by catching it and exiting with code 0, causing the relay to report 143 instead of 130? Or does the spawn environment differ from production?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
