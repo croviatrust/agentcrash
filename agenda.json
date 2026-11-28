@@ -9,7 +9,7 @@
       "source": "https://github.com/croviatrust/agentcrash/issues/9",
       "evidenceHash": "accc3b45ebbd85735f1c",
       "status": "needs-research",
-      "attempts": 1,
+      "attempts": 2,
       "checkpoints": [
         {
           "episode": "1795856853142-f8b8dcee",
@@ -17,13 +17,20 @@
           "verdict": "stopped",
           "next": "Why does the child process exit with status 0 when killed by SIGINT? Is there a signal handler in the child process that catches SIGINT and exits cleanly?",
           "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b"
+        },
+        {
+          "episode": "1795858998537-6db2a7e3",
+          "status": "stopped",
+          "verdict": "stopped",
+          "next": "Why does the child process in the actual production run exit with signal='SIGINT' and code=0, causing the relay to report 143? Is there a difference in how the child is spawned or handled between the probe environment and production?",
+          "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b"
         }
       ],
-      "lastEpisode": "1795856853142-f8b8dcee",
-      "next": "Why does the child process exit with status 0 when killed by SIGINT? Is there a signal handler in the child process that catches SIGINT and exits cleanly?",
-      "recoveryCycles": 1,
+      "lastEpisode": "1795858998537-6db2a7e3",
+      "next": "Why does the child process in the actual production run exit with signal='SIGINT' and code=0, causing the relay to report 143? Is there a difference in how the child is spawned or handled between the probe environment and production?",
+      "recoveryCycles": 2,
       "lastFailure": {
-        "episode": "1795856853142-f8b8dcee",
+        "episode": "1795858998537-6db2a7e3",
         "baseSHA": "cc45857c3039edfde39adc374fad21d67b8b571b",
         "snippetRevision": "Current checkout; prior findings require re-verification.",
         "task": {
@@ -35,25 +42,22 @@
         "observedBlockers": [
           {
             "phase": "action",
-            "error": "Read the Node script before requesting a process experiment"
-          },
-          {
-            "phase": "action",
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId."
+            "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file."
           }
         ],
-        "modelReasonUnverified": "The probe confirms the child process exits with status 0 (success) when killed by SIGINT, rather than propagating the signal code (130). The relay's exit handler logic `signal ? 128 + ... : code` is correct for non-zero signals, but the child process itself is not exiting with a non-zero status code; it is exiting cleanly (status 0) after receiving SIGINT. This indicates the bug lies in how Node.js handles the SIGINT signal within the spawned child's context or how the relay forwards termination, not in the exit status mapping formula itself. The probe log shows `actual: 0`, meaning the child process did not return a non-zero exit code to the parent. To fix this, we must investigate why the child process exits with 0 instead of 130 when killed by SIGINT. This requires examining the child process's behavior or the relay's signal handling logic more closely, as the current hypothesis about the exit status mapping formula is contradicted by the observation that the child exits with 0.",
+        "modelReasonUnverified": "The probe confirms the child process exits with code 0 when killed by SIGINT (not 143), contradicting the hypothesis that a signal handler converts SIGINT to exit 0. The relay's exit logic maps signal 'SIGINT' (value 15) to 128+15=143, but since the child exits with 0, the relay reports 128+0=128? No, the log shows actual exit code 0 in the test assertion failure context, yet the task states observed exit is 143. The discrepancy suggests the probe environment or the specific child process behavior differs from the production case (e.g., the child might be a different script or the signal handling logic is more complex than assumed). Without reproducing the exact 143 exit in this isolated probe, I cannot confirm the buggy behavior or propose a fix. The core question remains: why does the child exit with status 0 when killed by SIGINT in the actual production environment?",
         "actions": [
           {
-            "action": "probe_process"
-          },
-          {
-            "error": "Read the Node script before requesting a process experiment",
-            "phase": "action"
+            "action": "read",
+            "path": "src/cage/relay.js"
           },
           {
             "action": "read",
             "path": "src/cage/relay.js"
+          },
+          {
+            "error": "Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.",
+            "phase": "action"
           },
           {
             "action": "probe_process",
@@ -67,17 +71,9 @@
                 "-e",
                 "\"process.kill(process.pid, 'SIGINT')\""
               ],
-              "expectedExit": 130,
+              "expectedExit": 143,
               "timeoutMs": 5000
             }
-          },
-          {
-            "action": "read",
-            "path": "src/cage/relay.js"
-          },
-          {
-            "error": "Already observed this exact read/search input. Reuse the returned evidence. This restriction does NOT block probe, probe_process, new regression creation or propose. Execute a new probe or propose using a recorded failing probeId.",
-            "phase": "action"
           },
           {
             "action": "stop"
@@ -88,7 +84,7 @@
           {
             "status": "baseline-failed",
             "code": 1,
-            "log": "TAP version 13\n# Subtest: process exit contract\nnot ok 1 - process exit contract\n  ---\n  duration_ms: 61.642987\n  type: 'test'\n  location: '/work/resident-regressions/probe-46d2abede2864800e9cfb358.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    0 !== 130\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 130\n  actual: 0\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///work/resident-regressions/probe-46d2abede2864800e9cfb358.test.mjs:10:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 118.425562\n",
+            "log": "0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 90.753745\nUnable to find image 'node:22-bookworm' locally\n22-bookworm: Pulling from library/node\n1e6e7ca511b9: Pulling fs layer\nbdae095a5e19: Pulling fs layer\ndb1d5603818e: Pulling fs layer\n0db1ede1885b: Pulling fs layer\n1743e5baab33: Pulling fs layer\n6e5ce812b3ad: Pulling fs layer\n9e99979a8862: Pulling fs layer\n10a40058c783: Pulling fs layer\n1743e5baab33: Waiting\n6e5ce812b3ad: Waiting\n9e99979a8862: Waiting\n10a40058c783: Waiting\n0db1ede1885b: Waiting\nbdae095a5e19: Verifying Checksum\nbdae095a5e19: Download complete\n1e6e7ca511b9: Verifying Checksum\n1e6e7ca511b9: Download complete\n1743e5baab33: Verifying Checksum\n1743e5baab33: Download complete\ndb1d5603818e: Verifying Checksum\ndb1d5603818e: Download complete\n9e99979a8862: Verifying Checksum\n9e99979a8862: Download complete\n10a40058c783: Verifying Checksum\n10a40058c783: Download complete\n6e5ce812b3ad: Verifying Checksum\n6e5ce812b3ad: Download complete\n1e6e7ca511b9: Pull complete\nbdae095a5e19: Pull complete\n0db1ede1885b: Verifying Checksum\n0db1ede1885b: Download complete\ndb1d5603818e: Pull complete\n0db1ede1885b: Pull complete\n1743e5baab33: Pull complete\n6e5ce812b3ad: Pull complete\n9e99979a8862: Pull complete\n10a40058c783: Pull complete\nDigest: sha256:7c400d78797d8cbe3f6bb21d2227b86af4cd24b0014cc9f62ff989cc16de988e\nStatus: Downloaded newer image for node:22-bookworm\n",
             "processContract": {
               "script": "src/cage/relay.js",
               "args": [
@@ -99,7 +95,7 @@
                 "-e",
                 "\"process.kill(process.pid, 'SIGINT')\""
               ],
-              "expectedExit": 130,
+              "expectedExit": 143,
               "timeoutMs": 5000
             }
           }
@@ -112,14 +108,14 @@
         ],
         "attemptedMethod": {
           "mode": "contract-first",
-          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Already observed the complete file (2349 characters). Do not read its tail again; use the existing evidence for a probe or inspect another file.\"}],\"checks\":[]}",
-          "instructions": "1. Do NOT attempt to re-read `src/cage/relay.js`. Use the existing evidence from the probe log which shows the child process exiting with status 143 (SIGINT mapped to 128+15). \n2. Construct a minimal, self-contained regression test file at `resident-regressions/sigint-status.test.mjs` that uses `spawnSync` to run `relay.js` with a command that sends SIGINT to the spawned child.\n3. The test must assert that `result.status === 130`. \n4. Run this new test file directly to confirm the baseline failure (expecting 130 but getting 143).\n5. Once the baseline is confirmed via the NEW test, proceed to edit `src/cage/relay.js` to fix the exit status mapping.",
-          "falsifier": "If this method fails, it will be because the toolchain still blocks file creation entirely or the existing probe log does not contain the specific signal-to-status mapping logic needed to write the test. If the new test file cannot be created at all, the system is enforcing a hard lock on file generation rather than just read caching.",
-          "id": "method-0e74f6ef038624e3b435",
+          "observation": "{\"status\":\"stopped\",\"blockers\":[{\"phase\":\"action\",\"error\":\"Read the Node script before requesting a process experiment\"},{\"phase\":\"action\",\"error\":\"Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required.\"},{\"phase\":\"action\",\"error\":\"Invalid process experiment contract: args[3] must be a literal string, never null. Use the literal $NODE when a Node executable is required.\"}],\"checks\":[]}",
+          "instructions": "Execute a new probe_process with the same script and arguments as the failed baseline, but update the expectedExit value from 130 to 143 to confirm the current buggy behavior. Then, propose a minimal edit to src/cage/relay.js changing the signal mapping logic for SIGINT from adding 15 to adding 2.",
+          "falsifier": "If this method fails again with the same 'args[3] must be literal string' error, it confirms that the tool enforces strict path literals and requires a different approach (e.g., using spawnSync directly or modifying the script to use $NODE) for future experiments.",
+          "id": "method-dc85ce7508eda3363eb5",
           "status": "unverified-hypothesis"
         }
       },
-      "cooldownUntil": "2026-11-28T09:30:24.272Z"
+      "cooldownUntil": "2026-11-28T10:02:48.584Z"
     },
     {
       "id": "work-b3fa7fb504a6ee0bd549",

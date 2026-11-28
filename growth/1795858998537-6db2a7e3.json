@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "episode": "1795858998537-6db2a7e3",
+  "source": null,
+  "experiment": null,
+  "outcome": "stopped",
+  "checks": [],
+  "candidate": null,
+  "next": "Why does the child process in the actual production run exit with signal='SIGINT' and code=0, causing the relay to report 143? Is there a difference in how the child is spawned or handled between the probe environment and production?",
+  "adoption": "unmeasured",
+  "publication": "unpublished",
+  "limits": "A reported issue is not permission to contact its author, endorsement, demand validation or evidence that our product solves it."
+}
